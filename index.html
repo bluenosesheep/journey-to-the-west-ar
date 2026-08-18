@@ -114,14 +114,18 @@ AFRAME.registerComponent("canvas-texture-updater", {
       ctx.restore();
     };
 
-    // Back layer: short swirl
+    // Back layer: short swirl - wind02
     const w2Scale = 0.92 + 0.08 * (0.5 + 0.5*Math.sin(t*2.2));
     drawCentered(
       this.images.wind02,
-      w*0.40,
-      h*0.53,
-      w*0.36*w2Scale,
+      // w*0.40,
+      w*0.72,
+      // h*0.53,
+      h*0.34,
+      // w*0.36*w2Scale,
+      w*0.23*w2Scale,
       h*0.36*w2Scale,
+      // h*0.23*w2Scale,
       (-5 + 12*(0.5+0.5*Math.sin(t*1.7))) * Math.PI/180,
       0.82
     );
@@ -139,7 +143,7 @@ AFRAME.registerComponent("canvas-texture-updater", {
       1.0
     );
 
-    // Front long wind sweep
+    // Front long wind sweep - wind01
     const sweepX = w*(0.50 + 0.035*Math.sin(t*3.0));
     drawCentered(
       this.images.wind01,
