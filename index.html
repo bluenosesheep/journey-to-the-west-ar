@@ -31,7 +31,7 @@ a-scene {
   z-index: 1 !important;
   background: transparent !important;
 }
-canvas, canvas.a-canvas {
+canvas.a-canvas {
   background: transparent !important;
 }
 #hint {
@@ -48,19 +48,137 @@ canvas, canvas.a-canvas {
   white-space: nowrap;
   box-shadow: 0 6px 24px rgba(0,0,0,.16);
 }
+#fxCanvas {
+  display: none;
+}
 </style>
 
 <script>
-AFRAME.registerComponent("story-target-events",{init:function(){
-  const h=document.getElementById("hint");
-  this.el.addEventListener("targetFound",()=>h.textContent="筋斗云出现啦！移动手机看看 ✨");
-  this.el.addEventListener("targetLost",()=>h.textContent="请把镜头对准「筋斗云」故事卡");
-}});
+AFRAME.registerComponent("story-target-events", {
+  init: function() {
+    const hint = document.getElementById("hint");
+    this.el.addEventListener("targetFound", () => {
+      hint.textContent = "筋斗云出现啦！移动手机看看 ✨";
+    });
+    this.el.addEventListener("targetLost", () => {
+      hint.textContent = "请把镜头对准「筋斗云」故事卡";
+    });
+  }
+});
+
+AFRAME.registerComponent("canvas-texture-updater", {
+  init: function () {
+    this.canvas = document.getElementById("fxCanvas");
+    this.ctx = this.canvas.getContext("2d");
+    this.images = {};
+    this.loaded = 0;
+    this.startTime = performance.now();
+
+    const sources = {
+      cloud: "./assets/cloud.png",
+      wind01: "./assets/wind_01.png",
+      wind02: "./assets/wind_02.png",
+      sparkles: "./assets/sparkles.png"
+    };
+
+    Object.entries(sources).forEach(([key, src]) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        this.images[key] = img;
+        this.loaded++;
+      };
+      img.src = src;
+    });
+  },
+
+  tick: function () {
+    if (this.loaded < 4) return;
+
+    const c = this.canvas;
+    const ctx = this.ctx;
+    const w = c.width;
+    const h = c.height;
+
+    ctx.clearRect(0, 0, w, h);
+
+    const t = (performance.now() - this.startTime) / 1000;
+
+    // Helper
+    const drawCentered = (img, cx, cy, width, height, rotation=0, alpha=1) => {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(cx, cy);
+      ctx.rotate(rotation);
+      ctx.drawImage(img, -width/2, -height/2, width, height);
+      ctx.restore();
+    };
+
+    // Back layer: short swirl
+    const w2Scale = 0.92 + 0.08 * (0.5 + 0.5*Math.sin(t*2.2));
+    drawCentered(
+      this.images.wind02,
+      w*0.40,
+      h*0.53,
+      w*0.36*w2Scale,
+      h*0.36*w2Scale,
+      (-5 + 12*(0.5+0.5*Math.sin(t*1.7))) * Math.PI/180,
+      0.82
+    );
+
+    // Main cloud float
+    const cloudY = h*(0.50 - 0.025*Math.sin(t*2.0));
+    const cloudRot = 1.5*Math.sin(t*1.4) * Math.PI/180;
+    drawCentered(
+      this.images.cloud,
+      w*0.50,
+      cloudY,
+      w*0.58,
+      h*0.58,
+      cloudRot,
+      1.0
+    );
+
+    // Front long wind sweep
+    const sweepX = w*(0.50 + 0.035*Math.sin(t*3.0));
+    drawCentered(
+      this.images.wind01,
+      sweepX,
+      h*0.52,
+      w*0.68,
+      h*0.34,
+      0,
+      0.80
+    );
+
+    // Sparkles pulse
+    const spScale = 0.86 + 0.18*(0.5+0.5*Math.sin(t*5.0));
+    const spAlpha = 0.65 + 0.30*(0.5+0.5*Math.sin(t*5.0));
+    drawCentered(
+      this.images.sparkles,
+      w*0.53,
+      h*0.44,
+      w*0.46*spScale,
+      h*0.46*spScale,
+      0,
+      spAlpha
+    );
+
+    // Tell three.js the canvas texture changed.
+    const mesh = this.el.getObject3D("mesh");
+    if (mesh && mesh.material && mesh.material.map) {
+      mesh.material.map.needsUpdate = true;
+    }
+  }
+});
 </script>
 </head>
 
 <body>
 <div id="hint">请把镜头对准「筋斗云」故事卡</div>
+
+<!-- Offscreen 2D canvas that composites all AR effects -->
+<canvas id="fxCanvas" width="1024" height="1024"></canvas>
 
 <a-scene
   mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;"
@@ -69,45 +187,19 @@ AFRAME.registerComponent("story-target-events",{init:function(){
   vr-mode-ui="enabled:false"
   device-orientation-permission-ui="enabled:false">
 
-  <a-assets timeout="15000">
-    <img id="cloud" src="./assets/cloud.png" crossorigin="anonymous">
-    <img id="wind01" src="./assets/wind_01.png" crossorigin="anonymous">
-    <img id="wind02" src="./assets/wind_02.png" crossorigin="anonymous">
-    <img id="sparkles" src="./assets/sparkles.png" crossorigin="anonymous">
-  </a-assets>
-
   <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
   <a-entity mindar-image-target="targetIndex:0" story-target-events>
-
-    <a-image src="#wind02"
-      position="-0.15 0.06 0.015" width="0.82" height="0.82"
-      material="shader:flat; transparent:false; alphaTest:0.12; depthWrite:false; side:double"
-      animation__spin="property:rotation; from:0 0 -5; to:0 0 7; dur:3200; dir:alternate; loop:true; easing:easeInOutSine"
-      animation__breathe="property:scale; from:0.92 0.92 0.92; to:1.08 1.08 1.08; dur:2200; dir:alternate; loop:true; easing:easeInOutSine">
-    </a-image>
-
-    <a-image src="#cloud"
-      position="0 0.06 0.035" width="1.05" height="1.05"
-      material="shader:flat; transparent:false; alphaTest:0.08; depthWrite:false; side:double"
-      animation__float="property:position; from:0 0.02 0.035; to:0 0.11 0.035; dur:2600; dir:alternate; loop:true; easing:easeInOutSine"
-      animation__tilt="property:rotation; from:0 0 -1.5; to:0 0 1.5; dur:3400; dir:alternate; loop:true; easing:easeInOutSine">
-    </a-image>
-
-    <a-image src="#wind01"
-      position="0 0.02 0.055" width="1.25" height="0.62"
-      material="shader:flat; transparent:false; alphaTest:0.12; depthWrite:false; side:double; opacity:1"
-      animation__sweep="property:position; from:-0.16 0.02 0.055; to:0.16 0.05 0.055; dur:2000; dir:alternate; loop:true; easing:easeInOutSine">
-    </a-image>
-
-    <a-image src="#sparkles"
-      position="0.02 0.13 0.075" width="0.92" height="0.92"
-      material="shader:flat; transparent:false; alphaTest:0.15; depthWrite:false; side:double; opacity:1"
-      animation__twinkle="property:scale; from:0.84 0.84 0.84; to:1.1 1.1 1.1; dur:1150; dir:alternate; loop:true; easing:easeInOutSine"
-      animation__sparkrotate="property:rotation; from:0 0 -2; to:0 0 3; dur:1800; dir:alternate; loop:true; easing:easeInOutSine">
-    </a-image>
-
+    <a-plane
+      id="fxPlane"
+      width="1.35"
+      height="1.35"
+      position="0 0 0.03"
+      material="shader: flat; src: #fxCanvas; transparent: true; alphaTest: 0.01; depthWrite: false; side: double"
+      canvas-texture-updater>
+    </a-plane>
   </a-entity>
+
 </a-scene>
 </body>
 </html>
