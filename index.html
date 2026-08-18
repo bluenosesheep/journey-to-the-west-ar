@@ -1,125 +1,24 @@
-<!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Journey to the West AR</title>
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Journey to the West AR</title>
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}
 video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}
 a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}
 canvas.a-canvas{background:transparent!important}
-#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);
-z-index:20;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;
-font:14px/1.35 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;white-space:nowrap;
-box-shadow:0 6px 24px rgba(0,0,0,.16)}
+#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px system-ui;white-space:nowrap}
 #fxCanvas{display:none}
 </style>
-
 <script>
-AFRAME.registerComponent("story-target-events",{
-  init:function(){
-    const h=document.getElementById("hint");
-    this.el.addEventListener("targetFound",()=>h.textContent="筋斗云出现啦！移动手机看看 ✨");
-    this.el.addEventListener("targetLost",()=>h.textContent="请把镜头对准「筋斗云」故事卡");
-  }
-});
-
-AFRAME.registerComponent("canvas-texture-updater",{
-  init:function(){
-    this.canvas=document.getElementById("fxCanvas");
-    this.ctx=this.canvas.getContext("2d");
-    this.images={};
-    this.loaded=0;
-    this.startTime=performance.now();
-
-    const version="v4";
-    const sources={
-      cloud:"./assets/cloud.png?"+version,
-      wind01:"./assets/wind_01.png?"+version,
-      wind02:"./assets/wind_02.png?"+version,
-      sparkles:"./assets/sparkles.png?"+version
-    };
-
-    Object.entries(sources).forEach(([key,src])=>{
-      const img=new Image();
-      img.crossOrigin="anonymous";
-      img.onload=()=>{
-        this.images[key]=img;
-        this.loaded++;
-        this.drawFrame(0);
-        const mesh=this.el.getObject3D("mesh");
-        if(mesh && mesh.material && mesh.material.map){mesh.material.map.needsUpdate=true;}
-      };
-      img.onerror=()=>console.error("Failed to load",src);
-      img.src=src;
-    });
-  },
-
-  drawFrame:function(t){
-    if(this.loaded<4)return;
-    const c=this.canvas, ctx=this.ctx, w=c.width, h=c.height;
-    ctx.clearRect(0,0,w,h);
-
-    const drawCentered=(img,cx,cy,width,height,rotation=0,alpha=1)=>{
-      ctx.save();
-      ctx.globalAlpha=alpha;
-      ctx.translate(cx,cy);
-      ctx.rotate(rotation);
-      ctx.drawImage(img,-width/2,-height/2,width,height);
-      ctx.restore();
-    };
-
-    const w2Scale=0.92+0.08*(0.5+0.5*Math.sin(t*2.2));
-    drawCentered(this.images.wind02,w*0.72,h*0.34,w*0.23*w2Scale,h*0.23*w2Scale,
-      (-5+12*(0.5+0.5*Math.sin(t*1.7)))*Math.PI/180,0.70);
-
-    const cloudY=h*(0.54-0.018*Math.sin(t*2.0));
-    const cloudRot=1.5*Math.sin(t*1.4)*Math.PI/180;
-    drawCentered(this.images.cloud,w*0.42,cloudY,w*0.43,h*0.43,cloudRot,1.0);
-
-    const sweepX=w*(0.52+0.06*Math.sin(t*2.2));
-    drawCentered(this.images.wind01,sweepX,h*0.61,w*0.68,h*0.24,0,0.78);
-
-    const spScale=0.86+0.18*(0.5+0.5*Math.sin(t*5.0));
-    const spAlpha=0.65+0.30*(0.5+0.5*Math.sin(t*5.0));
-    drawCentered(this.images.sparkles,w*0.66,h*0.28,w*0.20*spScale,h*0.20*spScale,0,spAlpha);
-  },
-
-  tick:function(){
-    if(this.loaded<4)return;
-    const t=(performance.now()-this.startTime)/1000;
-    this.drawFrame(t);
-    const mesh=this.el.getObject3D("mesh");
-    if(mesh && mesh.material && mesh.material.map){mesh.material.map.needsUpdate=true;}
-  }
-});
-</script>
-</head>
-
-<body>
-<div id="hint">请把镜头对准「筋斗云」故事卡</div>
-<canvas id="fxCanvas" width="1024" height="1024"></canvas>
-
-<a-scene
-  mindar-image="imageTargetSrc: ./targets.mind?v=4; autoStart: true;"
-  color-space="sRGB"
-  renderer="colorManagement:true;physicallyCorrectLights:true;alpha:true;antialias:true"
-  vr-mode-ui="enabled:false"
-  device-orientation-permission-ui="enabled:false">
-
-  <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
-
-  <a-entity mindar-image-target="targetIndex:0" story-target-events>
-    <a-plane id="fxPlane"
-      width="1.35" height="1.35" position="0 0 0.03"
-      material="shader:flat;src:#fxCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
-      canvas-texture-updater>
-    </a-plane>
-  </a-entity>
-</a-scene>
-</body>
-</html>
+AFRAME.registerComponent("story-target-events",{init:function(){const h=document.getElementById("hint");this.el.addEventListener("targetFound",()=>h.textContent="筋斗云出现啦！移动手机看看 ✨");this.el.addEventListener("targetLost",()=>h.textContent="请把镜头对准「筋斗云」故事卡");}});
+AFRAME.registerComponent("canvas-texture-updater",{init:function(){this.canvas=document.getElementById("fxCanvas");this.ctx=this.canvas.getContext("2d");this.images={};this.loaded=0;this.startTime=performance.now();const s={cloud:"./assets/cloud.png",wind01:"./assets/wind_01.png",wind02:"./assets/wind_02.png",sparkles:"./assets/sparkles.png"};Object.entries(s).forEach(([k,src])=>{const i=new Image();i.crossOrigin="anonymous";i.onload=()=>{this.images[k]=i;this.loaded++};i.src=src;});},tick:function(){if(this.loaded<4)return;const c=this.canvas,ctx=this.ctx,w=c.width,h=c.height;ctx.clearRect(0,0,w,h);const t=(performance.now()-this.startTime)/1000;const d=(img,cx,cy,ww,hh,r=0,a=1)=>{ctx.save();ctx.globalAlpha=a;ctx.translate(cx,cy);ctx.rotate(r);ctx.drawImage(img,-ww/2,-hh/2,ww,hh);ctx.restore();};
+const s2=.92+.08*(.5+.5*Math.sin(t*2.2));d(this.images.wind02,w*.74,h*.32,w*.20*s2,h*.20*s2,(-5+12*(.5+.5*Math.sin(t*1.7)))*Math.PI/180,.72);
+const cy=h*(.58-.020*Math.sin(t*2));d(this.images.cloud,w*.38,cy,w*.40,h*.40,1.5*Math.sin(t*1.4)*Math.PI/180,1);
+const sx=w*(.53+.05*Math.sin(t*2.2));d(this.images.wind01,sx,h*.63,w*.62,h*.22,0,.80);
+const ss=.86+.18*(.5+.5*Math.sin(t*5)),sa=.65+.30*(.5+.5*Math.sin(t*5));d(this.images.sparkles,w*.68,h*.27,w*.18*ss,h*.18*ss,0,sa);
+const m=this.el.getObject3D("mesh");if(m&&m.material&&m.material.map)m.material.map.needsUpdate=true;}});</script></head>
+<body><div id="hint">请把镜头对准「筋斗云」故事卡</div><canvas id="fxCanvas" width="1024" height="1024"></canvas>
+<a-scene mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;" color-space="sRGB" renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true" vr-mode-ui="enabled:false" device-orientation-permission-ui="enabled:false">
+<a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+<a-entity mindar-image-target="targetIndex:0" story-target-events><a-plane id="fxPlane" width="1.35" height="1.35" position="0 0 0.03" material="shader: flat; src: #fxCanvas; transparent: true; alphaTest: 0.01; depthWrite: false; side: double" canvas-texture-updater></a-plane></a-entity>
+</a-scene></body></html>
