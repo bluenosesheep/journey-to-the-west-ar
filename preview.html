@@ -1,17 +1,118 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
-<title>AR effect preview</title><style>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>筋斗云 AR Layout Preview</title>
+<style>
 html,body{margin:0;height:100%;background:#f4ecd9;overflow:hidden}
-.stage{position:relative;width:min(86vw,700px);height:min(70vw,560px);margin:8vh auto 0}
-.x{position:absolute;left:50%;top:50%;object-fit:contain}
-.cloud{width:70%;animation:a 2.6s ease-in-out infinite alternate}
-.w1{width:82%;opacity:.8;animation:b 2s ease-in-out infinite alternate}
-.w2{width:58%;opacity:.8;animation:c 3.2s ease-in-out infinite alternate}
-.sp{width:55%;animation:d 1.15s ease-in-out infinite alternate}
-@keyframes a{from{transform:translate(-50%,-47%) rotate(-1.5deg)}to{transform:translate(-50%,-56%) rotate(1.5deg)}}
-@keyframes b{from{transform:translate(-58%,-50%) scale(.96)}to{transform:translate(-42%,-47%) scale(1.04)}}
-@keyframes c{from{transform:translate(-50%,-50%) rotate(-5deg) scale(.92)}to{transform:translate(-50%,-50%) rotate(7deg) scale(1.08)}}
-@keyframes d{from{transform:translate(-50%,-50%) scale(.84);opacity:.58}to{transform:translate(-50%,-50%) scale(1.1);opacity:1}}
-</style></head><body><div class="stage">
-<img class="x w2" src="./assets/wind_02.png"><img class="x cloud" src="./assets/cloud.png">
-<img class="x w1" src="./assets/wind_01.png"><img class="x sp" src="./assets/sparkles.png">
-</div></body></html>
+.stage{
+  position:relative;
+  width:min(88vw,720px);
+  aspect-ratio:1/1;
+  margin:4vh auto 0;
+  background:
+    linear-gradient(rgba(255,255,255,.45),rgba(255,255,255,.45)),
+    #f4ecd9;
+  border-radius:24px;
+  overflow:hidden;
+}
+#fxCanvas{width:100%;height:100%;display:block}
+.caption{text-align:center;font:15px/1.5 system-ui;color:#594a37;margin:12px 20px}
+</style>
+</head>
+<body>
+<div class="stage"><canvas id="fxCanvas" width="1024" height="1024"></canvas></div>
+<div class="caption">预览页与当前 AR index 使用相同的 Canvas 位置、尺寸和动画参数。</div>
+
+<script>
+const canvas=document.getElementById("fxCanvas");
+const ctx=canvas.getContext("2d");
+const images={};
+let loaded=0;
+const startTime=performance.now();
+
+const sources={
+  cloud:"./assets/cloud.png",
+  wind01:"./assets/wind_01.png",
+  wind02:"./assets/wind_02.png",
+  sparkles:"./assets/sparkles.png"
+};
+
+Object.entries(sources).forEach(([key,src])=>{
+  const img=new Image();
+  img.onload=()=>{images[key]=img;loaded++;};
+  img.src=src;
+});
+
+function drawCentered(img,cx,cy,width,height,rotation=0,alpha=1){
+  ctx.save();
+  ctx.globalAlpha=alpha;
+  ctx.translate(cx,cy);
+  ctx.rotate(rotation);
+  ctx.drawImage(img,-width/2,-height/2,width,height);
+  ctx.restore();
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  if(loaded<4)return;
+
+  const w=canvas.width,h=canvas.height;
+  ctx.clearRect(0,0,w,h);
+  const t=(performance.now()-startTime)/1000;
+
+  // wind_02 — right/top
+  const w2Scale=0.92+0.08*(0.5+0.5*Math.sin(t*2.2));
+  drawCentered(
+    images.wind02,
+    w*0.72,
+    h*0.34,
+    w*0.23*w2Scale,
+    h*0.23*w2Scale,
+    (-5+12*(0.5+0.5*Math.sin(t*1.7)))*Math.PI/180,
+    0.82
+  );
+
+  // cloud — left/lower
+  const cloudY=h*(0.54-0.018*Math.sin(t*2.0));
+  const cloudRot=1.5*Math.sin(t*1.4)*Math.PI/180;
+  drawCentered(
+    images.cloud,
+    w*0.42,
+    cloudY,
+    w*0.43,
+    h*0.43,
+    cloudRot,
+    1.0
+  );
+
+  // wind_01 — lower horizontal sweep
+  const sweepX=w*(0.52+0.06*Math.sin(t*2.2));
+  drawCentered(
+    images.wind01,
+    sweepX,
+    h*0.61,
+    w*0.68,
+    h*0.24,
+    0,
+    0.80
+  );
+
+  // sparkles — right/top
+  const spScale=0.86+0.18*(0.5+0.5*Math.sin(t*5.0));
+  const spAlpha=0.65+0.30*(0.5+0.5*Math.sin(t*5.0));
+  drawCentered(
+    images.sparkles,
+    w*0.66,
+    h*0.28,
+    w*0.20*spScale,
+    h*0.20*spScale,
+    0,
+    spAlpha
+  );
+}
+animate();
+</script>
+</body>
+</html>
