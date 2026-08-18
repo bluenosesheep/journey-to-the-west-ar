@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Journey to the West AR</title>
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111}
+#hint{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:20;
+padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;
+font:14px system-ui;white-space:nowrap}
+</style>
+<script>
+AFRAME.registerComponent("story-target-events",{init:function(){
+const h=document.getElementById("hint");
+this.el.addEventListener("targetFound",()=>h.textContent="筋斗云出现啦！移动手机看看 ✨");
+this.el.addEventListener("targetLost",()=>h.textContent="请把镜头对准「筋斗云」故事卡");
+}});
+</script>
+</head>
+<body>
+<div id="hint">请把镜头对准「筋斗云」故事卡</div>
+<a-scene mindar-image="imageTargetSrc: ./targets.mind; autoStart: true;"
+ color-space="sRGB" renderer="colorManagement:true;physicallyCorrectLights:true;alpha:true"
+ vr-mode-ui="enabled:false" device-orientation-permission-ui="enabled:false">
+<a-assets timeout="15000">
+<img id="cloud" src="./assets/cloud.png">
+<img id="wind01" src="./assets/wind_01.png">
+<img id="wind02" src="./assets/wind_02.png">
+<img id="sparkles" src="./assets/sparkles.png">
+</a-assets>
+<a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+<a-entity mindar-image-target="targetIndex:0" story-target-events>
+
+<a-plane src="#wind02" position="-0.15 0.06 0.015" width="0.82" height="0.82"
+ material="shader:flat;transparent:true;alphaTest:0.02;side:double"
+ animation__spin="property:rotation;from:0 0 -5;to:0 0 7;dur:3200;dir:alternate;loop:true;easing:easeInOutSine"
+ animation__breathe="property:scale;from:0.92 0.92 0.92;to:1.08 1.08 1.08;dur:2200;dir:alternate;loop:true;easing:easeInOutSine"></a-plane>
+
+<a-plane src="#cloud" position="0 0.06 0.035" width="1.05" height="1.05"
+ material="shader:flat;transparent:true;alphaTest:0.02;side:double"
+ animation__float="property:position;from:0 0.02 0.035;to:0 0.11 0.035;dur:2600;dir:alternate;loop:true;easing:easeInOutSine"
+ animation__tilt="property:rotation;from:0 0 -1.5;to:0 0 1.5;dur:3400;dir:alternate;loop:true;easing:easeInOutSine"></a-plane>
+
+<a-plane src="#wind01" position="0 0.02 0.055" width="1.25" height="0.62"
+ material="shader:flat;transparent:true;alphaTest:0.02;side:double;opacity:0.82"
+ animation__sweep="property:position;from:-0.16 0.02 0.055;to:0.16 0.05 0.055;dur:2000;dir:alternate;loop:true;easing:easeInOutSine"></a-plane>
+
+<a-plane src="#sparkles" position="0.02 0.13 0.075" width="0.92" height="0.92"
+ material="shader:flat;transparent:true;alphaTest:0.02;side:double;opacity:0.88"
+ animation__twinkle="property:scale;from:0.84 0.84 0.84;to:1.1 1.1 1.1;dur:1150;dir:alternate;loop:true;easing:easeInOutSine"
+ animation__sparkrotate="property:rotation;from:0 0 -2;to:0 0 3;dur:1800;dir:alternate;loop:true;easing:easeInOutSine"></a-plane>
+
+</a-entity>
+</a-scene>
+</body>
+</html>

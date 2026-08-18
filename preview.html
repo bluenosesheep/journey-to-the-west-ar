@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>AR effect preview</title><style>
+html,body{margin:0;height:100%;background:#f4ecd9;overflow:hidden}
+.stage{position:relative;width:min(86vw,700px);height:min(70vw,560px);margin:8vh auto 0}
+.x{position:absolute;left:50%;top:50%;object-fit:contain}
+.cloud{width:70%;animation:a 2.6s ease-in-out infinite alternate}
+.w1{width:82%;opacity:.8;animation:b 2s ease-in-out infinite alternate}
+.w2{width:58%;opacity:.8;animation:c 3.2s ease-in-out infinite alternate}
+.sp{width:55%;animation:d 1.15s ease-in-out infinite alternate}
+@keyframes a{from{transform:translate(-50%,-47%) rotate(-1.5deg)}to{transform:translate(-50%,-56%) rotate(1.5deg)}}
+@keyframes b{from{transform:translate(-58%,-50%) scale(.96)}to{transform:translate(-42%,-47%) scale(1.04)}}
+@keyframes c{from{transform:translate(-50%,-50%) rotate(-5deg) scale(.92)}to{transform:translate(-50%,-50%) rotate(7deg) scale(1.08)}}
+@keyframes d{from{transform:translate(-50%,-50%) scale(.84);opacity:.58}to{transform:translate(-50%,-50%) scale(1.1);opacity:1}}
+</style></head><body><div class="stage">
+<img class="x w2" src="./assets/wind_02.png"><img class="x cloud" src="./assets/cloud.png">
+<img class="x w1" src="./assets/wind_01.png"><img class="x sp" src="./assets/sparkles.png">
+</div></body></html>
