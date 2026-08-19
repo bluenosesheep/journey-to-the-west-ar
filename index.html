@@ -114,13 +114,13 @@ AFRAME.registerComponent("canvas-texture-updater", {
       ctx.restore();
     };
 
-    // Back layer: short swirl
+    // Back layer: short swirl - wind02
     const w2Scale = 0.92 + 0.08 * (0.5 + 0.5*Math.sin(t*2.2));
     drawCentered(
       this.images.wind02,
-      w*0.40,
-      h*0.53,
-      w*0.36*w2Scale,
+      w*0.72,
+      h*0.34,
+      w*0.23*w2Scale,
       h*0.36*w2Scale,
       (-5 + 12*(0.5+0.5*Math.sin(t*1.7))) * Math.PI/180,
       0.82
@@ -131,22 +131,22 @@ AFRAME.registerComponent("canvas-texture-updater", {
     const cloudRot = 1.5*Math.sin(t*1.4) * Math.PI/180;
     drawCentered(
       this.images.cloud,
-      w*0.50,
+      w*0.42,
       cloudY,
-      w*0.58,
-      h*0.58,
+      w*0.43,
+      h*0.43,
       cloudRot,
       1.0
     );
 
-    // Front long wind sweep
+    // Front long wind sweep - wind01
     const sweepX = w*(0.50 + 0.035*Math.sin(t*3.0));
     drawCentered(
       this.images.wind01,
       sweepX,
-      h*0.52,
+      h*0.61,
       w*0.68,
-      h*0.34,
+      h*0.24,
       0,
       0.80
     );
@@ -156,10 +156,10 @@ AFRAME.registerComponent("canvas-texture-updater", {
     const spAlpha = 0.65 + 0.30*(0.5+0.5*Math.sin(t*5.0));
     drawCentered(
       this.images.sparkles,
-      w*0.53,
-      h*0.44,
-      w*0.46*spScale,
-      h*0.46*spScale,
+      w*0.66,
+      h*0.28,
+      w*0.20*spScale,
+      h*0.20*spScale,
       0,
       spAlpha
     );
