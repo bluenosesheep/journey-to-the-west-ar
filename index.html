@@ -127,8 +127,8 @@ AFRAME.registerComponent("canvas-texture-updater", {
     );
 
     // Main cloud float
-    const cloudY = h*(0.50 - 0.025*Math.sin(t*2.0));
-    const cloudRot = 1.5*Math.sin(t*1.4) * Math.PI/180;
+    const cloudY = h*(0.50 - 0.06*Math.sin(t*2.0));
+    const cloudRot = 3.0*Math.sin(t*1.4) * Math.PI/180;
     drawCentered(
       this.images.cloud,
       w*0.42,
@@ -140,7 +140,7 @@ AFRAME.registerComponent("canvas-texture-updater", {
     );
 
     // Front long wind sweep - wind01
-    const sweepX = w*(0.50 + 0.035*Math.sin(t*3.0));
+    const sweepX = w*(0.50 + 0.10*Math.sin(t*2.4));
     drawCentered(
       this.images.wind01,
       sweepX,
@@ -152,8 +152,8 @@ AFRAME.registerComponent("canvas-texture-updater", {
     );
 
     // Sparkles pulse
-    const spScale = 0.86 + 0.18*(0.5+0.5*Math.sin(t*5.0));
-    const spAlpha = 0.65 + 0.30*(0.5+0.5*Math.sin(t*5.0));
+    const spScale = 0.75 + 0.40*(0.5+0.5*Math.sin(t*5.0));
+    const spAlpha = 0.45 + 0.55*(0.5+0.5*Math.sin(t*5.0));
     drawCentered(
       this.images.sparkles,
       w*0.66,
@@ -192,8 +192,8 @@ AFRAME.registerComponent("canvas-texture-updater", {
   <a-entity mindar-image-target="targetIndex:0" story-target-events>
     <a-plane
       id="fxPlane"
-      width="1.35"
-      height="1.35"
+      width="1.65"
+      height="1.65"
       position="0 0 0.03"
       material="shader: flat; src: #fxCanvas; transparent: true; alphaTest: 0.01; depthWrite: false; side: double"
       canvas-texture-updater>
