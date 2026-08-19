@@ -11,7 +11,7 @@ html,body{margin:0;height:100%;background:#f4ecd9;overflow:hidden}
 <div class="caption">与当前 AR index 同步：位置不变，仅增强动画幅度，并按 1.65 / 1.35 ≈ 1.22 倍预览整体画面尺寸。</div>
 <script>
 const canvas=document.getElementById("fxCanvas"),ctx=canvas.getContext("2d"),images={};let loaded=0;const startTime=performance.now();
-const sources={cloud:"./assets/cloud/cloud.png",wind01:"./assets/cloud/wind_01.png",wind02:"./assets/cloud/wind_02.png",sparkles:"./assets/cloud/sparkles.png"};
+const sources={cloud:"../assets/cloud/cloud.png",wind01:"../assets/cloud/wind_01.png",wind02:"../assets/cloud/wind_02.png",sparkles:"../assets/cloud/sparkles.png"};
 Object.entries(sources).forEach(([key,src])=>{const img=new Image();img.onload=()=>{images[key]=img;loaded++};img.src=src;});
 function drawCentered(img,cx,cy,width,height,rotation=0,alpha=1){ctx.save();ctx.globalAlpha=alpha;ctx.translate(cx,cy);ctx.rotate(rotation);ctx.drawImage(img,-width/2,-height/2,width,height);ctx.restore();}
 function animate(){requestAnimationFrame(animate);if(loaded<4)return;const w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);const t=(performance.now()-startTime)/1000;

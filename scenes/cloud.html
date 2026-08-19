@@ -75,10 +75,10 @@ AFRAME.registerComponent("canvas-texture-updater", {
     this.startTime = performance.now();
 
     const sources = {
-      cloud: "./assets/cloud/cloud.png",
-      wind01: "./assets/cloud/wind_01.png",
-      wind02: "./assets/cloud/wind_02.png",
-      sparkles: "./assets/cloud/sparkles.png"
+      cloud: "../assets/cloud/cloud.png",
+      wind01: "../assets/cloud/wind_01.png",
+      wind02: "../assets/cloud/wind_02.png",
+      sparkles: "../assets/cloud/sparkles.png"
     };
 
     Object.entries(sources).forEach(([key, src]) => {
@@ -181,7 +181,7 @@ AFRAME.registerComponent("canvas-texture-updater", {
 <canvas id="fxCanvas" width="1024" height="1024"></canvas>
 
 <a-scene
-  mindar-image="imageTargetSrc: ./targets/cloud.mind; autoStart: true;"
+  mindar-image="imageTargetSrc: ../targets/cloud.mind; autoStart: true;"
   color-space="sRGB"
   renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true"
   vr-mode-ui="enabled:false"
