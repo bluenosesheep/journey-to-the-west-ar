@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Forest Scene AR</title>
+
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+<style>
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:transparent!important;
+}
+video{
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  height:100vh!important;
+  object-fit:cover!important;
+  z-index:0!important;
+}
+a-scene{
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  height:100vh!important;
+  z-index:1!important;
+  background:transparent!important;
+}
+canvas.a-canvas{
+  background:transparent!important;
+}
+#hint{
+  position:fixed;
+  left:50%;
+  bottom:max(20px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  z-index:20;
+  max-width:88vw;
+  padding:10px 14px;
+  border-radius:999px;
+  background:rgba(255,255,255,.92);
+  color:#222;
+  font:14px/1.35 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  text-align:center;
+  box-shadow:0 6px 24px rgba(0,0,0,.16);
+}
+#forestCanvas{display:none}
+</style>
+
+<script>
+AFRAME.registerComponent("forest-target-events",{
+  init:function(){
+    const hint=document.getElementById("hint");
+    this.el.addEventListener("targetFound",()=>{
+      hint.textContent="森林出现啦！移动手机看看 🌳";
+    });
+    this.el.addEventListener("targetLost",()=>{
+      hint.textContent="请把镜头对准森林识别图";
+    });
+  }
+});
+
+AFRAME.registerComponent("forest-canvas-updater",{
+  init:function(){
+    this.canvas=document.getElementById("forestCanvas");
+    this.ctx=this.canvas.getContext("2d");
+    this.image=new Image();
+    this.ready=false;
+
+    this.image.crossOrigin="anonymous";
+    this.image.onload=()=>{
+      const c=this.canvas;
+      const ctx=this.ctx;
+
+      ctx.clearRect(0,0,c.width,c.height);
+
+      // Draw the forest image once, preserving aspect ratio.
+      const imgRatio=this.image.width/this.image.height;
+      const canvasRatio=c.width/c.height;
+
+      let dw,dh,dx,dy;
+
+      if(imgRatio>canvasRatio){
+        dw=c.width;
+        dh=dw/imgRatio;
+      }else{
+        dh=c.height;
+        dw=dh*imgRatio;
+      }
+
+      dx=(c.width-dw)/2;
+      dy=(c.height-dh)/2;
+
+      ctx.drawImage(this.image,dx,dy,dw,dh);
+      this.ready=true;
+    };
+
+    this.image.src="../assets/forest/forest_scene.png";
+  },
+
+  tick:function(){
+    if(!this.ready)return;
+
+    const mesh=this.el.getObject3D("mesh");
+    if(mesh && mesh.material && mesh.material.map && !mesh.material.map.__forestUpdated){
+      mesh.material.map.needsUpdate=true;
+      mesh.material.map.__forestUpdated=true;
+    }
+  }
+});
+</script>
+</head>
+
+<body>
+<div id="hint">请把镜头对准森林识别图</div>
+
+<!-- 4:3 canvas matches the optimized forest artwork closely -->
+<canvas id="forestCanvas" width="768" height="512"></canvas>
+
+<a-scene
+  mindar-image="imageTargetSrc: ../targets/forest.mind; autoStart: true;"
+  color-space="sRGB"
+  renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true"
+  vr-mode-ui="enabled:false"
+  device-orientation-permission-ui="enabled:false">
+
+  <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+
+  <a-entity mindar-image-target="targetIndex:0" forest-target-events>
+    <a-plane
+      width="2.0"
+      height="1.33"
+      position="0 0.05 0.03"
+      material="shader:flat; src:#forestCanvas; transparent:true; alphaTest:0.01; depthWrite:false; side:double"
+      forest-canvas-updater>
+    </a-plane>
+  </a-entity>
+
+</a-scene>
+</body>
+</html>
