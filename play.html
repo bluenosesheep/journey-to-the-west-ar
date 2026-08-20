@@ -1,19 +1,365 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Journey to the West AR</title>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>AR Story World · Play</title>
+
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}canvas.a-canvas{background:transparent!important}.off{display:none}#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px system-ui;text-align:center}</style>
+
+<style>
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:transparent!important;
+}
+video{
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  height:100vh!important;
+  object-fit:cover!important;
+  z-index:0!important;
+}
+a-scene{
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  height:100vh!important;
+  z-index:1!important;
+  background:transparent!important;
+}
+canvas.a-canvas{background:transparent!important}
+.offscreen{display:none}
+#hint{
+  position:fixed;
+  left:50%;
+  bottom:max(20px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  z-index:20;
+  max-width:90vw;
+  padding:10px 14px;
+  border-radius:999px;
+  background:rgba(255,255,255,.92);
+  color:#222;
+  font:14px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  text-align:center;
+  box-shadow:0 6px 24px rgba(0,0,0,.16);
+}
+</style>
+
 <script>
-AFRAME.registerComponent("cloud-events",{init:function(){const h=document.getElementById("hint");this.el.addEventListener("targetFound",()=>h.textContent="MAGIC 01 · 筋斗云出现啦！✨");this.el.addEventListener("targetLost",()=>h.textContent="选择一张 MAGIC 卡，放进你的故事吧！")}});
-AFRAME.registerComponent("fire-events",{init:function(){const h=document.getElementById("hint");this.el.addEventListener("targetFound",()=>h.textContent="MAGIC 02 · 三昧真火出现啦！🔥");this.el.addEventListener("targetLost",()=>h.textContent="选择一张 MAGIC 卡，放进你的故事吧！")}});
-function makeUpdater(canvasId,sources,drawFn){return{init:function(){this.c=document.getElementById(canvasId);this.ctx=this.c.getContext("2d");this.img={};this.loaded=0;this.start=performance.now();Object.entries(sources).forEach(([k,s])=>{const i=new Image();i.crossOrigin="anonymous";i.onload=()=>{this.img[k]=i;this.loaded++};i.src=s})},tick:function(){if(this.loaded<Object.keys(sources).length)return;const w=this.c.width,h=this.c.height,t=(performance.now()-this.start)/1000;this.ctx.clearRect(0,0,w,h);drawFn(this.ctx,this.img,w,h,t);const m=this.el.getObject3D("mesh");if(m&&m.material&&m.material.map)m.material.map.needsUpdate=true;}}}
-const dc=(ctx,img,x,y,w,h,r=0,a=1)=>{ctx.save();ctx.globalAlpha=a;ctx.translate(x,y);ctx.rotate(r);ctx.drawImage(img,-w/2,-h/2,w,h);ctx.restore()};
-AFRAME.registerComponent("cloud-canvas",makeUpdater("cloudCanvas",{cloud:"./assets/cloud/cloud.png",wind01:"./assets/cloud/wind_01.png",wind02:"./assets/cloud/wind_02.png",sparkles:"./assets/cloud/sparkles.png"},(ctx,I,w,h,t)=>{let z=.92+.08*(.5+.5*Math.sin(t*2.2));dc(ctx,I.wind02,w*.72,h*.34,w*.23*z,h*.36*z,(-5+12*(.5+.5*Math.sin(t*1.7)))*Math.PI/180,.82);let cy=h*(.50-.06*Math.sin(t*2)),cr=3*Math.sin(t*1.4)*Math.PI/180;dc(ctx,I.cloud,w*.42,cy,w*.43,h*.43,cr,1);let sx=w*(.50+.10*Math.sin(t*2.4));dc(ctx,I.wind01,sx,h*.61,w*.68,h*.24,0,.8);let ss=.75+.40*(.5+.5*Math.sin(t*5)),sa=.45+.55*(.5+.5*Math.sin(t*5));dc(ctx,I.sparkles,w*.66,h*.28,w*.20*ss,h*.20*ss,0,sa)}));
-AFRAME.registerComponent("fire-canvas",makeUpdater("fireCanvas",{fire:"./assets/fire/fire_main.png",sparks:"./assets/fire/fire_sparks.png",smoke:"./assets/fire/smoke.png",heat:"./assets/fire/heat_wave.png"},(ctx,I,w,h,t)=>{let hs=.94+.10*(.5+.5*Math.sin(t*1.6));dc(ctx,I.heat,w*.50,h*.61,w*.78*hs,h*.48*hs,4*Math.sin(t*.9)*Math.PI/180,.58);let sx=w*(.50+.035*Math.sin(t*1.2)),sy=h*(.42-.035*Math.sin(t*1.0)),ss=.92+.10*(.5+.5*Math.sin(t*1.4));dc(ctx,I.smoke,sx,sy,w*.62*ss,h*.42*ss,2.5*Math.sin(t*1.1)*Math.PI/180,.48);let fy=h*(.54-.06*Math.sin(t*2.2)),fs=.88+.18*(.5+.5*Math.sin(t*2.6)),fr=3.5*Math.sin(t*1.8)*Math.PI/180;dc(ctx,I.fire,w*.47,fy,w*.52*fs,h*.42*fs,fr,1);let py=h*(.42-.08*Math.sin(t*1.7)),ps=.88+.22*(.5+.5*Math.sin(t*4)),pa=.55+.40*(.5+.5*Math.sin(t*5.2));dc(ctx,I.sparks,w*.53,py,w*.66*ps,h*.44*ps,0,pa)}));
-</script></head><body>
-<div id="hint">选择一张 MAGIC 卡，放进你的故事吧！</div>
-<canvas id="cloudCanvas" class="off" width="1024" height="1024"></canvas><canvas id="fireCanvas" class="off" width="1024" height="1024"></canvas>
-<a-scene mindar-image="imageTargetSrc: ./targets/all.mind; autoStart: true; maxTrack: 3;" color-space="sRGB" renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true" vr-mode-ui="enabled:false" device-orientation-permission-ui="enabled:false">
-<a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
-<a-entity mindar-image-target="targetIndex:0" cloud-events><a-plane width="1.65" height="1.65" position="0 0 0.03" material="shader:flat;src:#cloudCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double" cloud-canvas></a-plane></a-entity>
-<a-entity mindar-image-target="targetIndex:1" fire-events><a-plane width="1.65" height="1.65" position="0 0 0.03" material="shader:flat;src:#fireCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double" fire-canvas></a-plane></a-entity>
-</a-scene></body></html>
+const DEFAULT_HINT="把 MAGIC 或 SCENE 图放进你的故事吧！";
+function setHint(text){
+  const el=document.getElementById("hint");
+  if(el) el.textContent=text;
+}
+
+/* ---------------- Shared target messages ---------------- */
+function registerTargetEvents(name, foundText){
+  AFRAME.registerComponent(name,{
+    init:function(){
+      this.el.addEventListener("targetFound",()=>setHint(foundText));
+      this.el.addEventListener("targetLost",()=>setHint(DEFAULT_HINT));
+    }
+  });
+}
+
+registerTargetEvents("cloud-events","MAGIC 01 · 筋斗云出现啦！✨");
+registerTargetEvents("fire-events","MAGIC 02 · 三昧真火出现啦！🔥");
+registerTargetEvents("forest-events","SCENE · 森林出现啦！🌳");
+registerTargetEvents("river-events","SCENE · 河流出现啦！🌊");
+registerTargetEvents("bridge-events","SCENE · 小桥出现啦！🌉");
+
+/* ---------------- Canvas helper ---------------- */
+function drawCentered(ctx,img,cx,cy,width,height,rotation=0,alpha=1){
+  ctx.save();
+  ctx.globalAlpha=alpha;
+  ctx.translate(cx,cy);
+  ctx.rotate(rotation);
+  ctx.drawImage(img,-width/2,-height/2,width,height);
+  ctx.restore();
+}
+
+function markTexture(el){
+  const mesh=el.getObject3D("mesh");
+  if(mesh && mesh.material && mesh.material.map){
+    mesh.material.map.needsUpdate=true;
+  }
+}
+
+/* ---------------- MAGIC 01 Cloud: lazy load ---------------- */
+AFRAME.registerComponent("cloud-canvas-lazy",{
+  init:function(){
+    this.canvas=document.getElementById("cloudCanvas");
+    this.ctx=this.canvas.getContext("2d");
+    this.images={};
+    this.loaded=0;
+    this.loading=false;
+    this.ready=false;
+    this.active=false;
+    this.start=performance.now();
+
+    const target=this.el.parentEl;
+    target.addEventListener("targetFound",()=>{
+      this.active=true;
+      if(!this.loading && !this.ready) this.loadAssets();
+    });
+    target.addEventListener("targetLost",()=>{this.active=false;});
+  },
+
+  loadAssets:function(){
+    this.loading=true;
+    const sources={
+      cloud:"./assets/cloud/cloud.png",
+      wind01:"./assets/cloud/wind_01.png",
+      wind02:"./assets/cloud/wind_02.png",
+      sparkles:"./assets/cloud/sparkles.png"
+    };
+    Object.entries(sources).forEach(([key,src])=>{
+      const img=new Image();
+      img.crossOrigin="anonymous";
+      img.onload=()=>{
+        this.images[key]=img;
+        this.loaded++;
+        if(this.loaded===4){
+          this.ready=true;
+          this.start=performance.now();
+        }
+      };
+      img.src=src;
+    });
+  },
+
+  tick:function(){
+    if(!this.active || !this.ready) return;
+
+    const c=this.canvas,ctx=this.ctx,w=c.width,h=c.height;
+    const t=(performance.now()-this.start)/1000;
+    ctx.clearRect(0,0,w,h);
+
+    const w2Scale=.92+.08*(.5+.5*Math.sin(t*2.2));
+    drawCentered(ctx,this.images.wind02,w*.72,h*.34,w*.23*w2Scale,h*.36*w2Scale,
+      (-5+12*(.5+.5*Math.sin(t*1.7)))*Math.PI/180,.82);
+
+    const cloudY=h*(.50-.06*Math.sin(t*2.0));
+    const cloudRot=3.0*Math.sin(t*1.4)*Math.PI/180;
+    drawCentered(ctx,this.images.cloud,w*.42,cloudY,w*.43,h*.43,cloudRot,1);
+
+    const sweepX=w*(.50+.10*Math.sin(t*2.4));
+    drawCentered(ctx,this.images.wind01,sweepX,h*.61,w*.68,h*.24,0,.80);
+
+    const spScale=.75+.40*(.5+.5*Math.sin(t*5.0));
+    const spAlpha=.45+.55*(.5+.5*Math.sin(t*5.0));
+    drawCentered(ctx,this.images.sparkles,w*.66,h*.28,w*.20*spScale,h*.20*spScale,0,spAlpha);
+
+    markTexture(this.el);
+  }
+});
+
+/* ---------------- MAGIC 02 Fire: lazy load ---------------- */
+AFRAME.registerComponent("fire-canvas-lazy",{
+  init:function(){
+    this.canvas=document.getElementById("fireCanvas");
+    this.ctx=this.canvas.getContext("2d");
+    this.images={};
+    this.loaded=0;
+    this.loading=false;
+    this.ready=false;
+    this.active=false;
+    this.start=performance.now();
+
+    const target=this.el.parentEl;
+    target.addEventListener("targetFound",()=>{
+      this.active=true;
+      if(!this.loading && !this.ready) this.loadAssets();
+    });
+    target.addEventListener("targetLost",()=>{this.active=false;});
+  },
+
+  loadAssets:function(){
+    this.loading=true;
+    const sources={
+      fire:"./assets/fire/fire_main.png",
+      sparks:"./assets/fire/fire_sparks.png",
+      smoke:"./assets/fire/smoke.png",
+      heat:"./assets/fire/heat_wave.png"
+    };
+    Object.entries(sources).forEach(([key,src])=>{
+      const img=new Image();
+      img.crossOrigin="anonymous";
+      img.onload=()=>{
+        this.images[key]=img;
+        this.loaded++;
+        if(this.loaded===4){
+          this.ready=true;
+          this.start=performance.now();
+        }
+      };
+      img.src=src;
+    });
+  },
+
+  tick:function(){
+    if(!this.active || !this.ready) return;
+
+    const c=this.canvas,ctx=this.ctx,w=c.width,h=c.height;
+    const t=(performance.now()-this.start)/1000;
+    ctx.clearRect(0,0,w,h);
+
+    const heatScale=.94+.10*(.5+.5*Math.sin(t*1.6));
+    drawCentered(ctx,this.images.heat,w*.50,h*.61,w*.78*heatScale,h*.48*heatScale,
+      4*Math.sin(t*.9)*Math.PI/180,.58);
+
+    const smokeX=w*(.50+.035*Math.sin(t*1.2));
+    const smokeY=h*(.42-.035*Math.sin(t*1.0));
+    const smokeScale=.92+.10*(.5+.5*Math.sin(t*1.4));
+    drawCentered(ctx,this.images.smoke,smokeX,smokeY,w*.62*smokeScale,h*.42*smokeScale,
+      2.5*Math.sin(t*1.1)*Math.PI/180,.48);
+
+    const fireY=h*(.54-.06*Math.sin(t*2.2));
+    const fireScale=.88+.18*(.5+.5*Math.sin(t*2.6));
+    const fireRot=3.5*Math.sin(t*1.8)*Math.PI/180;
+    drawCentered(ctx,this.images.fire,w*.47,fireY,w*.52*fireScale,h*.42*fireScale,fireRot,1);
+
+    const sparkY=h*(.42-.08*Math.sin(t*1.7));
+    const sparkScale=.88+.22*(.5+.5*Math.sin(t*4.0));
+    const sparkAlpha=.55+.40*(.5+.5*Math.sin(t*5.2));
+    drawCentered(ctx,this.images.sparks,w*.53,sparkY,w*.66*sparkScale,h*.44*sparkScale,0,sparkAlpha);
+
+    markTexture(this.el);
+  }
+});
+
+/* ---------------- Static scene lazy loader ---------------- */
+AFRAME.registerComponent("static-scene-lazy",{
+  schema:{
+    canvas:{type:"selector"},
+    src:{type:"string"}
+  },
+
+  init:function(){
+    this.ready=false;
+    this.loading=false;
+    const target=this.el.parentEl;
+
+    target.addEventListener("targetFound",()=>{
+      if(!this.ready && !this.loading) this.load();
+    });
+  },
+
+  load:function(){
+    this.loading=true;
+    const canvas=this.data.canvas;
+    const ctx=canvas.getContext("2d");
+    const img=new Image();
+    img.crossOrigin="anonymous";
+
+    img.onload=()=>{
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+
+      const imgRatio=img.width/img.height;
+      const canvasRatio=canvas.width/canvas.height;
+      let dw,dh;
+      if(imgRatio>canvasRatio){
+        dw=canvas.width;
+        dh=dw/imgRatio;
+      }else{
+        dh=canvas.height;
+        dw=dh*imgRatio;
+      }
+
+      const dx=(canvas.width-dw)/2;
+      const dy=(canvas.height-dh)/2;
+      ctx.drawImage(img,dx,dy,dw,dh);
+
+      this.ready=true;
+      markTexture(this.el);
+    };
+
+    img.src=this.data.src;
+  }
+});
+</script>
+</head>
+
+<body>
+<div id="hint">把 MAGIC 或 SCENE 图放进你的故事吧！</div>
+
+<!-- Offscreen canvases -->
+<canvas id="cloudCanvas" class="offscreen" width="1024" height="1024"></canvas>
+<canvas id="fireCanvas" class="offscreen" width="1024" height="1024"></canvas>
+<canvas id="forestCanvas" class="offscreen" width="768" height="512"></canvas>
+<canvas id="riverCanvas" class="offscreen" width="768" height="512"></canvas>
+<canvas id="bridgeCanvas" class="offscreen" width="768" height="512"></canvas>
+
+<a-scene
+  mindar-image="imageTargetSrc: ./targets/all.mind; autoStart: true; maxTrack: 5;"
+  color-space="sRGB"
+  renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true"
+  vr-mode-ui="enabled:false"
+  device-orientation-permission-ui="enabled:false">
+
+  <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+
+  <!-- 0 · MAGIC 01 Cloud -->
+  <a-entity mindar-image-target="targetIndex:0" cloud-events>
+    <a-plane
+      width="1.65"
+      height="1.65"
+      position="0 0 0.03"
+      material="shader:flat; src:#cloudCanvas; transparent:true; alphaTest:0.01; depthWrite:false; side:double"
+      cloud-canvas-lazy>
+    </a-plane>
+  </a-entity>
+
+  <!-- 1 · MAGIC 02 Fire -->
+  <a-entity mindar-image-target="targetIndex:1" fire-events>
+    <a-plane
+      width="1.65"
+      height="1.65"
+      position="0 0 0.03"
+      material="shader:flat; src:#fireCanvas; transparent:true; alphaTest:0.01; depthWrite:false; side:double"
+      fire-canvas-lazy>
+    </a-plane>
+  </a-entity>
+
+  <!-- 2 · Forest -->
+  <a-entity mindar-image-target="targetIndex:2" forest-events>
+    <a-plane
+      width="2.6"
+      height="1.73"
+      position="0 0.05 0.03"
+      material="shader:flat; src:#forestCanvas; transparent:true; alphaTest:0.01; depthWrite:false; side:double"
+      static-scene-lazy="canvas:#forestCanvas; src:./assets/forest/forest_scene.png">
+    </a-plane>
+  </a-entity>
+
+  <!-- 3 · River -->
+  <a-entity mindar-image-target="targetIndex:3" river-events>
+    <a-plane
+      width="2.4"
+      height="1.6"
+      position="0 0.02 0.03"
+      material="shader:flat; src:#riverCanvas; transparent:true; alphaTest:0.01; depthWrite:false; side:double"
+      static-scene-lazy="canvas:#riverCanvas; src:./assets/river/river_scene.png">
+    </a-plane>
+  </a-entity>
+
+  <!-- 4 · Bridge -->
+  <a-entity mindar-image-target="targetIndex:4" bridge-events>
+    <a-plane
+      width="2.4"
+      height="1.6"
+      position="0 0.03 0.03"
+      material="shader:flat; src:#bridgeCanvas; transparent:true; alphaTest:0.01; depthWrite:false; side:double"
+      static-scene-lazy="canvas:#bridgeCanvas; src:./assets/bridge/bridge_scene.png">
+    </a-plane>
+  </a-entity>
+
+</a-scene>
+</body>
+</html>
