@@ -26,18 +26,24 @@ h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(40px,8vw
 .note{text-align:center;margin-top:12px;color:#8d7b6c;font-size:12px}
 @media(max-width:680px){body{padding:12px}.card{min-height:calc(100vh - 24px);padding:22px 16px}.steps{grid-template-columns:1fr;gap:10px}.step{display:grid;grid-template-columns:38px 1fr;column-gap:10px}.step .num{grid-row:1/span 2}.topline{align-items:flex-start;flex-direction:column}}
 </style>
+
+<script>
+  // Preload the combined MindAR target database while the user reads the intro.
+  // This does not start the camera and does not change play.html.
+  window.addEventListener("DOMContentLoaded", () => {
+    fetch("./targets/all.mind", { cache: "force-cache" })
+      .then(() => console.log("all.mind preloaded"))
+      .catch(() => {});
+  });
+</script>
+
 </head>
 <body>
 <main class="card">
-<div class="topline">
-<span>AR STORY CARDS</span>
-<div class="badges"><span class="badge">MAGIC 01</span><span class="badge">MAGIC 02</span></div>
-</div>
-
 <section class="hero">
 <div class="kicker">AR STORY WORLD</div>
 <h1>让你的故事<br>动起来</h1>
-<div class="subtitle">搭建你的世界，选择一张 MAGIC 卡，让你创造的故事发生变化。</div>
+<div class="subtitle">选择一张 MAGIC 卡，搭建你的世界。</div>
 <div class="en">Build your own world, choose a MAGIC card, and bring your story to life with AR.</div>
 </section>
 
@@ -47,10 +53,6 @@ h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(40px,8vw
 <article class="step"><div class="num">3</div><h2>激活 · ACTIVATE</h2><p>进入 AR 后，把 MAGIC 卡放进场景，看看故事发生什么。</p></article>
 </section>
 
-<div class="magic-row">
-<div class="magic">☁️ <strong>MAGIC 01</strong> · 筋斗云</div>
-<div class="magic">🔥 <strong>MAGIC 02</strong> · 三昧真火</div>
-</div>
 
 <div class="start"><a href="./play.html">开启 AR 故事 · START AR</a></div>
 <div class="note">点击后浏览器会请求摄像头权限。</div>
