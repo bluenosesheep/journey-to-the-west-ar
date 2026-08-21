@@ -3,27 +3,13 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}canvas.a-canvas{background:transparent!important}.off{display:none}#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px system-ui;text-align:center}</style>
 <script>
-<<<<<<< Updated upstream
-AFRAME.registerComponent("forest-events",{init:function(){const h=document.getElementById("hint");this.el.addEventListener("targetFound",()=>h.textContent="SCENE · 森林出现啦！🌳");this.el.addEventListener("targetLost",()=>h.textContent="选择一张 MAGIC 卡，放进你的故事吧！")}});
-AFRAME.registerComponent("bridge-events",{init:function(){const h=document.getElementById("hint");this.el.addEventListener("targetFound",()=>h.textContent="SCENE · 小桥出现啦！🌉");this.el.addEventListener("targetLost",()=>h.textContent="选择一张 MAGIC 卡，放进你的故事吧！")}});
-=======
 AFRAME.registerComponent("forest-events",{init:function(){const h=document.getElementById("hint");this.el.addEventListener("targetFound",()=>h.textContent="FOREST WORLD · 森林出现啦！🌳");this.el.addEventListener("targetLost",()=>h.textContent="继续探索森林世界吧！")}});
 AFRAME.registerComponent("bridge-events",{init:function(){const h=document.getElementById("hint");this.el.addEventListener("targetFound",()=>h.textContent="FOREST WORLD · 小桥出现啦！🌉");this.el.addEventListener("targetLost",()=>h.textContent="继续探索森林世界吧！")}});
->>>>>>> Stashed changes
 function makeUpdater(canvasId,sources,drawFn){return{init:function(){this.c=document.getElementById(canvasId);this.ctx=this.c.getContext("2d");this.img={};this.loaded=0;this.start=performance.now();Object.entries(sources).forEach(([k,s])=>{const i=new Image();i.crossOrigin="anonymous";i.onload=()=>{this.img[k]=i;this.loaded++};i.src=s})},tick:function(){if(this.loaded<Object.keys(sources).length)return;const w=this.c.width,h=this.c.height,t=(performance.now()-this.start)/1000;this.ctx.clearRect(0,0,w,h);drawFn(this.ctx,this.img,w,h,t);const m=this.el.getObject3D("mesh");if(m&&m.material&&m.material.map)m.material.map.needsUpdate=true;}}}
 const dc=(ctx,img,x,y,w,h,r=0,a=1)=>{ctx.save();ctx.globalAlpha=a;ctx.translate(x,y);ctx.rotate(r);ctx.drawImage(img,-w/2,-h/2,w,h);ctx.restore()};
 AFRAME.registerComponent("forest-canvas",makeUpdater("forestCanvas",{forest:"./assets/forest/forest_scene.png"},(ctx,I,w,h,t)=>{dc(ctx,I.forest,w*.50,h*.50,w*.98,h*.66,0,1)}));
 AFRAME.registerComponent("bridge-canvas",makeUpdater("bridgeCanvas",{bridge:"./assets/bridge/bridge_scene.png"},(ctx,I,w,h,t)=>{dc(ctx,I.bridge,w*.50,h*.50,w*.98,h*.66,0,1)}));
 </script></head><body>
-<<<<<<< Updated upstream
-<div id="hint">选择一张森林场景，放进你的故事吧！</div>
-<canvas id="cloudCanvas" class="off" width="1024" height="1024"></canvas><canvas id="fireCanvas" class="off" width="1024" height="1024"></canvas><canvas id="forestCanvas" class="off" width="768" height="512"></canvas><canvas id="riverCanvas" class="off" width="768" height="512"></canvas><canvas id="bridgeCanvas" class="off" width="768" height="512"></canvas>
-<a-scene mindar-image="imageTargetSrc: ./targets/forest_world.mind; autoStart: true; maxTrack: 5;" color-space="sRGB" renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true" vr-mode-ui="enabled:false" device-orientation-permission-ui="enabled:false">
-<a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
-<a-entity mindar-image-target="targetIndex:0" forest-events><a-plane width="2.6" height="1.73" position="0 0.05 0.03" material="shader:flat;src:#forestCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double" forest-canvas></a-plane></a-entity>
-<a-entity mindar-image-target="targetIndex:1" bridge-events><a-plane width="2.4" height="1.6" position="0 0.03 0.03" material="shader:flat;src:#bridgeCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double" bridge-canvas></a-plane></a-entity>
-</a-scene></body></html>
-=======
 <div id="hint">继续探索森林世界吧！</div>
 <canvas id="forestCanvas" class="off" width="768" height="512"></canvas><canvas id="bridgeCanvas" class="off" width="768" height="512"></canvas>
 <a-scene mindar-image="imageTargetSrc: ./targets/forest_world.mind; autoStart: true; maxTrack: 2;" color-space="sRGB" renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true" vr-mode-ui="enabled:false" device-orientation-permission-ui="enabled:false">
@@ -31,4 +17,3 @@ AFRAME.registerComponent("bridge-canvas",makeUpdater("bridgeCanvas",{bridge:"./a
 <a-entity mindar-image-target="targetIndex:0" forest-events><a-plane width="2.6" height="1.73" position="0 0.05 0.03" material="shader:flat;src:#forestCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double" forest-canvas></a-plane></a-entity>
 <a-entity mindar-image-target="targetIndex:1" bridge-events><a-plane width="2.4" height="1.6" position="0 0.03 0.03" material="shader:flat;src:#bridgeCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double" bridge-canvas></a-plane></a-entity>
 </a-scene></body></html>
->>>>>>> Stashed changes
