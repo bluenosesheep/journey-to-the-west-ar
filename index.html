@@ -29,10 +29,10 @@ h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(40px,8vw
 
 <script>
   // Preload the combined MindAR target database while the user reads the intro.
-  // This does not start the camera and does not change play.html.
+  // This does not start the camera and does not change play_forest.html.
   window.addEventListener("DOMContentLoaded", () => {
-    fetch("./targets/all.mind", { cache: "force-cache" })
-      .then(() => console.log("all.mind preloaded"))
+    fetch("./targets/forest_world.mind", { cache: "force-cache" })
+      .then(() => console.log("forest_world.mind preloaded"))
       .catch(() => {});
   });
 </script>
@@ -54,7 +54,7 @@ h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(40px,8vw
 </section>
 
 
-<div class="start"><a href="./play.html">开启 AR 故事 · START AR</a></div>
+<div class="start"><a href="./play_forest.html">开启 AR 故事 · START AR</a></div>
 <div class="note">点击后浏览器会请求摄像头权限。</div>
 </main>
 </body>
