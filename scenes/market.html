@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Road Scene AR</title>
+<title>Market Scene AR</title>
 
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -52,14 +52,14 @@ canvas.a-canvas{background:transparent!important}
 </style>
 
 <script>
-AFRAME.registerComponent("road-events",{
+AFRAME.registerComponent("market-events",{
   init:function(){
     const hint=document.getElementById("hint");
     this.el.addEventListener("targetFound",()=>{
-      hint.textContent="道路出现啦！🚗";
+      hint.textContent="热闹的市场出现啦！🧺🥕";
     });
     this.el.addEventListener("targetLost",()=>{
-      hint.textContent="请把镜头对准 Road 识别图";
+      hint.textContent="请把镜头对准 Market 识别图";
     });
   }
 });
@@ -80,8 +80,8 @@ function makeUpdater(canvasId,sources,drawFn){
       this.ctx=this.c.getContext("2d");
       this.images={};
       this.loaded=0;
-      const entries=Object.entries(sources);
 
+      const entries=Object.entries(sources);
       entries.forEach(([k,src])=>{
         const img=new Image();
         img.onload=()=>{
@@ -90,7 +90,6 @@ function makeUpdater(canvasId,sources,drawFn){
         };
         img.src=src;
       });
-
       this.total=entries.length;
     },
 
@@ -111,12 +110,12 @@ function makeUpdater(canvasId,sources,drawFn){
 }
 
 AFRAME.registerComponent(
-  "road-canvas",
+  "market-canvas",
   makeUpdater(
-    "roadCanvas",
-    {road:"../assets/city/road_scene.png"},
+    "marketCanvas",
+    {market:"../assets/city/market_scene.png"},
     (ctx,I,w,h)=>{
-      dc(ctx,I.road,w*.50,h*.50,w*.98,h*.72,0,1);
+      dc(ctx,I.market,w*.50,h*.50,w*.98,h*.66,0,1);
     }
   )
 );
@@ -124,12 +123,12 @@ AFRAME.registerComponent(
 </head>
 
 <body>
-<div id="hint">请把镜头对准 Road 识别图</div>
+<div id="hint">请把镜头对准 Market 识别图</div>
 
-<canvas id="roadCanvas" class="off" width="768" height="512"></canvas>
+<canvas id="marketCanvas" class="off" width="768" height="512"></canvas>
 
 <a-scene
-  mindar-image="imageTargetSrc: ../targets/road.mind; autoStart: true;"
+  mindar-image="imageTargetSrc: ../targets/market.mind; autoStart: true;"
   color-space="sRGB"
   renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true"
   vr-mode-ui="enabled:false"
@@ -137,13 +136,13 @@ AFRAME.registerComponent(
 
   <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
-  <a-entity mindar-image-target="targetIndex:0" road-events>
+  <a-entity mindar-image-target="targetIndex:0" market-events>
     <a-plane
-      width="2.45"
-      height="1.43"
-      position="0 0.02 0.03"
-      material="shader:flat;src:#roadCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
-      road-canvas>
+      width="2.35"
+      height="1.57"
+      position="0 0.03 0.03"
+      material="shader:flat;src:#marketCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
+      market-canvas>
     </a-plane>
   </a-entity>
 
