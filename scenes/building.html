@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Building Scene AR</title>
+
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+<style>
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:transparent!important;
+}
+video{
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  height:100vh!important;
+  object-fit:cover!important;
+  z-index:0!important;
+}
+a-scene{
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  height:100vh!important;
+  z-index:1!important;
+  background:transparent!important;
+}
+canvas.a-canvas{background:transparent!important}
+.off{display:none}
+#hint{
+  position:fixed;
+  left:50%;
+  bottom:max(20px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  z-index:20;
+  max-width:88vw;
+  padding:10px 14px;
+  border-radius:999px;
+  background:rgba(255,255,255,.92);
+  color:#222;
+  font:14px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  text-align:center;
+  box-shadow:0 6px 24px rgba(0,0,0,.16);
+}
+</style>
+
+<script>
+AFRAME.registerComponent("building-events",{
+  init:function(){
+    const hint=document.getElementById("hint");
+    this.el.addEventListener("targetFound",()=>{
+      hint.textContent="城市出现啦！🏙️";
+    });
+    this.el.addEventListener("targetLost",()=>{
+      hint.textContent="请把镜头对准 Building 识别图";
+    });
+  }
+});
+
+function dc(ctx,img,cx,cy,w,h,r=0,a=1){
+  ctx.save();
+  ctx.globalAlpha=a;
+  ctx.translate(cx,cy);
+  ctx.rotate(r);
+  ctx.drawImage(img,-w/2,-h/2,w,h);
+  ctx.restore();
+}
+
+function makeUpdater(canvasId,sources,drawFn){
+  return {
+    init:function(){
+      this.c=document.getElementById(canvasId);
+      this.ctx=this.c.getContext("2d");
+      this.images={};
+      this.loaded=0;
+      const entries=Object.entries(sources);
+      entries.forEach(([k,src])=>{
+        const img=new Image();
+        img.onload=()=>{
+          this.images[k]=img;
+          this.loaded++;
+        };
+        img.src=src;
+      });
+      this.total=entries.length;
+    },
+    tick:function(){
+      if(this.loaded<this.total)return;
+      const c=this.c,ctx=this.ctx,w=c.width,h=c.height;
+      ctx.clearRect(0,0,w,h);
+      drawFn(ctx,this.images,w,h);
+      const mesh=this.el.getObject3D("mesh");
+      if(mesh&&mesh.material&&mesh.material.map){
+        mesh.material.map.needsUpdate=true;
+      }
+    }
+  };
+}
+
+AFRAME.registerComponent(
+  "building-canvas",
+  makeUpdater(
+    "buildingCanvas",
+    {building:"../assets/city/building_scene.png"},
+    (ctx,I,w,h)=>{
+      dc(ctx,I.building,w*.50,h*.50,w*.98,h*.66,0,1);
+    }
+  )
+);
+</script>
+</head>
+
+<body>
+<div id="hint">请把镜头对准 Building 识别图</div>
+
+<canvas id="buildingCanvas" class="off" width="768" height="512"></canvas>
+
+<a-scene
+  mindar-image="imageTargetSrc: ../targets/building.mind; autoStart: true;"
+  color-space="sRGB"
+  renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true"
+  vr-mode-ui="enabled:false"
+  device-orientation-permission-ui="enabled:false">
+
+  <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+
+  <a-entity mindar-image-target="targetIndex:0" building-events>
+    <a-plane
+      width="2.55"
+      height="1.70"
+      position="0 0.03 0.03"
+      material="shader:flat;src:#buildingCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
+      building-canvas>
+    </a-plane>
+  </a-entity>
+
+</a-scene>
+</body>
+</html>
