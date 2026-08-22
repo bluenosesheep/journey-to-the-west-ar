@@ -133,44 +133,50 @@ AFRAME.registerComponent("grow-events",{
   }
 });
 
+
 function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
 function easeOutCubic(x){ return 1-Math.pow(1-x,3); }
 function smoothstep(x){ x=clamp(x,0,1); return x*x*(3-2*x); }
 
-AFRAME.registerComponent("grow-canvas",{
-  init:function(){
-    this.c=document.getElementById("growCanvas");
-    this.ctx=this.c.getContext("2d");
-    this.images={};
-    this.loaded=0;
-    this.start=performance.now();
+window.addEventListener("DOMContentLoaded",()=>{
+  const c=document.getElementById("growCanvas");
+  const ctx=c.getContext("2d");
+  const images={};
+  let loaded=0;
 
-    const sources={
-      vine:"../assets/grow/grow_vine.png",
-      leaves:"../assets/grow/grow_leaves.png",
-      flower:"../assets/grow/grow_flower.png"
-    };
+  const sources={
+    vine:"../assets/grow/grow_vine.png",
+    leaves:"../assets/grow/grow_leaves.png",
+    flower:"../assets/grow/grow_flower.png"
+  };
 
-    Object.entries(sources).forEach(([key,src])=>{
-      const img=new Image();
-      img.onload=()=>{ this.images[key]=img; this.loaded++; };
-      img.src=src;
-    });
+  Object.entries(sources).forEach(([key,src])=>{
+    const img=new Image();
+    img.onload=()=>{ images[key]=img; loaded++; };
+    img.src=src;
+  });
 
-    this.total=Object.keys(sources).length;
-  },
+  const total=Object.keys(sources).length;
+  const animStart=performance.now();
 
-  tick:function(){
-    if(this.loaded<this.total)return;
+  const drawCentered=(img,cx,cy,ww,hh,alpha=1,scaleY=1)=>{
+    ctx.save();
+    ctx.globalAlpha=alpha;
+    ctx.translate(cx,cy);
+    ctx.scale(1,scaleY);
+    ctx.drawImage(img,-ww/2,-hh/2,ww,hh);
+    ctx.restore();
+  };
 
-    const ctx=this.ctx;
-    const c=this.c;
-    const w=c.width;
-    const h=c.height;
-    const t=(performance.now()-this.start)/1000;
+  function render(){
+    requestAnimationFrame(render);
+    if(loaded<total)return;
 
+    const w=c.width,h=c.height;
+    const t=(performance.now()-animStart)/1000;
     ctx.clearRect(0,0,w,h);
 
+    // Same 6-second animation as preview.
     const cycle=6.0;
     const phase=(t%cycle)/cycle;
 
@@ -184,9 +190,9 @@ AFRAME.registerComponent("grow-canvas",{
     const vineW=w*.58;
     const vineH=h*.78;
     const sx=0;
-    const sy=this.images.vine.height*(1-vineP);
-    const sw=this.images.vine.width;
-    const sh=this.images.vine.height*vineP;
+    const sy=images.vine.height*(1-vineP);
+    const sw=images.vine.width;
+    const sh=images.vine.height*vineP;
     const dx=w*.21;
     const dy=h*.86-vineH*vineP;
     const dw=vineW;
@@ -195,22 +201,13 @@ AFRAME.registerComponent("grow-canvas",{
     if(vineP>0.01){
       ctx.save();
       ctx.globalAlpha=.98;
-      ctx.drawImage(this.images.vine,sx,sy,sw,sh,dx,dy,dw,dh);
+      ctx.drawImage(images.vine,sx,sy,sw,sh,dx,dy,dw,dh);
       ctx.restore();
     }
 
-    const drawCentered=(img,cx,cy,ww,hh,alpha=1,scaleY=1)=>{
-      ctx.save();
-      ctx.globalAlpha=alpha;
-      ctx.translate(cx,cy);
-      ctx.scale(1,scaleY);
-      ctx.drawImage(img,-ww/2,-hh/2,ww,hh);
-      ctx.restore();
-    };
-
     if(leavesP>0.01){
       drawCentered(
-        this.images.leaves,
+        images.leaves,
         w*.50,
         h*.49,
         w*.56*(.90+.10*leavesP),
@@ -223,7 +220,7 @@ AFRAME.registerComponent("grow-canvas",{
     if(flowerP>0.01){
       const bloomScale=.70+.30*flowerP;
       drawCentered(
-        this.images.flower,
+        images.flower,
         w*.50,
         h*.44,
         w*.50*bloomScale,
@@ -233,12 +230,18 @@ AFRAME.registerComponent("grow-canvas",{
       );
     }
 
-    const mesh=this.el.getObject3D("mesh");
-    if(mesh&&mesh.material&&mesh.material.map){
-      mesh.material.map.needsUpdate=true;
-    }
+    // Force any A-Frame material using the canvas to refresh continuously.
+    document.querySelectorAll('a-plane').forEach(el=>{
+      const mesh=el.getObject3D && el.getObject3D("mesh");
+      if(mesh && mesh.material && mesh.material.map){
+        mesh.material.map.needsUpdate=true;
+      }
+    });
   }
+
+  render();
 });
+
 </script>
 </head>
 
