@@ -35,28 +35,30 @@ function draw(){
   ctx.clearRect(0,0,w,h);
   const I=images;
 
-      const cycle=2.0;                         // one complete rain rhythm
-      const phase=(t%cycle)/cycle;                // 0..1 shared by all layers
-      const wave=Math.sin(phase*Math.PI*2);
+      const cloudCycle=2.4;
+      const cloudPhase=(t%cloudCycle)/cloudCycle;
+      const cloudWave=Math.sin(cloudPhase*Math.PI*2);
 
-      // Cloud: one gentle bob per rain cycle.
-      const cloudY=h*.25 + wave*5;
-      const cloudX=w*.50 + Math.sin(phase*Math.PI*2)*2;
+      // Cloud moves slowly and independently.
+      const cloudY=h*.25 + cloudWave*6;
+      const cloudX=w*.50 + Math.sin(cloudPhase*Math.PI*2)*2;
 
-      // Rain: falls once during the same cycle.
-      // Keep it moving only downward; reset at the top at the next cycle.
-      const rainPhase=Math.min(1, phase/0.60);
-      const dropDrift=rainPhase*34;
-      const dropX=Math.sin(phase*Math.PI*2)*1.5;
+      // Rain and splash use EXACTLY the same fast cycle.
+      const rainCycle=.90;
+      const rainPhase=(t%rainCycle)/rainCycle;
 
-      // Splash: trigger earlier, when the faster rain reaches the bottom.
-      const impactCenter=.56;
-      const impactWidth=.10;
-      const impact=Math.max(0,1-Math.abs(phase-impactCenter)/impactWidth);
-      const splashPulse=.96 + .08*impact;
-      const splashAlpha=.45 + .48*impact;
+      // Noticeable downward movement on phone, then instant reset at top.
+      const dropDrift=rainPhase*58;
+      const dropX=Math.sin(rainPhase*Math.PI*2)*1.2;
 
-      dc(ctx,I.drops,w*.50+dropX,h*.535+dropDrift,w*.88,h*.50,0,.72);
+      // Splash peaks once per rain cycle, just before the rain resets.
+      const impactCenter=.84;
+      const impactWidth=.14;
+      const impact=Math.max(0,1-Math.abs(rainPhase-impactCenter)/impactWidth);
+      const splashPulse=.95 + .10*impact;
+      const splashAlpha=.38 + .58*impact;
+
+      dc(ctx,I.drops,w*.50+dropX,h*.515+dropDrift,w*.88,h*.50,0,.76);
       dc(ctx,I.cloud,cloudX,cloudY,w*.70,h*.45,0,1);
       dc(
         ctx,
