@@ -39,7 +39,7 @@ function draw(){
       const cloudX=w*.50 + Math.sin(t*.55)*2;
 
       // Small, one-direction rain drift: only 10px, no large up/down travel.
-      const dropDrift=(t*18)%10;
+      const dropDrift=(t*32)%35;
       const dropX=Math.sin(t*.45)*2;
 
       const splashAlpha=.68 + .12*Math.sin(t*3.0);
