@@ -138,14 +138,10 @@ function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
 function easeOutCubic(x){ return 1-Math.pow(1-x,3); }
 function smoothstep(x){ x=clamp(x,0,1); return x*x*(3-2*x); }
 
+
 window.addEventListener("DOMContentLoaded",()=>{
   const c=document.getElementById("growCanvas");
   const ctx=c.getContext("2d");
-
-  const images={};
-  let loaded=0;
-  let animationStarted=false;
-  let rafId=null;
 
   const sources={
     vine:"../assets/grow/grow_vine.png",
@@ -153,14 +149,14 @@ window.addEventListener("DOMContentLoaded",()=>{
     flower:"../assets/grow/grow_flower.png"
   };
 
-  Object.entries(sources).forEach(([key,src])=>{
-    const img=new Image();
-    img.onload=()=>{ images[key]=img; loaded++; };
-    img.src=src;
-  });
+  const images={};
+  let loaded=0;
+  let loadingStarted=false;
+  let targetSeen=false;
+  let animationStarted=false;
+  let animStart=0;
 
   const total=Object.keys(sources).length;
-  let animStart=0;
 
   const drawCentered=(img,cx,cy,ww,hh,alpha=1,scaleY=1)=>{
     ctx.save();
@@ -181,10 +177,32 @@ window.addEventListener("DOMContentLoaded",()=>{
     });
   }
 
+  function maybeStartAnimation(){
+    if(targetSeen && loaded===total && !animationStarted){
+      animationStarted=true;
+      animStart=performance.now();
+      render();
+    }
+  }
+
+  function loadGrowAssets(){
+    if(loadingStarted)return;
+    loadingStarted=true;
+
+    Object.entries(sources).forEach(([key,src])=>{
+      const img=new Image();
+      img.onload=()=>{
+        images[key]=img;
+        loaded++;
+        maybeStartAnimation();
+      };
+      img.src=src;
+    });
+  }
+
   function render(){
     if(!animationStarted)return;
-    rafId=requestAnimationFrame(render);
-    if(loaded<total)return;
+    requestAnimationFrame(render);
 
     const w=c.width,h=c.height;
     const t=(performance.now()-animStart)/1000;
@@ -246,19 +264,20 @@ window.addEventListener("DOMContentLoaded",()=>{
     refreshCanvasMaterials();
   }
 
-  // Start heavy canvas animation only after Grow is actually found.
-  const target=document.querySelector('[mindar-image-target]');
-  target.addEventListener("targetFound",()=>{
-    if(!animationStarted){
-      animationStarted=true;
-      animStart=performance.now();
-      render();
-    }
+  const scene=document.querySelector("a-scene");
+  const target=document.querySelector("[mindar-image-target]");
+
+  // Critical change:
+  // Wait until MindAR says the camera/tracker is READY before downloading Grow PNG assets.
+  scene.addEventListener("arReady",()=>{
+    loadGrowAssets();
   });
 
-  // If animation has started, keep it running so the 10-second ghost remains animated.
+  target.addEventListener("targetFound",()=>{
+    targetSeen=true;
+    maybeStartAnimation();
+  });
 });
-
 
 </script>
 </head>
