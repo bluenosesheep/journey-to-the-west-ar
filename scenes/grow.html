@@ -53,30 +53,74 @@ canvas.a-canvas{background:transparent!important}
 
 <script>
 
-AFRAME.registerComponent("hold-after-lost",{
+AFRAME.registerComponent("freeze-on-lost",{
   schema:{
-    seconds:{type:"number",default:10}
+    seconds:{type:"number",default:10},
+    ghost:{type:"selector"}
   },
+
   init:function(){
-    this.holdUntil=0;
+    this.tracking=false;
+    this.hideTimer=null;
+    this.lastPos=new THREE.Vector3();
+    this.lastQuat=new THREE.Quaternion();
+    this.lastScale=new THREE.Vector3(1,1,1);
+
+    this.sourcePlane=this.el.querySelector("a-plane");
+    this.ghost=this.data.ghost;
+
+    if(this.ghost){
+      this.ghost.object3D.visible=false;
+    }
 
     this.el.addEventListener("targetFound",()=>{
-      this.holdUntil=0;
-      this.el.object3D.visible=true;
+      this.tracking=true;
+
+      if(this.hideTimer){
+        clearTimeout(this.hideTimer);
+        this.hideTimer=null;
+      }
+
+      if(this.ghost){
+        this.ghost.object3D.visible=false;
+      }
     });
 
     this.el.addEventListener("targetLost",()=>{
-      this.holdUntil=performance.now() + this.data.seconds*1000;
+      this.tracking=false;
+
+      if(!this.ghost || !this.sourcePlane)return;
+
+      const src=this.sourcePlane.object3D;
+
+      src.getWorldPosition(this.lastPos);
+      src.getWorldQuaternion(this.lastQuat);
+      src.getWorldScale(this.lastScale);
+
+      const g=this.ghost.object3D;
+      g.position.copy(this.lastPos);
+      g.quaternion.copy(this.lastQuat);
+      g.scale.copy(this.lastScale);
+      g.visible=true;
+
+      if(this.hideTimer){
+        clearTimeout(this.hideTimer);
+      }
+
+      this.hideTimer=setTimeout(()=>{
+        g.visible=false;
+        this.hideTimer=null;
+      },this.data.seconds*1000);
     });
   },
+
   tick:function(){
-    if(this.holdUntil>0){
-      if(performance.now()<this.holdUntil){
-        this.el.object3D.visible=true;
-      }else{
-        this.el.object3D.visible=false;
-        this.holdUntil=0;
-      }
+    // Continuously remember the last valid tracked pose.
+    if(this.tracking && this.sourcePlane){
+      const src=this.sourcePlane.object3D;
+      src.getWorldPosition(this.lastPos);
+      src.getWorldQuaternion(this.lastQuat);
+      src.getWorldScale(this.lastScale);
     }
   }
 });
@@ -212,7 +256,7 @@ AFRAME.registerComponent("grow-canvas",{
 
   <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
-  <a-entity mindar-image-target="targetIndex:0" grow-events hold-after-lost="seconds:10">
+  <a-entity mindar-image-target="targetIndex:0" grow-events freeze-on-lost="seconds:10; ghost:#growGhost">
     <a-plane
       width="1.35"
       height="2.03"
@@ -221,6 +265,16 @@ AFRAME.registerComponent("grow-canvas",{
       grow-canvas>
     </a-plane>
   </a-entity>
+
+
+  <a-plane
+    id="growGhost"
+    width="1.35"
+    height="2.03"
+    position="0 0 -999"
+    visible="false"
+    material="shader:flat;src:#growCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double">
+  </a-plane>
 
 </a-scene>
 </body>
