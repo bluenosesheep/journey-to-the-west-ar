@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cloud Magic AR</title>
+
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+<style>
+html,body{
+  margin:0;width:100%;height:100%;overflow:hidden;
+  background:transparent!important;
+}
+video{
+  position:fixed!important;inset:0!important;
+  width:100vw!important;height:100vh!important;
+  object-fit:cover!important;z-index:0!important;
+}
+a-scene{
+  position:fixed!important;inset:0!important;
+  width:100vw!important;height:100vh!important;
+  z-index:1!important;background:transparent!important;
+}
+canvas.a-canvas{background:transparent!important}
+.off{display:none}
+#hint{
+  position:fixed;left:50%;
+  bottom:max(20px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  z-index:20;max-width:88vw;
+  padding:10px 14px;border-radius:999px;
+  background:rgba(255,255,255,.92);
+  color:#222;
+  font:14px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  text-align:center;
+  box-shadow:0 6px 24px rgba(0,0,0,.16);
+}
+</style>
+
+<script>
+AFRAME.registerComponent("cloud-events",{
+  init:function(){
+    const h=document.getElementById("hint");
+    this.el.addEventListener("targetFound",()=>{
+      h.textContent="MAGIC 01 · 筋斗云出现啦！✨";
+    });
+    this.el.addEventListener("targetLost",()=>{
+      h.textContent="筋斗云还会停留 10 秒 ☁️";
+    });
+  }
+});
+
+AFRAME.registerComponent("freeze-on-lost",{
+  schema:{
+    seconds:{type:"number",default:10},
+    ghost:{type:"selector"}
+  },
+
+  init:function(){
+    this.tracking=false;
+    this.hideTimer=null;
+
+    this.lastPos=new THREE.Vector3();
+    this.lastQuat=new THREE.Quaternion();
+    this.lastScale=new THREE.Vector3(1,1,1);
+
+    this.sourcePlane=this.el.querySelector("a-plane");
+    this.ghost=this.data.ghost;
+
+    if(this.ghost){
+      this.ghost.object3D.visible=false;
+    }
+
+    this.el.addEventListener("targetFound",()=>{
+      this.tracking=true;
+
+      if(this.hideTimer){
+        clearTimeout(this.hideTimer);
+        this.hideTimer=null;
+      }
+
+      if(this.ghost){
+        this.ghost.object3D.visible=false;
+      }
+    });
+
+    this.el.addEventListener("targetLost",()=>{
+      this.tracking=false;
+
+      if(!this.ghost || !this.sourcePlane)return;
+
+      const src=this.sourcePlane.object3D;
+      src.getWorldPosition(this.lastPos);
+      src.getWorldQuaternion(this.lastQuat);
+      src.getWorldScale(this.lastScale);
+
+      const g=this.ghost.object3D;
+      g.position.copy(this.lastPos);
+      g.quaternion.copy(this.lastQuat);
+      g.scale.copy(this.lastScale);
+      g.visible=true;
+
+      if(this.hideTimer){
+        clearTimeout(this.hideTimer);
+      }
+
+      this.hideTimer=setTimeout(()=>{
+        g.visible=false;
+        this.hideTimer=null;
+      },this.data.seconds*1000);
+    });
+  },
+
+  tick:function(){
+    if(this.tracking && this.sourcePlane){
+      const src=this.sourcePlane.object3D;
+      src.getWorldPosition(this.lastPos);
+      src.getWorldQuaternion(this.lastQuat);
+      src.getWorldScale(this.lastScale);
+    }
+  }
+});
+
+function dc(ctx,img,cx,cy,w,h,r=0,a=1){
+  ctx.save();
+  ctx.globalAlpha=a;
+  ctx.translate(cx,cy);
+  ctx.rotate(r);
+  ctx.drawImage(img,-w/2,-h/2,w,h);
+  ctx.restore();
+}
+
+/* Standalone canvas animation:
+   it keeps running even after the MindAR target disappears. */
+
+
+window.addEventListener("DOMContentLoaded",()=>{
+  const c=document.getElementById("cloudCanvas");
+  const ctx=c.getContext("2d");
+
+  const sources={
+    cloud:"../assets/cloud/cloud.png",
+    wind01:"../assets/cloud/wind_01.png",
+    wind02:"../assets/cloud/wind_02.png",
+    sparkles:"../assets/cloud/sparkles.png"
+  };
+
+  const images={};
+  let loaded=0;
+  let loadingStarted=false;
+  let animationStarted=false;
+  let animStart=0;
+
+  function loadCloudAssets(){
+    if(loadingStarted)return;
+    loadingStarted=true;
+
+    Object.entries(sources).forEach(([key,src])=>{
+      const img=new Image();
+
+      img.onload=()=>{
+        images[key]=img;
+        loaded++;
+
+        // Start animation only after all 4 Cloud assets are ready.
+        if(loaded===Object.keys(sources).length && !animationStarted){
+          animationStarted=true;
+          animStart=performance.now();
+          render();
+        }
+      };
+
+      img.src=src;
+    });
+  }
+
+  function refreshCanvasMaterials(){
+    ["#cloudTrackedPlane","#cloudGhost"].forEach(sel=>{
+      const el=document.querySelector(sel);
+      const mesh=el && el.getObject3D && el.getObject3D("mesh");
+      if(mesh && mesh.material && mesh.material.map){
+        mesh.material.map.needsUpdate=true;
+      }
+    });
+  }
+
+  function render(){
+    if(!animationStarted)return;
+
+    requestAnimationFrame(render);
+
+    const w=c.width;
+    const h=c.height;
+    const t=(performance.now()-animStart)/1000;
+
+    ctx.clearRect(0,0,w,h);
+
+    const z=.92+.08*(.5+.5*Math.sin(t*2.2));
+    dc(
+      ctx,images.wind02,
+      w*.72,h*.34,
+      w*.23*z,h*.36*z,
+      (-5+12*(.5+.5*Math.sin(t*1.7)))*Math.PI/180,
+      .82
+    );
+
+    const cy=h*(.50-.06*Math.sin(t*2));
+    const cr=3*Math.sin(t*1.4)*Math.PI/180;
+    dc(ctx,images.cloud,w*.42,cy,w*.43,h*.43,cr,1);
+
+    const sx=w*(.50+.10*Math.sin(t*2.4));
+    dc(ctx,images.wind01,sx,h*.61,w*.68,h*.24,0,.8);
+
+    const ss=.75+.40*(.5+.5*Math.sin(t*5));
+    const sa=.45+.55*(.5+.5*Math.sin(t*5));
+    dc(ctx,images.sparkles,w*.66,h*.28,w*.20*ss,h*.20*ss,0,sa);
+
+    refreshCanvasMaterials();
+  }
+
+  const target=document.querySelector('[mindar-image-target]');
+
+  // Important:
+  // Do NOT request Cloud PNGs during page startup.
+  // Let MindAR + cloud.mind + camera permission initialize first.
+  target.addEventListener("targetFound",()=>{
+    loadCloudAssets();
+  });
+});
+
+</script>
+</head>
+
+<body>
+<div id="hint">请把镜头对准 CLOUD 卡</div>
+
+<canvas id="cloudCanvas" class="off" width="768" height="768"></canvas>
+
+<a-scene
+  mindar-image="imageTargetSrc: ../targets/cloud.mind; autoStart: true;"
+  color-space="sRGB"
+  renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true"
+  vr-mode-ui="enabled:false"
+  device-orientation-permission-ui="enabled:false">
+
+  <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+
+  <a-entity
+    mindar-image-target="targetIndex:0"
+    cloud-events
+    freeze-on-lost="seconds:10; ghost:#cloudGhost">
+
+    <a-plane
+      id="cloudTrackedPlane"
+      width="1.65"
+      height="1.65"
+      position="0 0 0.03"
+      material="shader:flat;src:#cloudCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double">
+    </a-plane>
+  </a-entity>
+
+  <a-plane
+    id="cloudGhost"
+    width="1.65"
+    height="1.65"
+    position="0 0 -999"
+    visible="false"
+    material="shader:flat;src:#cloudCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double">
+  </a-plane>
+
+</a-scene>
+</body>
+</html>
