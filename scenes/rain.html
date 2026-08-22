@@ -1,176 +1,87 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Rain Magic AR</title>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Rain Magic AR</title>
 
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
 <style>
-html,body{
-  margin:0;
-  width:100%;
-  height:100%;
-  overflow:hidden;
-  background:transparent!important;
-}
-video{
-  position:fixed!important;
-  inset:0!important;
-  width:100vw!important;
-  height:100vh!important;
-  object-fit:cover!important;
-  z-index:0!important;
-}
-a-scene{
-  position:fixed!important;
-  inset:0!important;
-  width:100vw!important;
-  height:100vh!important;
-  z-index:1!important;
-  background:transparent!important;
-}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+
+html,body{background:transparent!important}
+video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}
+a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}
 canvas.a-canvas{background:transparent!important}
 .off{display:none}
-#hint{
-  position:fixed;
-  left:50%;
-  bottom:max(20px,env(safe-area-inset-bottom));
-  transform:translateX(-50%);
-  z-index:20;
-  max-width:88vw;
-  padding:10px 14px;
-  border-radius:999px;
-  background:rgba(255,255,255,.92);
-  color:#222;
-  font:14px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  text-align:center;
-  box-shadow:0 6px 24px rgba(0,0,0,.16);
-}
-</style>
+#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px/1.4 system-ui;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.16)}
+</style></head><body>
+<div id="hint">请把镜头对准 RAIN 卡</div>
+<canvas id="rainCanvas" class="off" width="768" height="768"></canvas>
+<a-scene mindar-image="imageTargetSrc: ../targets/rain.mind; autoStart: true;"
+ color-space="sRGB"
+ renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true"
+ vr-mode-ui="enabled:false"
+ device-orientation-permission-ui="enabled:false">
+<a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+<a-entity mindar-image-target="targetIndex:0" rain-events>
+<a-plane width="2.1" height="2.1" position="0 0.03 0.03"
+ material="shader:flat;src:#rainCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
+ rain-canvas></a-plane>
+</a-entity>
+</a-scene>
 
 <script>
-AFRAME.registerComponent("rain-events",{
-  init:function(){
-    const hint=document.getElementById("hint");
-    this.el.addEventListener("targetFound",()=>{
-      hint.textContent="MAGIC 03 · RAIN 🌧️";
-    });
-    this.el.addEventListener("targetLost",()=>{
-      hint.textContent="请把镜头对准 RAIN 卡";
-    });
-  }
-});
-
 function dc(ctx,img,cx,cy,w,h,r=0,a=1){
-  ctx.save();
-  ctx.globalAlpha=a;
-  ctx.translate(cx,cy);
-  ctx.rotate(r);
-  ctx.drawImage(img,-w/2,-h/2,w,h);
-  ctx.restore();
+  ctx.save();ctx.globalAlpha=a;ctx.translate(cx,cy);ctx.rotate(r);
+  ctx.drawImage(img,-w/2,-h/2,w,h);ctx.restore();
 }
+
+AFRAME.registerComponent("rain-events",{init:function(){
+  const hint=document.getElementById("hint");
+  this.el.addEventListener("targetFound",()=>hint.textContent="MAGIC 03 · RAIN 🌧️");
+  this.el.addEventListener("targetLost",()=>hint.textContent="请把镜头对准 RAIN 卡");
+}});
 
 function makeUpdater(canvasId,sources,drawFn){
   return {
     init:function(){
-      this.c=document.getElementById(canvasId);
-      this.ctx=this.c.getContext("2d");
-      this.images={};
-      this.loaded=0;
-      this.start=performance.now();
+      this.c=document.getElementById(canvasId);this.ctx=this.c.getContext("2d");
+      this.images={};this.loaded=0;this.start=performance.now();
       const entries=Object.entries(sources);
-
-      entries.forEach(([k,src])=>{
-        const img=new Image();
-        img.onload=()=>{
-          this.images[k]=img;
-          this.loaded++;
-        };
-        img.src=src;
-      });
-
+      entries.forEach(([k,src])=>{const img=new Image();img.onload=()=>{this.images[k]=img;this.loaded++};img.src=src;});
       this.total=entries.length;
     },
-
     tick:function(){
       if(this.loaded<this.total)return;
-
-      const c=this.c,ctx=this.ctx,w=c.width,h=c.height;
-      const t=(performance.now()-this.start)/1000;
-
+      const c=this.c,ctx=this.ctx,w=c.width,h=c.height,t=(performance.now()-this.start)/1000;
       ctx.clearRect(0,0,w,h);
       drawFn(ctx,this.images,w,h,t);
-
       const mesh=this.el.getObject3D("mesh");
-      if(mesh&&mesh.material&&mesh.material.map){
-        mesh.material.map.needsUpdate=true;
-      }
+      if(mesh&&mesh.material&&mesh.material.map)mesh.material.map.needsUpdate=true;
     }
-  };
+  }
 }
 
-AFRAME.registerComponent(
-  "rain-canvas",
-  makeUpdater(
-    "rainCanvas",
-    {
+AFRAME.registerComponent("rain-canvas",
+  makeUpdater("rainCanvas",{
       cloud:"../assets/rain/rain_cloud.png",
       drops:"../assets/rain/rain_drops.png",
       splash:"../assets/rain/rain_splash.png"
-    },
-    (ctx,I,w,h,t)=>{
-      // gentle cloud floating
-      const cloudY = h*0.31 + Math.sin(t*1.2)*8;
-      const cloudX = w*0.50 + Math.sin(t*0.7)*6;
+    },(ctx,I,w,h,t)=>{
 
-      // falling rain loop
-      const rainOffset = (t*150) % h;
+      const cloudY=h*.30 + Math.sin(t*.9)*3;
+      const cloudX=w*.50 + Math.sin(t*.55)*2;
 
-      // splash pulse
-      const splashAlpha = 0.55 + 0.35*Math.sin(t*4.2);
+      // Small, one-direction rain drift: only 10px, no large up/down travel.
+      const dropDrift=(t*18)%10;
+      const dropX=Math.sin(t*.45)*2;
 
-      // draw rain behind the cloud in two looping layers
-      dc(ctx,I.drops,w*.50,h*.50 + rainOffset,w*.92,h*.64,0,.72);
-      dc(ctx,I.drops,w*.50,h*.50 + rainOffset - h,w*.92,h*.64,0,.72);
+      const splashAlpha=.68 + .12*Math.sin(t*3.0);
 
-      // cloud
-      dc(ctx,I.cloud,cloudX,cloudY,w*.72,h*.48,0,1);
+      dc(ctx,I.drops,w*.50+dropX,h*.53+dropDrift,w*.90,h*.56,0,.72);
+      dc(ctx,I.cloud,cloudX,cloudY,w*.70,h*.45,0,1);
+      dc(ctx,I.splash,w*.50,h*.79,w*.88,h*.28,0,splashAlpha);
 
-      // water splashes at the bottom
-      dc(ctx,I.splash,w*.50,h*.79,w*.92,h*.34,0,splashAlpha);
-    }
-  )
+  })
 );
 </script>
-</head>
-
-<body>
-<div id="hint">请把镜头对准 RAIN 卡</div>
-
-<canvas id="rainCanvas" class="off" width="768" height="768"></canvas>
-
-<a-scene
-  mindar-image="imageTargetSrc: ../targets/rain.mind; autoStart: true;"
-  color-space="sRGB"
-  renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true"
-  vr-mode-ui="enabled:false"
-  device-orientation-permission-ui="enabled:false">
-
-  <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
-
-  <a-entity mindar-image-target="targetIndex:0" rain-events>
-    <a-plane
-      width="2.1"
-      height="2.1"
-      position="0 0.03 0.03"
-      material="shader:flat;src:#rainCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
-      rain-canvas>
-    </a-plane>
-  </a-entity>
-
-</a-scene>
-</body>
-</html>
+</body></html>
