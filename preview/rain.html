@@ -35,18 +35,28 @@ function draw(){
   ctx.clearRect(0,0,w,h);
   const I=images;
 
-      const cloudY=h*.30 + Math.sin(t*.9)*3;
-      const cloudX=w*.50 + Math.sin(t*.55)*2;
+      const cloudY=h*.25 + Math.sin(t*.85)*6;
+      const cloudX=w*.50 + Math.sin(t*.50)*2;
 
       // Small, one-direction rain drift: only 10px, no large up/down travel.
-      const dropDrift=(t*32)%35;
+      const dropDrift=(t*16)%28;
       const dropX=Math.sin(t*.45)*2;
 
-      const splashAlpha=.68 + .12*Math.sin(t*3.0);
+      const splashPulse=.96 + .06*(.5+.5*Math.sin(t*3.2));
+      const splashAlpha=.58 + .30*(.5+.5*Math.sin(t*3.2));
 
-      dc(ctx,I.drops,w*.50+dropX,h*.53+dropDrift,w*.90,h*.56,0,.72);
+      dc(ctx,I.drops,w*.50+dropX,h*.56+dropDrift,w*.88,h*.50,0,.72);
       dc(ctx,I.cloud,cloudX,cloudY,w*.70,h*.45,0,1);
-      dc(ctx,I.splash,w*.50,h*.79,w*.88,h*.28,0,splashAlpha);
+      dc(
+        ctx,
+        I.splash,
+        w*.50,
+        h*.81,
+        w*.86*splashPulse,
+        h*.27*splashPulse,
+        0,
+        splashAlpha
+      );
 
 }
 draw();
