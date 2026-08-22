@@ -135,7 +135,6 @@ function dc(ctx,img,cx,cy,w,h,r=0,a=1){
 /* Standalone canvas animation:
    it keeps running even after the MindAR target disappears. */
 
-
 window.addEventListener("DOMContentLoaded",()=>{
   const c=document.getElementById("cloudCanvas");
   const ctx=c.getContext("2d");
@@ -149,32 +148,19 @@ window.addEventListener("DOMContentLoaded",()=>{
 
   const images={};
   let loaded=0;
-  let loadingStarted=false;
   let animationStarted=false;
+
+  Object.entries(sources).forEach(([key,src])=>{
+    const img=new Image();
+    img.onload=()=>{
+      images[key]=img;
+      loaded++;
+    };
+    img.src=src;
+  });
+
+  const total=Object.keys(sources).length;
   let animStart=0;
-
-  function loadCloudAssets(){
-    if(loadingStarted)return;
-    loadingStarted=true;
-
-    Object.entries(sources).forEach(([key,src])=>{
-      const img=new Image();
-
-      img.onload=()=>{
-        images[key]=img;
-        loaded++;
-
-        // Start animation only after all 4 Cloud assets are ready.
-        if(loaded===Object.keys(sources).length && !animationStarted){
-          animationStarted=true;
-          animStart=performance.now();
-          render();
-        }
-      };
-
-      img.src=src;
-    });
-  }
 
   function refreshCanvasMaterials(){
     ["#cloudTrackedPlane","#cloudGhost"].forEach(sel=>{
@@ -188,8 +174,8 @@ window.addEventListener("DOMContentLoaded",()=>{
 
   function render(){
     if(!animationStarted)return;
-
     requestAnimationFrame(render);
+    if(loaded<total)return;
 
     const w=c.width;
     const h=c.height;
@@ -221,12 +207,12 @@ window.addEventListener("DOMContentLoaded",()=>{
   }
 
   const target=document.querySelector('[mindar-image-target]');
-
-  // Important:
-  // Do NOT request Cloud PNGs during page startup.
-  // Let MindAR + cloud.mind + camera permission initialize first.
   target.addEventListener("targetFound",()=>{
-    loadCloudAssets();
+    if(!animationStarted){
+      animationStarted=true;
+      animStart=performance.now();
+      render();
+    }
   });
 });
 
