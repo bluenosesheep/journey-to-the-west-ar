@@ -4,6 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Preparing Grow Magic</title>
+
+<link rel="preload"
+      href="https://aframe.io/releases/1.5.0/aframe.min.js"
+      as="script"
+      crossorigin="anonymous">
+
+<link rel="preload"
+      href="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"
+      as="script"
+      crossorigin="anonymous">
+
+<link rel="preload"
+      href="../targets/grow.mind"
+      as="fetch"
+      crossorigin="anonymous">
+
 <style>
 html,body{
   margin:0;width:100%;height:100%;
@@ -29,28 +45,50 @@ main{
 }
 h1{font-size:20px;margin:0 0 8px}
 p{font-size:14px;line-height:1.5;margin:0;opacity:.78}
+#status{margin-top:8px;font-size:12px;opacity:.62}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
+
 <body>
 <main>
   <div class="card">
     <div class="spinner"></div>
     <h1>正在准备仙藤魔法…</h1>
     <p>Preparing Grow Magic</p>
+    <div id="status">正在加载识别数据…</div>
   </div>
 </main>
 
 <script>
 (async()=>{
-  const target="./../targets/grow.mind";
-  try{
-    const res=await fetch(target,{cache:"force-cache"});
-    if(!res.ok) throw new Error("grow.mind preload failed");
+  const status=document.getElementById("status");
+
+  const growMind="../targets/grow.mind";
+  const aframe="https://aframe.io/releases/1.5.0/aframe.min.js";
+  const mindar="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js";
+
+  async function warm(url,label){
+    status.textContent=label;
+    const res=await fetch(url,{cache:"force-cache"});
+    if(!res.ok) throw new Error(url+" preload failed: "+res.status);
     await res.arrayBuffer();
+  }
+
+  try{
+    // Force the three cold-start resources to finish before entering AR.
+    await Promise.all([
+      warm(growMind,"正在加载 Grow 识别数据…"),
+      warm(aframe,"正在准备 AR 引擎…"),
+      warm(mindar,"正在准备图像识别…")
+    ]);
+
+    status.textContent="准备完成，正在打开相机…";
   }catch(e){
     console.warn(e);
+    status.textContent="正在打开 AR…";
   }
+
   location.replace("./grow_ar.html");
 })();
 </script>
