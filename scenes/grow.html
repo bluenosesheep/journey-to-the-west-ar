@@ -141,8 +141,11 @@ function smoothstep(x){ x=clamp(x,0,1); return x*x*(3-2*x); }
 window.addEventListener("DOMContentLoaded",()=>{
   const c=document.getElementById("growCanvas");
   const ctx=c.getContext("2d");
+
   const images={};
   let loaded=0;
+  let animationStarted=false;
+  let rafId=null;
 
   const sources={
     vine:"../assets/grow/grow_vine.png",
@@ -157,7 +160,7 @@ window.addEventListener("DOMContentLoaded",()=>{
   });
 
   const total=Object.keys(sources).length;
-  const animStart=performance.now();
+  let animStart=0;
 
   const drawCentered=(img,cx,cy,ww,hh,alpha=1,scaleY=1)=>{
     ctx.save();
@@ -168,15 +171,25 @@ window.addEventListener("DOMContentLoaded",()=>{
     ctx.restore();
   };
 
+  function refreshCanvasMaterials(){
+    ["#growTrackedPlane","#growGhost"].forEach(sel=>{
+      const el=document.querySelector(sel);
+      const mesh=el && el.getObject3D && el.getObject3D("mesh");
+      if(mesh && mesh.material && mesh.material.map){
+        mesh.material.map.needsUpdate=true;
+      }
+    });
+  }
+
   function render(){
-    requestAnimationFrame(render);
+    if(!animationStarted)return;
+    rafId=requestAnimationFrame(render);
     if(loaded<total)return;
 
     const w=c.width,h=c.height;
     const t=(performance.now()-animStart)/1000;
     ctx.clearRect(0,0,w,h);
 
-    // Same 6-second animation as preview.
     const cycle=6.0;
     const phase=(t%cycle)/cycle;
 
@@ -230,17 +243,22 @@ window.addEventListener("DOMContentLoaded",()=>{
       );
     }
 
-    // Force any A-Frame material using the canvas to refresh continuously.
-    document.querySelectorAll('a-plane').forEach(el=>{
-      const mesh=el.getObject3D && el.getObject3D("mesh");
-      if(mesh && mesh.material && mesh.material.map){
-        mesh.material.map.needsUpdate=true;
-      }
-    });
+    refreshCanvasMaterials();
   }
 
-  render();
+  // Start heavy canvas animation only after Grow is actually found.
+  const target=document.querySelector('[mindar-image-target]');
+  target.addEventListener("targetFound",()=>{
+    if(!animationStarted){
+      animationStarted=true;
+      animStart=performance.now();
+      render();
+    }
+  });
+
+  // If animation has started, keep it running so the 10-second ghost remains animated.
 });
+
 
 </script>
 </head>
@@ -248,7 +266,7 @@ window.addEventListener("DOMContentLoaded",()=>{
 <body>
 <div id="hint">请把镜头对准 GROW 卡</div>
 
-<canvas id="growCanvas" class="off" width="640" height="960"></canvas>
+<canvas id="growCanvas" class="off" width="512" height="768"></canvas>
 
 <a-scene
   mindar-image="imageTargetSrc: ../targets/grow.mind; autoStart: true;"
@@ -261,6 +279,7 @@ window.addEventListener("DOMContentLoaded",()=>{
 
   <a-entity mindar-image-target="targetIndex:0" grow-events freeze-on-lost="seconds:10; ghost:#growGhost">
     <a-plane
+      id="growTrackedPlane"
       width="1.35"
       height="2.03"
       position="0 0.03 0.03"
