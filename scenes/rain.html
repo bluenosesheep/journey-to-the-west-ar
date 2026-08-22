@@ -68,18 +68,38 @@ AFRAME.registerComponent("rain-canvas",
       splash:"../assets/rain/rain_splash.png"
     },(ctx,I,w,h,t)=>{
 
-      const cloudY=h*.30 + Math.sin(t*.9)*3;
-      const cloudX=w*.50 + Math.sin(t*.55)*2;
+      const cycle=2.0;                         // one complete rain rhythm
+      const phase=(t%cycle)/cycle;                // 0..1 shared by all layers
+      const wave=Math.sin(phase*Math.PI*2);
 
-      // Small, one-direction rain drift: only 10px, no large up/down travel.
-      const dropDrift=(t*18)%10;
-      const dropX=Math.sin(t*.45)*2;
+      // Cloud: one gentle bob per rain cycle.
+      const cloudY=h*.25 + wave*5;
+      const cloudX=w*.50 + Math.sin(phase*Math.PI*2)*2;
 
-      const splashAlpha=.68 + .12*Math.sin(t*3.0);
+      // Rain: falls once during the same cycle.
+      // Keep it moving only downward; reset at the top at the next cycle.
+      const dropDrift=phase*30;
+      const dropX=Math.sin(phase*Math.PI*2)*1.5;
 
-      dc(ctx,I.drops,w*.50+dropX,h*.53+dropDrift,w*.90,h*.56,0,.72);
+      // Splash: strongest just as the rain reaches the bottom.
+      const impactCenter=.84;
+      const impactWidth=.12;
+      const impact=Math.max(0,1-Math.abs(phase-impactCenter)/impactWidth);
+      const splashPulse=.96 + .08*impact;
+      const splashAlpha=.45 + .48*impact;
+
+      dc(ctx,I.drops,w*.50+dropX,h*.535+dropDrift,w*.88,h*.50,0,.72);
       dc(ctx,I.cloud,cloudX,cloudY,w*.70,h*.45,0,1);
-      dc(ctx,I.splash,w*.50,h*.79,w*.88,h*.28,0,splashAlpha);
+      dc(
+        ctx,
+        I.splash,
+        w*.50,
+        h*.81,
+        w*.86*splashPulse,
+        h*.27*splashPulse,
+        0,
+        splashAlpha
+      );
 
   })
 );
