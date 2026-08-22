@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Grow Magic AR</title>
+
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+<style>
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:transparent!important;
+}
+video{
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  height:100vh!important;
+  object-fit:cover!important;
+  z-index:0!important;
+}
+a-scene{
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  height:100vh!important;
+  z-index:1!important;
+  background:transparent!important;
+}
+canvas.a-canvas{background:transparent!important}
+.off{display:none}
+#hint{
+  position:fixed;
+  left:50%;
+  bottom:max(20px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  z-index:20;
+  max-width:88vw;
+  padding:10px 14px;
+  border-radius:999px;
+  background:rgba(255,255,255,.92);
+  color:#222;
+  font:14px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  text-align:center;
+  box-shadow:0 6px 24px rgba(0,0,0,.16);
+}
+</style>
+
+<script>
+
+AFRAME.registerComponent("freeze-on-lost",{
+  schema:{
+    seconds:{type:"number",default:10},
+    ghost:{type:"selector"}
+  },
+
+  init:function(){
+    this.tracking=false;
+    this.hideTimer=null;
+    this.lastPos=new THREE.Vector3();
+    this.lastQuat=new THREE.Quaternion();
+    this.lastScale=new THREE.Vector3(1,1,1);
+
+    this.sourcePlane=this.el.querySelector("a-plane");
+    this.ghost=this.data.ghost;
+
+    if(this.ghost){
+      this.ghost.object3D.visible=false;
+    }
+
+    this.el.addEventListener("targetFound",()=>{
+      this.tracking=true;
+
+      if(this.hideTimer){
+        clearTimeout(this.hideTimer);
+        this.hideTimer=null;
+      }
+
+      if(this.ghost){
+        this.ghost.object3D.visible=false;
+      }
+    });
+
+    this.el.addEventListener("targetLost",()=>{
+      this.tracking=false;
+
+      if(!this.ghost || !this.sourcePlane)return;
+
+      const src=this.sourcePlane.object3D;
+
+      src.getWorldPosition(this.lastPos);
+      src.getWorldQuaternion(this.lastQuat);
+      src.getWorldScale(this.lastScale);
+
+      const g=this.ghost.object3D;
+      g.position.copy(this.lastPos);
+      g.quaternion.copy(this.lastQuat);
+      g.scale.copy(this.lastScale);
+      g.visible=true;
+
+      if(this.hideTimer){
+        clearTimeout(this.hideTimer);
+      }
+
+      this.hideTimer=setTimeout(()=>{
+        g.visible=false;
+        this.hideTimer=null;
+      },this.data.seconds*1000);
+    });
+  },
+
+  tick:function(){
+    // Continuously remember the last valid tracked pose.
+    if(this.tracking && this.sourcePlane){
+      const src=this.sourcePlane.object3D;
+      src.getWorldPosition(this.lastPos);
+      src.getWorldQuaternion(this.lastQuat);
+      src.getWorldScale(this.lastScale);
+    }
+  }
+});
+
+AFRAME.registerComponent("grow-events",{
+  init:function(){
+    const hint=document.getElementById("hint");
+    this.el.addEventListener("targetFound",()=>hint.textContent="MAGIC 04 · GROW 🌱");
+    this.el.addEventListener("targetLost",()=>hint.textContent="请把镜头对准 GROW 卡");
+  }
+});
+
+
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function easeOutCubic(x){ return 1-Math.pow(1-x,3); }
+function smoothstep(x){ x=clamp(x,0,1); return x*x*(3-2*x); }
+
+window.addEventListener("DOMContentLoaded",()=>{
+  const c=document.getElementById("growCanvas");
+  const ctx=c.getContext("2d");
+
+  const images={};
+  let loaded=0;
+  let animationStarted=false;
+  let rafId=null;
+
+  const sources={
+    vine:"../assets/grow/grow_vine.png",
+    leaves:"../assets/grow/grow_leaves.png",
+    flower:"../assets/grow/grow_flower.png"
+  };
+
+  Object.entries(sources).forEach(([key,src])=>{
+    const img=new Image();
+    img.onload=()=>{ images[key]=img; loaded++; };
+    img.src=src;
+  });
+
+  const total=Object.keys(sources).length;
+  let animStart=0;
+
+  const drawCentered=(img,cx,cy,ww,hh,alpha=1,scaleY=1)=>{
+    ctx.save();
+    ctx.globalAlpha=alpha;
+    ctx.translate(cx,cy);
+    ctx.scale(1,scaleY);
+    ctx.drawImage(img,-ww/2,-hh/2,ww,hh);
+    ctx.restore();
+  };
+
+  function refreshCanvasMaterials(){
+    ["#growTrackedPlane","#growGhost"].forEach(sel=>{
+      const el=document.querySelector(sel);
+      const mesh=el && el.getObject3D && el.getObject3D("mesh");
+      if(mesh && mesh.material && mesh.material.map){
+        mesh.material.map.needsUpdate=true;
+      }
+    });
+  }
+
+  function render(){
+    if(!animationStarted)return;
+    rafId=requestAnimationFrame(render);
+    if(loaded<total)return;
+
+    const w=c.width,h=c.height;
+    const t=(performance.now()-animStart)/1000;
+    ctx.clearRect(0,0,w,h);
+
+    const cycle=6.0;
+    const phase=(t%cycle)/cycle;
+
+    const vineP=easeOutCubic(clamp(phase/0.48,0,1));
+    const leavesP=smoothstep((phase-0.28)/0.34);
+    const flowerP=smoothstep((phase-0.55)/0.28);
+
+    const breathe=1+0.018*Math.sin(t*2.2);
+    const glow=0.92+0.08*Math.sin(t*3.0);
+
+    const vineW=w*.58;
+    const vineH=h*.78;
+    const sx=0;
+    const sy=images.vine.height*(1-vineP);
+    const sw=images.vine.width;
+    const sh=images.vine.height*vineP;
+    const dx=w*.21;
+    const dy=h*.86-vineH*vineP;
+    const dw=vineW;
+    const dh=vineH*vineP;
+
+    if(vineP>0.01){
+      ctx.save();
+      ctx.globalAlpha=.98;
+      ctx.drawImage(images.vine,sx,sy,sw,sh,dx,dy,dw,dh);
+      ctx.restore();
+    }
+
+    if(leavesP>0.01){
+      drawCentered(
+        images.leaves,
+        w*.50,
+        h*.49,
+        w*.56*(.90+.10*leavesP),
+        h*.66*(.90+.10*leavesP),
+        .78*leavesP,
+        breathe
+      );
+    }
+
+    if(flowerP>0.01){
+      const bloomScale=.70+.30*flowerP;
+      drawCentered(
+        images.flower,
+        w*.50,
+        h*.44,
+        w*.50*bloomScale,
+        h*.60*bloomScale,
+        flowerP*glow,
+        1
+      );
+    }
+
+    refreshCanvasMaterials();
+  }
+
+  // Start heavy canvas animation only after Grow is actually found.
+  const target=document.querySelector('[mindar-image-target]');
+  target.addEventListener("targetFound",()=>{
+    if(!animationStarted){
+      animationStarted=true;
+      animStart=performance.now();
+      render();
+    }
+  });
+
+  // If animation has started, keep it running so the 10-second ghost remains animated.
+});
+
+
+</script>
+</head>
+
+<body>
+<div id="hint">请把镜头对准 GROW 卡</div>
+
+<canvas id="growCanvas" class="off" width="512" height="768"></canvas>
+
+<a-scene
+  mindar-image="imageTargetSrc: ../targets/grow.mind; autoStart: true;"
+  color-space="sRGB"
+  renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true"
+  vr-mode-ui="enabled:false"
+  device-orientation-permission-ui="enabled:false">
+
+  <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+
+  <a-entity mindar-image-target="targetIndex:0" grow-events freeze-on-lost="seconds:10; ghost:#growGhost">
+    <a-plane
+      id="growTrackedPlane"
+      width="1.35"
+      height="2.03"
+      position="0 0.03 0.03"
+      material="shader:flat;src:#growCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
+      grow-canvas>
+    </a-plane>
+  </a-entity>
+
+
+  <a-plane
+    id="growGhost"
+    width="1.35"
+    height="2.03"
+    position="0 0 -999"
+    visible="false"
+    material="shader:flat;src:#growCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double">
+  </a-plane>
+
+</a-scene>
+</body>
+</html>
