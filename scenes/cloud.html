@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Preparing Cloud Magic</title>
+<title>Cloud Magic</title>
 <style>
 html,body{
   margin:0;width:100%;height:100%;
@@ -19,7 +19,7 @@ main{
   padding:24px;
   box-sizing:border-box;
 }
-.card{max-width:360px}
+.card{width:min(88vw,360px)}
 .spinner{
   width:34px;height:34px;margin:0 auto 16px;
   border:3px solid rgba(89,74,55,.18);
@@ -28,35 +28,63 @@ main{
   animation:spin .8s linear infinite;
 }
 h1{font-size:20px;margin:0 0 8px}
-p{font-size:14px;line-height:1.5;margin:0;opacity:.78}
+p{font-size:14px;line-height:1.5;margin:0 0 18px;opacity:.78}
+button{
+  width:100%;
+  border:0;
+  border-radius:999px;
+  padding:14px 20px;
+  background:#8f2f2a;
+  color:white;
+  font-size:16px;
+  font-weight:700;
+  cursor:pointer;
+  opacity:.45;
+}
+button.ready{opacity:1}
+#status{font-size:12px;opacity:.62;margin-top:12px}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 <main>
   <div class="card">
-    <div class="spinner"></div>
-    <h1>正在准备筋斗云…</h1>
-    <p>Preparing Cloud Magic</p>
+    <div id="spinner" class="spinner"></div>
+    <h1>筋斗云魔法</h1>
+    <p>Cloud Magic</p>
+    <button id="enterBtn" disabled>正在准备 AR…</button>
+    <div id="status">正在加载识别数据…</div>
   </div>
 </main>
 
 <script>
 (async()=>{
-  const target="./../targets/cloud.mind";
+  const btn=document.getElementById("enterBtn");
+  const status=document.getElementById("status");
+  const spinner=document.getElementById("spinner");
 
   try{
-    // Warm the browser cache before entering the real AR page.
-    const res=await fetch(target,{cache:"force-cache"});
+    const res=await fetch("../targets/cloud.mind",{cache:"force-cache"});
     if(!res.ok) throw new Error("cloud.mind preload failed");
     await res.arrayBuffer();
+    status.textContent="识别数据已准备好";
   }catch(e){
-    // Do not trap the user on the launcher if preload fails.
     console.warn(e);
+    status.textContent="可以继续进入 AR";
   }
 
-  // replace() prevents Back from bouncing between launcher and AR page.
-  location.replace("./cloud_ar.html");
+  // Keep the page here until the user taps START.
+  // This gives mobile Safari/Chrome a fresh user gesture for camera startup.
+  spinner.style.display="none";
+  btn.disabled=false;
+  btn.classList.add("ready");
+  btn.textContent="开启 AR · START";
+
+  btn.addEventListener("click",()=>{
+    btn.disabled=true;
+    btn.textContent="正在打开相机…";
+    location.href="./cloud_ar.html";
+  },{once:true});
 })();
 </script>
 </body>
