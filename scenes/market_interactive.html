@@ -36,6 +36,11 @@ AFRAME.registerComponent("market-persist",{
     this.camera=null;
 
     this.lastMatrix=new THREE.Matrix4();
+    this.holding=false;
+    this.holdStart=0;
+    this.basePos=new THREE.Vector3();
+    this.baseQuat=new THREE.Quaternion();
+    this.baseScale=new THREE.Vector3(1,1,1);
 
     this.hits={
       peach:document.getElementById("holdPeach"),
@@ -71,6 +76,7 @@ AFRAME.registerComponent("market-persist",{
 
     this.el.addEventListener("targetFound",()=>{
       this.tracking=true;
+      this.holding=false;
       this.hideHoldHits();
 
       if(this.timer){
@@ -85,20 +91,27 @@ AFRAME.registerComponent("market-persist",{
 
     this.el.addEventListener("targetLost",()=>{
       this.tracking=false;
+      this.holding=true;
+      this.holdStart=performance.now();
 
       if(this.world){
-        // Keep the same Market picture frozen at its last world pose.
-        this.world.object3D.visible=true;
+        // Save the last tracked pose, then add only a tiny "alive" motion during the 15s hold.
+        const obj=this.world.object3D;
+        this.basePos.copy(obj.position);
+        this.baseQuat.copy(obj.quaternion);
+        this.baseScale.copy(obj.scale);
+        obj.visible=true;
       }
 
       // A-Frame raycaster is unreliable after targetLost on some mobile browsers.
-      // Switch interaction to fixed DOM hit zones based on the last visible screen positions.
+      // Switch interaction to DOM hit zones and keep them synced to the idle motion.
       this.updateHoldHits();
       this.showHoldHits();
 
       if(this.timer)clearTimeout(this.timer);
       this.timer=setTimeout(()=>{
         if(this.world)this.world.object3D.visible=false;
+        this.holding=false;
         this.hideHoldHits();
         this.timer=null;
       },this.data.seconds*1000);
@@ -167,21 +180,46 @@ AFRAME.registerComponent("market-persist",{
   },
 
   tick:function(){
-    if(!this.tracking || !this.world)return;
-
-    this.el.object3D.updateMatrixWorld(true);
-    this.lastMatrix.copy(this.el.object3D.matrixWorld);
-
-    const pos=new THREE.Vector3();
-    const quat=new THREE.Quaternion();
-    const scale=new THREE.Vector3();
-    this.lastMatrix.decompose(pos,quat,scale);
+    if(!this.world)return;
 
     const obj=this.world.object3D;
-    obj.position.copy(pos);
-    obj.quaternion.copy(quat);
-    obj.scale.copy(scale);
-    obj.updateMatrixWorld(true);
+
+    if(this.tracking){
+      this.el.object3D.updateMatrixWorld(true);
+      this.lastMatrix.copy(this.el.object3D.matrixWorld);
+
+      const pos=new THREE.Vector3();
+      const quat=new THREE.Quaternion();
+      const scale=new THREE.Vector3();
+      this.lastMatrix.decompose(pos,quat,scale);
+
+      obj.position.copy(pos);
+      obj.quaternion.copy(quat);
+      obj.scale.copy(scale);
+      obj.updateMatrixWorld(true);
+      return;
+    }
+
+    if(this.holding){
+      // Very small, slow motion so the AR still feels "alive" after the card is removed.
+      // It is intentionally much steadier than real tracking jitter.
+      const t=(performance.now()-this.holdStart)/1000;
+      const bob=Math.sin(t*1.55)*0.008;
+      const sway=Math.sin(t*1.10)*0.006;
+      const roll=Math.sin(t*1.25)*THREE.MathUtils.degToRad(0.7);
+
+      obj.position.copy(this.basePos);
+      obj.position.x+=sway;
+      obj.position.y+=bob;
+
+      const qRoll=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),roll);
+      obj.quaternion.copy(this.baseQuat).multiply(qRoll);
+      obj.scale.copy(this.baseScale);
+      obj.updateMatrixWorld(true);
+
+      // Keep the HTML tap zones exactly on top of the gently moving AR UI.
+      this.updateHoldHits();
+    }
   }
 });
 
