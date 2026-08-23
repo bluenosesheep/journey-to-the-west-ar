@@ -10,13 +10,42 @@ AFRAME.registerComponent("city-world-controller",{
     this.park=document.getElementById("cityPark");
     this.market=document.getElementById("cityMarket");
     this.hint=document.getElementById("hint");
+
+    this.tracking=false;
+    this.lastMatrix=new THREE.Matrix4();
+
     this.world.object3D.visible=false;
 
     this.el.addEventListener("targetFound",()=>{
+      this.tracking=true;
       this.world.object3D.visible=true;
       this.showWorld();
       this.hint.textContent="CITY WORLD · 点击 PARK 或 MARKET 进入场景";
     });
+
+    this.el.addEventListener("targetLost",()=>{
+      // City World stays visible at the last tracked pose.
+      this.tracking=false;
+      this.world.object3D.visible=true;
+    });
+  },
+
+  tick:function(){
+    if(!this.tracking || !this.world)return;
+
+    this.el.object3D.updateMatrixWorld(true);
+    this.lastMatrix.copy(this.el.object3D.matrixWorld);
+
+    const p=new THREE.Vector3();
+    const q=new THREE.Quaternion();
+    const s=new THREE.Vector3();
+    this.lastMatrix.decompose(p,q,s);
+
+    const obj=this.world.object3D;
+    obj.position.copy(p);
+    obj.quaternion.copy(q);
+    obj.scale.copy(s);
+    obj.updateMatrixWorld(true);
   },
   showWorld:function(){
     this.setPanel(this.building,"0 0.34 0.02","1 1 1",1);
