@@ -439,9 +439,9 @@ AFRAME.registerComponent("park-drag-controller",{
     if(this.holding){
       const t=(performance.now()-this.holdStart)/1000;
 
-      const bob=Math.sin(t*1.45)*.022;
-      const sway=Math.sin(t*1.05)*.014;
-      const roll=Math.sin(t*1.18)*THREE.MathUtils.degToRad(1.4);
+      const bob=Math.sin(t*1.35)*.014;
+      const sway=Math.sin(t*.95)*.008;
+      const roll=Math.sin(t*1.05)*THREE.MathUtils.degToRad(.8);
 
       obj.position.copy(this.basePos);
       obj.position.x+=sway;
@@ -475,7 +475,7 @@ AFRAME.registerComponent("park-drag-controller",{
 <canvas id="parkCanvas" class="off" width="768" height="512"></canvas>
 
 <a-scene
-  mindar-image="imageTargetSrc: ../targets/city_world.mind; autoStart: true;"
+  mindar-image="imageTargetSrc: ../targets/park.mind; autoStart: true;"
   color-space="sRGB"
   renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true"
   vr-mode-ui="enabled:false"
@@ -484,7 +484,7 @@ AFRAME.registerComponent("park-drag-controller",{
   <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
   <a-entity
-    mindar-image-target="targetIndex:1"
+    mindar-image-target="targetIndex:0"
     park-events
     park-drag-controller="seconds:15; world:#parkWorld">
   </a-entity>
