@@ -64,9 +64,9 @@ AFRAME.registerComponent("park-canvas",{
     };
 
     this.items={
-      tree:{emoji:"🌳",x:245,y:120,scale:1.28},
-      flower:{emoji:"🌷",x:335,y:120,scale:.78},
-      bench:{emoji:"🪑",x:435,y:120,scale:.92},
+      tree:{emoji:"🌳",x:245,y:120,scale:1.55},
+      flower:{emoji:"🌷",x:335,y:120,scale:.58},
+      bench:{emoji:"🪑",x:435,y:120,scale:.72},
       fountain:{emoji:"⛲",x:530,y:120,scale:1.08}
     };
   },
@@ -127,14 +127,19 @@ AFRAME.registerComponent("park-canvas",{
     ctx.fillText("🌱",305,430);
     ctx.restore();
 
-    // 4) one gently drifting butterfly, decorative only
+    // 4) butterfly flies clearly back and forth across the park.
     const bt=performance.now()/1000;
-    const butterflyX=540+Math.sin(bt*.85)*24;
-    const butterflyY=245+Math.sin(bt*1.35)*12;
+    const travel=(Math.sin(bt*.72)+1)/2; // 0 -> 1 -> 0
+    const butterflyX=185+travel*395;
+    const butterflyY=245+Math.sin(bt*1.55)*16;
+    const butterflyScale=.86+.10*Math.sin(bt*3.1);
+
     ctx.save();
-    ctx.globalAlpha=.82;
+    ctx.globalAlpha=.86;
+    ctx.translate(butterflyX,butterflyY);
+    ctx.scale(butterflyScale,butterflyScale);
     ctx.font='38px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-    ctx.fillText("🦋",butterflyX,butterflyY);
+    ctx.fillText("🦋",0,0);
     ctx.restore();
 
     // Draw movable items.
