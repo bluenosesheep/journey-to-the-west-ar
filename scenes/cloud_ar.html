@@ -135,6 +135,7 @@ function dc(ctx,img,cx,cy,w,h,r=0,a=1){
 /* Standalone canvas animation:
    it keeps running even after the MindAR target disappears. */
 
+
 window.addEventListener("DOMContentLoaded",()=>{
   const c=document.getElementById("cloudCanvas");
   const ctx=c.getContext("2d");
@@ -148,19 +149,27 @@ window.addEventListener("DOMContentLoaded",()=>{
 
   const images={};
   let loaded=0;
+  let loadingStarted=false;
+  let targetSeen=false;
   let animationStarted=false;
-
-  Object.entries(sources).forEach(([key,src])=>{
-    const img=new Image();
-    img.onload=()=>{
-      images[key]=img;
-      loaded++;
-    };
-    img.src=src;
-  });
+  let animStart=0;
 
   const total=Object.keys(sources).length;
-  let animStart=0;
+
+  function loadCloudAssets(){
+    if(loadingStarted)return;
+    loadingStarted=true;
+
+    Object.entries(sources).forEach(([key,src])=>{
+      const img=new Image();
+      img.onload=()=>{
+        images[key]=img;
+        loaded++;
+        maybeStartAnimation();
+      };
+      img.src=src;
+    });
+  }
 
   function refreshCanvasMaterials(){
     ["#cloudTrackedPlane","#cloudGhost"].forEach(sel=>{
@@ -172,10 +181,17 @@ window.addEventListener("DOMContentLoaded",()=>{
     });
   }
 
+  function maybeStartAnimation(){
+    if(targetSeen && loaded===total && !animationStarted){
+      animationStarted=true;
+      animStart=performance.now();
+      render();
+    }
+  }
+
   function render(){
     if(!animationStarted)return;
     requestAnimationFrame(render);
-    if(loaded<total)return;
 
     const w=c.width;
     const h=c.height;
@@ -206,13 +222,18 @@ window.addEventListener("DOMContentLoaded",()=>{
     refreshCanvasMaterials();
   }
 
-  const target=document.querySelector('[mindar-image-target]');
+  const scene=document.querySelector("a-scene");
+  const target=document.querySelector("[mindar-image-target]");
+
+  // Important: wait until MindAR camera/tracker is ready before creating/decoding
+  // the 4 Cloud images. The launcher has already downloaded them into cache.
+  scene.addEventListener("arReady",()=>{
+    loadCloudAssets();
+  });
+
   target.addEventListener("targetFound",()=>{
-    if(!animationStarted){
-      animationStarted=true;
-      animStart=performance.now();
-      render();
-    }
+    targetSeen=true;
+    maybeStartAnimation();
   });
 });
 
