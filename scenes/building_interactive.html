@@ -160,8 +160,32 @@ AFRAME.registerComponent("building-canvas",{
 
     ctx.restore();
 
+    // Night mode appears when at least one building is lit.
+    const anyLit=Object.values(this.items).some(item=>item.lit);
+    if(anyLit){
+      ctx.save();
+      ctx.fillStyle="rgba(8,14,28,.72)";
+      ctx.fillRect(0,0,w,h);
+      ctx.restore();
+
+      // Redraw road lightly on top so the city still reads at night.
+      ctx.save();
+      ctx.fillStyle="rgba(58,63,72,.58)";
+      roundRect(ctx,105,365,558,88,24);
+      ctx.fill();
+      ctx.strokeStyle="rgba(255,233,140,.82)";
+      ctx.lineWidth=5;
+      ctx.setLineDash([30,22]);
+      ctx.beginPath();
+      ctx.moveTo(135,410);
+      ctx.lineTo(635,410);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
     // draw draggable buildings
-    Object.values(this.items).forEach(item=>{
+    Object.entries(this.items).forEach(([kind,item])=>{
       ctx.save();
       ctx.translate(item.x,item.y);
 
@@ -182,9 +206,17 @@ AFRAME.registerComponent("building-canvas",{
 
       if(item.lit){
         ctx.fillStyle="rgba(255,225,105,.96)";
-        const windows=[[-22,-12],[0,-12],[22,-12],[-22,10],[0,10],[22,10]];
+
+        const windowSets={
+          house:[[-14,-4],[14,-4],[-14,16],[14,16]],
+          tower:[[-18,-24],[0,-24],[18,-24],[-18,-6],[0,-6],[18,-6],[-18,12],[0,12],[18,12]],
+          school:[[-18,-10],[0,-10],[18,-10],[-18,10],[0,10],[18,10]],
+          shop:[[-14,-3],[14,-3],[-14,16],[14,16]]
+        };
+
+        const windows=windowSets[kind]||[];
         windows.forEach(([wx,wy])=>{
-          roundRect(ctx,wx-5,wy-5,10,10,2);
+          roundRect(ctx,wx-4.5,wy-4.5,9,9,2);
           ctx.fill();
         });
       }
