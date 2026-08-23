@@ -73,7 +73,7 @@ AFRAME.registerComponent("market-canvas",{
 AFRAME.registerComponent("pick-item",{
   schema:{kind:{type:"string"}},
   init:function(){
-    this.el.addEventListener("click",()=>{
+    this.el.addEventListener("click",()=>{console.log("market click",this.data.kind);
       const anchor=this.el.parentElement;
       const display=anchor.querySelector("#marketDisplay");
       const comp=display&&display.components["market-canvas"];
@@ -91,11 +91,9 @@ AFRAME.registerComponent("pick-item",{
  color-space="sRGB"
  renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true"
  vr-mode-ui="enabled:false"
- device-orientation-permission-ui="enabled:false"
- cursor="rayOrigin: mouse; fuse: false"
- raycaster="objects: .clickable; far: 100">
+ device-orientation-permission-ui="enabled:false">
 
-<a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+<a-camera position="0 0 0" look-controls="enabled:false" cursor="fuse:false; rayOrigin:mouse" raycaster="objects:.clickable; far:10000"></a-camera>
 
 <a-entity mindar-image-target="targetIndex:0" market-events>
   <a-plane id="marketDisplay"
@@ -106,15 +104,15 @@ AFRAME.registerComponent("pick-item",{
   <!-- Larger, almost invisible hit areas placed IN FRONT of display canvas -->
   <a-plane class="clickable" pick-item="kind:peach"
     position="-0.65 0.36 0.10" width="0.62" height="0.62"
-    material="color:#fff;opacity:0.001;transparent:true;depthWrite:false;side:double"></a-plane>
+    material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
 
   <a-plane class="clickable" pick-item="kind:cabbage"
     position="0 0.40 0.10" width="0.62" height="0.62"
-    material="color:#fff;opacity:0.001;transparent:true;depthWrite:false;side:double"></a-plane>
+    material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
 
   <a-plane class="clickable" pick-item="kind:egg"
     position="0.65 0.36 0.10" width="0.62" height="0.62"
-    material="color:#fff;opacity:0.001;transparent:true;depthWrite:false;side:double"></a-plane>
+    material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
 </a-entity>
 </a-scene>
 </body></html>
