@@ -64,10 +64,10 @@ AFRAME.registerComponent("park-canvas",{
     };
 
     this.items={
-      tree:{emoji:"🌳",x:245,y:120},
-      flower:{emoji:"🌷",x:335,y:120},
-      bench:{emoji:"🪑",x:435,y:120},
-      fountain:{emoji:"⛲",x:530,y:120}
+      tree:{emoji:"🌳",x:245,y:120,scale:1.28},
+      flower:{emoji:"🌷",x:335,y:120,scale:.78},
+      bench:{emoji:"🪑",x:435,y:120,scale:.92},
+      fountain:{emoji:"⛲",x:530,y:120,scale:1.08}
     };
   },
 
@@ -141,6 +141,7 @@ AFRAME.registerComponent("park-canvas",{
     Object.values(this.items).forEach(item=>{
       ctx.save();
       ctx.translate(item.x,item.y);
+      ctx.scale(item.scale||1,item.scale||1);
       ctx.font='92px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
       ctx.fillText(item.emoji,0,0);
       ctx.restore();
@@ -408,7 +409,7 @@ AFRAME.registerComponent("park-drag-controller",{
     const scale=this.getScreenScale();
     if(!scale)return;
 
-    const sizePx=Math.max(52,.46*scale.pxPerUnitX);
+    const baseSizePx=Math.max(52,.46*scale.pxPerUnitX);
 
     Object.entries(comp.items).forEach(([kind,item])=>{
       const local=this.canvasToLocal(item.x,item.y);
@@ -417,6 +418,8 @@ AFRAME.registerComponent("park-drag-controller",{
       if(!s)return;
 
       const b=this.hits[kind];
+      const visualScale=item.scale||1;
+      const sizePx=baseSizePx*Math.max(.85,visualScale);
       b.style.left=(s.x-sizePx/2)+"px";
       b.style.top=(s.y-sizePx/2)+"px";
       b.style.width=sizePx+"px";
