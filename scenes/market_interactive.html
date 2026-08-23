@@ -42,6 +42,12 @@ AFRAME.registerComponent("market-persist",{
     this.baseQuat=new THREE.Quaternion();
     this.baseScale=new THREE.Vector3(1,1,1);
 
+    // Keep a short history of stable tracked poses.
+    // When the card is moved away, MindAR can briefly report a distorted pose.
+    // We freeze from an earlier stable sample instead of the very last frame.
+    this.poseHistory=[];
+    this.maxPoseHistory=24;
+
     this.hits={
       peach:document.getElementById("holdPeach"),
       cabbage:document.getElementById("holdCabbage"),
@@ -77,6 +83,7 @@ AFRAME.registerComponent("market-persist",{
     this.el.addEventListener("targetFound",()=>{
       this.tracking=true;
       this.holding=false;
+      this.poseHistory=[];
       this.hideHoldHits();
 
       if(this.timer){
@@ -95,11 +102,40 @@ AFRAME.registerComponent("market-persist",{
       this.holdStart=performance.now();
 
       if(this.world){
-        // Save the last tracked pose, then add only a tiny "alive" motion during the 15s hold.
         const obj=this.world.object3D;
-        this.basePos.copy(obj.position);
-        this.baseQuat.copy(obj.quaternion);
-        this.baseScale.copy(obj.scale);
+
+        // Use a pose from roughly 250-350ms BEFORE targetLost.
+        // That avoids freezing the bad skew/tilt that often happens while the card is being pulled away.
+        let stablePose=null;
+        const now=performance.now();
+        for(let i=this.poseHistory.length-1;i>=0;i--){
+          const age=now-this.poseHistory[i].time;
+          if(age>=280){
+            stablePose=this.poseHistory[i];
+            break;
+          }
+        }
+
+        // Fallback to the oldest available recent pose, then finally current pose.
+        if(!stablePose && this.poseHistory.length){
+          stablePose=this.poseHistory[0];
+        }
+
+        if(stablePose){
+          this.basePos.copy(stablePose.pos);
+          this.baseQuat.copy(stablePose.quat);
+          this.baseScale.copy(stablePose.scale);
+
+          obj.position.copy(this.basePos);
+          obj.quaternion.copy(this.baseQuat);
+          obj.scale.copy(this.baseScale);
+          obj.updateMatrixWorld(true);
+        }else{
+          this.basePos.copy(obj.position);
+          this.baseQuat.copy(obj.quaternion);
+          this.baseScale.copy(obj.scale);
+        }
+
         obj.visible=true;
       }
 
@@ -192,6 +228,17 @@ AFRAME.registerComponent("market-persist",{
       const quat=new THREE.Quaternion();
       const scale=new THREE.Vector3();
       this.lastMatrix.decompose(pos,quat,scale);
+
+      // Save recent poses. About 20-24 frames gives us a few hundred ms of history.
+      this.poseHistory.push({
+        pos:pos.clone(),
+        quat:quat.clone(),
+        scale:scale.clone(),
+        time:performance.now()
+      });
+      if(this.poseHistory.length>this.maxPoseHistory){
+        this.poseHistory.shift();
+      }
 
       obj.position.copy(pos);
       obj.quaternion.copy(quat);
