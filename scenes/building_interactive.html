@@ -73,31 +73,43 @@ AFRAME.registerComponent("building-canvas",{
     ctx.clearRect(0,0,w,h);
     ctx.textAlign="center";ctx.textBaseline="middle";
 
-    // Light street / sidewalk environment; transparent overall.
+    // Clear street hierarchy: sidewalk above, roadway below.
     ctx.save();
-    ctx.fillStyle="rgba(210,210,205,.24)";
-    roundRect(ctx,115,345,538,105,34);
+
+    // Sidewalk strip
+    ctx.fillStyle="rgba(232,222,198,.62)";
+    roundRect(ctx,120,300,528,58,20);
     ctx.fill();
 
-    ctx.fillStyle="rgba(245,239,218,.38)";
-    roundRect(ctx,135,322,498,34,17);
+    // sidewalk edge / curb
+    ctx.strokeStyle="rgba(165,145,115,.55)";
+    ctx.lineWidth=5;
+    ctx.beginPath();
+    ctx.moveTo(135,355);
+    ctx.lineTo(633,355);
+    ctx.stroke();
+
+    // Roadway placed distinctly below the sidewalk
+    ctx.fillStyle="rgba(92,96,102,.48)";
+    roundRect(ctx,105,365,558,88,24);
     ctx.fill();
 
-    // road lane dashes
-    ctx.strokeStyle="rgba(255,255,255,.62)";
+    // center lane dashes
+    ctx.strokeStyle="rgba(255,246,185,.82)";
     ctx.lineWidth=5;
     ctx.setLineDash([30,22]);
     ctx.beginPath();
-    ctx.moveTo(155,400);
-    ctx.lineTo(615,400);
+    ctx.moveTo(135,410);
+    ctx.lineTo(635,410);
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // small street lamps for atmosphere
+    // small street lamps stay on the sidewalk
     ctx.font='30px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-    ctx.globalAlpha=.78;
+    ctx.globalAlpha=.82;
     ctx.fillText("💡",155,330);
     ctx.fillText("💡",615,330);
+
     ctx.restore();
 
     // draw draggable buildings
@@ -116,7 +128,7 @@ AFRAME.registerComponent("building-canvas",{
     ctx.save();
     ctx.globalAlpha=.88;
     ctx.font='34px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-    ctx.fillText("🚗",carX,420);
+    ctx.fillText("🚗",carX,414);
     ctx.restore();
 
     // RESET
