@@ -28,7 +28,7 @@ function roundRect(ctx,x,y,w,h,r){
 AFRAME.registerComponent("building-events",{
   init:function(){
     const h=document.getElementById("hint");
-    this.el.addEventListener("targetFound",()=>h.textContent="CITY · 拖动建筑，搭一个自己的街区吧！🏙️");
+    this.el.addEventListener("targetFound",()=>h.textContent="CITY · 拖动建筑搭街区，轻点建筑可以点亮它 ✨");
     this.el.addEventListener("targetLost",()=>h.textContent="City 还会停留 15 秒，可以继续搭建 🏙️");
   }
 });
@@ -46,10 +46,10 @@ AFRAME.registerComponent("building-canvas",{
     };
 
     this.items={
-      house:{emoji:"🏠",x:215,y:120,scale:.82},
-      tower:{emoji:"🏢",x:330,y:120,scale:1.35},
-      school:{emoji:"🏫",x:445,y:120,scale:1.00},
-      shop:{emoji:"🏪",x:555,y:120,scale:.88}
+      house:{emoji:"🏠",x:215,y:120,scale:.82,lit:false},
+      tower:{emoji:"🏢",x:330,y:120,scale:1.35,lit:false},
+      school:{emoji:"🏫",x:445,y:120,scale:1.00,lit:false},
+      shop:{emoji:"🏪",x:555,y:120,scale:.88,lit:false}
     };
   },
 
@@ -60,12 +60,20 @@ AFRAME.registerComponent("building-canvas",{
     item.y=Math.max(80,Math.min(430,y));
   },
 
+  toggleLight:function(kind){
+    const item=this.items[kind];
+    if(!item)return;
+    item.lit=!item.lit;
+    document.getElementById("hint").textContent=item.lit?"建筑点亮啦！✨":"灯关掉了";
+  },
+
   reset:function(){
     Object.entries(this.initial).forEach(([k,p])=>{
       this.items[k].x=p.x;
       this.items[k].y=p.y;
+      this.items[k].lit=false;
     });
-    document.getElementById("hint").textContent="CITY · 拖动建筑，搭一个自己的街区吧！🏙️";
+    document.getElementById("hint").textContent="CITY · 拖动建筑搭街区，轻点建筑可以点亮它 ✨";
   },
 
   tick:function(){
@@ -156,9 +164,31 @@ AFRAME.registerComponent("building-canvas",{
     Object.values(this.items).forEach(item=>{
       ctx.save();
       ctx.translate(item.x,item.y);
+
+      if(item.lit){
+        // warm halo + little glowing windows, independent of platform emoji design
+        const glow=ctx.createRadialGradient(0,0,10,0,0,62*(item.scale||1));
+        glow.addColorStop(0,"rgba(255,220,92,.46)");
+        glow.addColorStop(1,"rgba(255,220,92,0)");
+        ctx.fillStyle=glow;
+        ctx.beginPath();
+        ctx.arc(0,0,66*(item.scale||1),0,Math.PI*2);
+        ctx.fill();
+      }
+
       ctx.scale(item.scale||1,item.scale||1);
       ctx.font='92px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
       ctx.fillText(item.emoji,0,0);
+
+      if(item.lit){
+        ctx.fillStyle="rgba(255,225,105,.96)";
+        const windows=[[-22,-12],[0,-12],[22,-12],[-22,10],[0,10],[22,10]];
+        windows.forEach(([wx,wy])=>{
+          roundRect(ctx,wx-5,wy-5,10,10,2);
+          ctx.fill();
+        });
+      }
+
       ctx.restore();
     });
 
@@ -304,7 +334,8 @@ AFRAME.registerComponent("building-drag-controller",{
       pointerId:e.pointerId,kind,
       startScreenX:e.clientX,startScreenY:e.clientY,
       startCanvasX:item.x,startCanvasY:item.y,
-      pxPerUnitX:scale.pxPerUnitX,pxPerUnitY:scale.pxPerUnitY
+      pxPerUnitX:scale.pxPerUnitX,pxPerUnitY:scale.pxPerUnitY,
+      moved:false
     };
 
     document.getElementById("hint").textContent="拖到街道旁边吧！";
@@ -318,6 +349,7 @@ AFRAME.registerComponent("building-drag-controller",{
 
     const dx=e.clientX-this.dragState.startScreenX;
     const dy=e.clientY-this.dragState.startScreenY;
+    if(Math.hypot(dx,dy)>8)this.dragState.moved=true;
 
     const screenPxPerCanvasX=(this.dragState.pxPerUnitX*this.planeWidth)/this.canvasW;
     const screenPxPerCanvasY=(this.dragState.pxPerUnitY*this.planeHeight)/this.canvasH;
@@ -333,8 +365,16 @@ AFRAME.registerComponent("building-drag-controller",{
 
   endDrag:function(e){
     if(!this.dragState||e.pointerId!==this.dragState.pointerId)return;
+
+    const state=this.dragState;
     this.dragState=null;
-    document.getElementById("hint").textContent="CITY · 继续拖动建筑来搭街区吧！🏙️";
+
+    if(!state.moved){
+      const comp=this.getCanvasComp();
+      if(comp)comp.toggleLight(state.kind);
+    }else{
+      document.getElementById("hint").textContent="CITY · 拖动建筑，轻点建筑可以点亮它 ✨";
+    }
   },
 
   showHits:function(){Object.values(this.hits).forEach(b=>b.style.display="block");},
