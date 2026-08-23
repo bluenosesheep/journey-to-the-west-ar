@@ -4,194 +4,117 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Market Interactive AR</title>
-
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}
 video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}
 a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}
-canvas.a-canvas{background:transparent!important}
-.off{display:none}
-#hint{
-  position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));
-  transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;
-  border-radius:999px;background:rgba(255,255,255,.92);color:#222;
-  font:14px/1.4 system-ui;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.16)
-}
+canvas.a-canvas{background:transparent!important}.off{display:none}
+#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px/1.4 system-ui;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.16)}
 </style>
-
 <script>
-AFRAME.registerComponent("market-events",{
-  init:function(){
-    const hint=document.getElementById("hint");
-    this.el.addEventListener("targetFound",()=>{
-      hint.textContent="MARKET · 选一些东西放进篮筐吧！🧺";
-    });
-    this.el.addEventListener("targetLost",()=>{
-      hint.textContent="请把镜头对准 Market 识别图";
-    });
-  }
-});
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+}
+
+AFRAME.registerComponent("market-events",{init:function(){
+  const h=document.getElementById("hint");
+  this.el.addEventListener("targetFound",()=>h.textContent="MARKET · 点一个食物放进篮筐吧！🧺");
+  this.el.addEventListener("targetLost",()=>h.textContent="请把镜头对准 Market 识别图");
+}});
 
 AFRAME.registerComponent("market-canvas",{
   init:function(){
-    this.canvas=document.getElementById("marketCanvas");
-    this.ctx=this.canvas.getContext("2d");
-    this.start=performance.now();
-
+    this.c=document.getElementById("marketCanvas");
+    this.ctx=this.c.getContext("2d");
     this.items={
-      peach:{emoji:"🍑",x:180,y:145,tx:330,ty:355,selected:false,start:0},
-      cabbage:{emoji:"🥬",x:384,y:125,tx:384,ty:350,selected:false,start:0},
-      egg:{emoji:"🥚",x:588,y:145,tx:438,ty:355,selected:false,start:0}
+      peach:{emoji:"🍑",x:170,y:130,tx:330,ty:365,selected:false,start:0},
+      cabbage:{emoji:"🥬",x:384,y:115,tx:384,ty:350,selected:false,start:0},
+      egg:{emoji:"🥚",x:598,y:130,tx:438,ty:365,selected:false,start:0}
     };
-
-    this.draw();
   },
-
   pick:function(kind){
     const item=this.items[kind];
-    if(!item || item.selected)return;
-    item.selected=true;
-    item.start=performance.now();
+    if(!item||item.selected)return;
+    item.selected=true;item.start=performance.now();
+    document.getElementById("hint").textContent="放进篮筐里！";
   },
-
   tick:function(){
-    this.draw();
+    const ctx=this.ctx,c=this.c,w=c.width,h=c.height;
+    ctx.clearRect(0,0,w,h); // fully transparent canvas
 
-    const mesh=this.el.getObject3D("mesh");
-    if(mesh&&mesh.material&&mesh.material.map){
-      mesh.material.map.needsUpdate=true;
-    }
-  },
+    ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.font='118px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+    ctx.fillText("🧺",w/2,400);
 
-  draw:function(){
-    const ctx=this.ctx,c=this.canvas,w=c.width,h=c.height;
-    ctx.clearRect(0,0,w,h);
-
-    // soft translucent UI panel
-    ctx.save();
-    ctx.fillStyle="rgba(255,250,238,.82)";
-    roundRect(ctx,70,55,w-140,h-110,34);
-    ctx.fill();
-    ctx.restore();
-
-    ctx.textAlign="center";
-    ctx.textBaseline="middle";
-
-    // title
-    ctx.fillStyle="#8f2f2a";
-    ctx.font='700 42px system-ui, sans-serif';
-    ctx.fillText("MARKET",w/2,88);
-
-    // basket first
-    ctx.font='112px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-    ctx.fillText("🧺",w/2,390);
-
-    // food items
-    Object.entries(this.items).forEach(([kind,item])=>{
-      let x=item.x,y=item.y,scale=1,alpha=1;
-
+    Object.values(this.items).forEach(item=>{
+      let x=item.x,y=item.y,s=1;
       if(item.selected){
         const p=Math.min(1,(performance.now()-item.start)/650);
         const e=1-Math.pow(1-p,3);
-        const arc=Math.sin(Math.PI*p)*72;
-
+        const arc=Math.sin(Math.PI*p)*75;
         x=item.x+(item.tx-item.x)*e;
         y=item.y+(item.ty-item.y)*e-arc;
-        scale=1-.58*e;
-        alpha=1-.08*e;
+        s=1-.58*e;
       }
-
-      ctx.save();
-      ctx.globalAlpha=alpha;
-      ctx.translate(x,y);
-      ctx.scale(scale,scale);
-      ctx.font='92px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-      ctx.fillText(item.emoji,0,0);
-      ctx.restore();
+      ctx.save();ctx.translate(x,y);ctx.scale(s,s);
+      ctx.font='96px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+      ctx.fillText(item.emoji,0,0);ctx.restore();
     });
+
+    const mesh=this.el.getObject3D("mesh");
+    if(mesh&&mesh.material&&mesh.material.map)mesh.material.map.needsUpdate=true;
   }
 });
-
-function roundRect(ctx,x,y,w,h,r){
-  ctx.beginPath();
-  ctx.moveTo(x+r,y);
-  ctx.arcTo(x+w,y,x+w,y+h,r);
-  ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r);
-  ctx.arcTo(x,y,x+w,y,r);
-  ctx.closePath();
-}
 
 AFRAME.registerComponent("pick-item",{
   schema:{kind:{type:"string"}},
   init:function(){
     this.el.addEventListener("click",()=>{
-      const target=this.el.closest("[mindar-image-target]");
-      if(!target)return;
-      const plane=target.querySelector("[market-canvas]");
-      const comp=plane && plane.components["market-canvas"];
+      const anchor=this.el.parentElement;
+      const display=anchor.querySelector("#marketDisplay");
+      const comp=display&&display.components["market-canvas"];
       if(comp)comp.pick(this.data.kind);
     });
   }
 });
 </script>
 </head>
-
 <body>
 <div id="hint">请把镜头对准 Market 识别图</div>
-
 <canvas id="marketCanvas" class="off" width="768" height="512"></canvas>
 
-<a-scene
-  mindar-image="imageTargetSrc: ../targets/market.mind; autoStart: true;"
-  color-space="sRGB"
-  renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true"
-  vr-mode-ui="enabled:false"
-  device-orientation-permission-ui="enabled:false"
-  cursor="rayOrigin:mouse"
-  raycaster="objects:.clickable">
+<a-scene mindar-image="imageTargetSrc: ../targets/market.mind; autoStart: true;"
+ color-space="sRGB"
+ renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true"
+ vr-mode-ui="enabled:false"
+ device-orientation-permission-ui="enabled:false"
+ cursor="rayOrigin: mouse; fuse: false"
+ raycaster="objects: .clickable; far: 100">
 
-  <a-camera position="0 0 0" look-controls="enabled:false">
-    <a-cursor fuse="false" raycaster="objects:.clickable" material="opacity:0"></a-cursor>
-  </a-camera>
+<a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
-  <a-entity mindar-image-target="targetIndex:0" market-events>
+<a-entity mindar-image-target="targetIndex:0" market-events>
+  <a-plane id="marketDisplay"
+    width="2.35" height="1.57" position="0 0.03 0.02"
+    material="shader:flat;src:#marketCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
+    market-canvas></a-plane>
 
-    <!-- visible emoji canvas -->
-    <a-plane
-      width="2.35"
-      height="1.57"
-      position="0 0.03 0.02"
-      material="shader:flat;src:#marketCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
-      market-canvas>
-    </a-plane>
+  <!-- Larger, almost invisible hit areas placed IN FRONT of display canvas -->
+  <a-plane class="clickable" pick-item="kind:peach"
+    position="-0.65 0.36 0.10" width="0.62" height="0.62"
+    material="color:#fff;opacity:0.001;transparent:true;depthWrite:false;side:double"></a-plane>
 
-    <!-- invisible click zones -->
-    <a-plane class="clickable"
-      position="-0.62 0.28 0.04"
-      width="0.48" height="0.48"
-      material="opacity:0;transparent:true"
-      pick-item="kind:peach">
-    </a-plane>
+  <a-plane class="clickable" pick-item="kind:cabbage"
+    position="0 0.40 0.10" width="0.62" height="0.62"
+    material="color:#fff;opacity:0.001;transparent:true;depthWrite:false;side:double"></a-plane>
 
-    <a-plane class="clickable"
-      position="0 0.34 0.04"
-      width="0.48" height="0.48"
-      material="opacity:0;transparent:true"
-      pick-item="kind:cabbage">
-    </a-plane>
-
-    <a-plane class="clickable"
-      position="0.62 0.28 0.04"
-      width="0.48" height="0.48"
-      material="opacity:0;transparent:true"
-      pick-item="kind:egg">
-    </a-plane>
-
-  </a-entity>
+  <a-plane class="clickable" pick-item="kind:egg"
+    position="0.65 0.36 0.10" width="0.62" height="0.62"
+    material="color:#fff;opacity:0.001;transparent:true;depthWrite:false;side:double"></a-plane>
+</a-entity>
 </a-scene>
-</body>
-</html>
+</body></html>
