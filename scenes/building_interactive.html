@@ -104,11 +104,51 @@ AFRAME.registerComponent("building-canvas",{
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // small street lamps stay on the sidewalk
-    ctx.font='30px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-    ctx.globalAlpha=.82;
-    ctx.fillText("💡",155,330);
-    ctx.fillText("💡",615,330);
+    // Draw real street lamps with Canvas instead of the light-bulb emoji.
+    function drawStreetLamp(x,y){
+      ctx.save();
+
+      // pole
+      ctx.strokeStyle="rgba(72,76,78,.82)";
+      ctx.lineWidth=5;
+      ctx.lineCap="round";
+      ctx.beginPath();
+      ctx.moveTo(x,y+26);
+      ctx.lineTo(x,y-18);
+      ctx.stroke();
+
+      // curved lamp arm
+      ctx.beginPath();
+      ctx.moveTo(x,y-18);
+      ctx.quadraticCurveTo(x+2,y-34,x+18,y-34);
+      ctx.stroke();
+
+      // lamp shade
+      ctx.fillStyle="rgba(70,74,76,.88)";
+      ctx.beginPath();
+      ctx.moveTo(x+10,y-35);
+      ctx.lineTo(x+27,y-35);
+      ctx.lineTo(x+23,y-26);
+      ctx.lineTo(x+14,y-26);
+      ctx.closePath();
+      ctx.fill();
+
+      // warm light
+      ctx.fillStyle="rgba(255,221,112,.90)";
+      ctx.beginPath();
+      ctx.arc(x+18.5,y-25,5,0,Math.PI*2);
+      ctx.fill();
+
+      // base
+      ctx.fillStyle="rgba(72,76,78,.82)";
+      roundRect(ctx,x-8,y+24,16,5,2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    drawStreetLamp(155,326);
+    drawStreetLamp(615,326);
 
     ctx.restore();
 
