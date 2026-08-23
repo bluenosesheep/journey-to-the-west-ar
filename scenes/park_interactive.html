@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Park Interactive AR</title>
+
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}
+video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}
+a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}
+canvas.a-canvas{background:transparent!important}.off{display:none}
+#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px/1.4 system-ui;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.16)}
+#holdHitLayer{position:fixed;inset:0;z-index:40;pointer-events:none}
+.hold-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+</style>
+
+<script>
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+}
+
+AFRAME.registerComponent("park-events",{init:function(){
+  const h=document.getElementById("hint");
+  this.el.addEventListener("targetFound",()=>h.textContent="PARK · 选一些东西布置公园吧！🌳");
+  this.el.addEventListener("targetLost",()=>h.textContent="Park 还会停留 15 秒，可以继续布置 🌿");
+}});
+
+AFRAME.registerComponent("park-canvas",{
+  init:function(){
+    this.c=document.getElementById("parkCanvas");
+    this.ctx=this.c.getContext("2d");
+    this.items={
+      tree:{emoji:"🌳",x:205,y:120,tx:260,ty:350,selected:false,start:0},
+      flower:{emoji:"🌷",x:325,y:120,tx:340,ty:385,selected:false,start:0},
+      bench:{emoji:"🪑",x:445,y:120,tx:430,ty:370,selected:false,start:0},
+      fountain:{emoji:"⛲",x:565,y:120,tx:510,ty:345,selected:false,start:0}
+    };
+  },
+  pick:function(kind){
+    const item=this.items[kind];
+    if(!item||item.selected)return;
+    item.selected=true;
+    item.start=performance.now();
+    document.getElementById("hint").textContent="放进公园里！";
+  },
+  reset:function(){
+    Object.values(this.items).forEach(item=>{item.selected=false;item.start=0;});
+    document.getElementById("hint").textContent="PARK · 选一些东西布置公园吧！🌳";
+  },
+  tick:function(){
+    const ctx=this.ctx,c=this.c,w=c.width,h=c.height;
+    ctx.clearRect(0,0,w,h);
+    ctx.textAlign="center";ctx.textBaseline="middle";
+
+    // Light grass islands only, no card background.
+    ctx.save();
+    ctx.fillStyle="rgba(126,181,92,.28)";
+    ctx.beginPath();ctx.ellipse(w/2,390,240,72,0,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+
+    Object.values(this.items).forEach(item=>{
+      let x=item.x,y=item.y,s=1,alpha=1;
+      if(item.selected){
+        const p=Math.min(1,(performance.now()-item.start)/700);
+        const e=1-Math.pow(1-p,3);
+        const arc=Math.sin(Math.PI*p)*70;
+        x=item.x+(item.tx-item.x)*e;
+        y=item.y+(item.ty-item.y)*e-arc;
+        s=1-.28*e;
+      }
+      ctx.save();
+      ctx.globalAlpha=alpha;
+      ctx.translate(x,y);ctx.scale(s,s);
+      ctx.font='92px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+      ctx.fillText(item.emoji,0,0);
+      ctx.restore();
+    });
+
+    // RESET
+    const bx=w/2-86,by=458,bw=172,bh=40,br=20;
+    ctx.save();roundRect(ctx,bx,by,bw,bh,br);
+    ctx.fillStyle="rgba(255,248,220,.96)";ctx.fill();
+    ctx.lineWidth=3;ctx.strokeStyle="#6f8e42";ctx.stroke();
+    ctx.fillStyle="#56713b";ctx.font='700 20px system-ui,sans-serif';
+    ctx.fillText("RESET",w/2,by+bh/2+1);ctx.restore();
+
+    const mesh=this.el.getObject3D("mesh");
+    if(mesh&&mesh.material&&mesh.material.map)mesh.material.map.needsUpdate=true;
+  }
+});
+
+AFRAME.registerComponent("pick-park",{schema:{kind:{type:"string"}},init:function(){
+  this.el.addEventListener("click",()=>{
+    const d=document.getElementById("parkDisplay");
+    const c=d&&d.components["park-canvas"];
+    if(c)c.pick(this.data.kind);
+  });
+}});
+AFRAME.registerComponent("reset-park",{init:function(){
+  this.el.addEventListener("click",()=>{
+    const d=document.getElementById("parkDisplay");
+    const c=d&&d.components["park-canvas"];
+    if(c)c.reset();
+  });
+}});
+
+AFRAME.registerComponent("park-persist",{
+  schema:{seconds:{type:"number",default:15},world:{type:"selector"}},
+  init:function(){
+    this.world=this.data.world;this.tracking=false;this.holding=false;this.timer=null;this.holdStart=0;
+    this.lastMatrix=new THREE.Matrix4();this.basePos=new THREE.Vector3();this.baseQuat=new THREE.Quaternion();this.baseScale=new THREE.Vector3(1,1,1);
+    this.poseHistory=[];this.maxPoseHistory=24;
+    this.hits={
+      tree:document.getElementById("holdTree"),
+      flower:document.getElementById("holdFlower"),
+      bench:document.getElementById("holdBench"),
+      fountain:document.getElementById("holdFountain"),
+      reset:document.getElementById("holdReset")
+    };
+    this.localPoints={
+      tree:new THREE.Vector3(-.48,.36,.10),
+      flower:new THREE.Vector3(-.16,.36,.10),
+      bench:new THREE.Vector3(.16,.36,.10),
+      fountain:new THREE.Vector3(.48,.36,.10),
+      reset:new THREE.Vector3(0,-.62,.14)
+    };
+    this.localSizes={
+      tree:[.48,.52],flower:[.48,.52],bench:[.48,.52],fountain:[.48,.52],reset:[.74,.30]
+    };
+
+    const comp=()=>document.getElementById("parkDisplay")?.components?.["park-canvas"];
+    this.hits.tree.addEventListener("click",()=>comp()?.pick("tree"));
+    this.hits.flower.addEventListener("click",()=>comp()?.pick("flower"));
+    this.hits.bench.addEventListener("click",()=>comp()?.pick("bench"));
+    this.hits.fountain.addEventListener("click",()=>comp()?.pick("fountain"));
+    this.hits.reset.addEventListener("click",()=>comp()?.reset());
+
+    if(this.world)this.world.object3D.visible=false;
+
+    this.el.addEventListener("targetFound",()=>{
+      this.tracking=true;this.holding=false;this.poseHistory=[];this.hideHoldHits();
+      if(this.timer){clearTimeout(this.timer);this.timer=null;}
+      if(this.world)this.world.object3D.visible=true;
+    });
+
+    this.el.addEventListener("targetLost",()=>{
+      this.tracking=false;this.holding=true;this.holdStart=performance.now();
+      if(this.world){
+        const obj=this.world.object3D;let stable=null,now=performance.now();
+        for(let i=this.poseHistory.length-1;i>=0;i--){if(now-this.poseHistory[i].time>=280){stable=this.poseHistory[i];break;}}
+        if(!stable&&this.poseHistory.length)stable=this.poseHistory[0];
+        if(stable){
+          this.basePos.copy(stable.pos);this.baseQuat.copy(stable.quat);this.baseScale.copy(stable.scale);
+          obj.position.copy(this.basePos);obj.quaternion.copy(this.baseQuat);obj.scale.copy(this.baseScale);obj.updateMatrixWorld(true);
+        }else{
+          this.basePos.copy(obj.position);this.baseQuat.copy(obj.quaternion);this.baseScale.copy(obj.scale);
+        }
+        obj.visible=true;
+      }
+      this.updateHoldHits();this.showHoldHits();
+      if(this.timer)clearTimeout(this.timer);
+      this.timer=setTimeout(()=>{
+        if(this.world)this.world.object3D.visible=false;
+        this.holding=false;this.hideHoldHits();this.timer=null;
+      },this.data.seconds*1000);
+    });
+  },
+
+  getCamera:function(){
+    if(!this.camera){const e=document.querySelector("a-camera");this.camera=e&&e.getObject3D("camera");}
+    return this.camera;
+  },
+  projectWorld:function(v){
+    const cam=this.getCamera();if(!cam)return null;
+    const p=v.clone().project(cam);
+    return{x:(p.x*.5+.5)*innerWidth,y:(-p.y*.5+.5)*innerHeight};
+  },
+  updateHoldHits:function(){
+    if(!this.world)return;
+    const obj=this.world.object3D;obj.updateMatrixWorld(true);
+    const cw=new THREE.Vector3(0,0,0).applyMatrix4(obj.matrixWorld);
+    const rw=new THREE.Vector3(.5,0,0).applyMatrix4(obj.matrixWorld);
+    const uw=new THREE.Vector3(0,.5,0).applyMatrix4(obj.matrixWorld);
+    const c=this.projectWorld(cw),r=this.projectWorld(rw),u=this.projectWorld(uw);
+    if(!c||!r||!u)return;
+    const px=Math.max(1,Math.abs(r.x-c.x)*2),py=Math.max(1,Math.abs(u.y-c.y)*2);
+    Object.entries(this.localPoints).forEach(([k,l])=>{
+      const s=this.projectWorld(l.clone().applyMatrix4(obj.matrixWorld));if(!s)return;
+      const [wu,hu]=this.localSizes[k],bw=Math.max(k==="reset"?80:50,wu*px),bh=Math.max(k==="reset"?42:50,hu*py),b=this.hits[k];
+      b.style.left=(s.x-bw/2)+"px";b.style.top=(s.y-bh/2)+"px";b.style.width=bw+"px";b.style.height=bh+"px";
+    });
+  },
+  showHoldHits:function(){Object.values(this.hits).forEach(b=>b.style.display="block");},
+  hideHoldHits:function(){Object.values(this.hits).forEach(b=>b.style.display="none");},
+
+  tick:function(){
+    if(!this.world)return;const obj=this.world.object3D;
+    if(this.tracking){
+      this.el.object3D.updateMatrixWorld(true);this.lastMatrix.copy(this.el.object3D.matrixWorld);
+      const p=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();this.lastMatrix.decompose(p,q,s);
+      this.poseHistory.push({pos:p.clone(),quat:q.clone(),scale:s.clone(),time:performance.now()});
+      if(this.poseHistory.length>this.maxPoseHistory)this.poseHistory.shift();
+      obj.position.copy(p);obj.quaternion.copy(q);obj.scale.copy(s);obj.updateMatrixWorld(true);return;
+    }
+    if(this.holding){
+      const t=(performance.now()-this.holdStart)/1000;
+      const bob=Math.sin(t*1.45)*.022,sway=Math.sin(t*1.05)*.014,roll=Math.sin(t*1.18)*THREE.MathUtils.degToRad(1.4);
+      obj.position.copy(this.basePos);obj.position.x+=sway;obj.position.y+=bob;
+      const qr=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),roll);
+      obj.quaternion.copy(this.baseQuat).multiply(qr);obj.scale.copy(this.baseScale);obj.updateMatrixWorld(true);
+      this.updateHoldHits();
+    }
+  }
+});
+</script>
+</head>
+
+<body>
+<div id="hint">请把镜头对准 Park 识别图</div>
+
+<div id="holdHitLayer">
+<button id="holdTree" class="hold-hit"></button>
+<button id="holdFlower" class="hold-hit"></button>
+<button id="holdBench" class="hold-hit"></button>
+<button id="holdFountain" class="hold-hit"></button>
+<button id="holdReset" class="hold-hit"></button>
+</div>
+
+<canvas id="parkCanvas" class="off" width="768" height="512"></canvas>
+
+<a-scene
+  mindar-image="imageTargetSrc: ./targets/city_world.mind; autoStart: true;"
+  color-space="sRGB"
+  renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true"
+  vr-mode-ui="enabled:false"
+  device-orientation-permission-ui="enabled:false">
+
+  <a-camera position="0 0 0" look-controls="enabled:false" cursor="fuse:false; rayOrigin:mouse" raycaster="objects:.clickable; far:10000"></a-camera>
+
+  <!-- Park is targetIndex 1 in city_world.mind -->
+  <a-entity mindar-image-target="targetIndex:1" park-events park-persist="seconds:15; world:#parkWorld"></a-entity>
+
+  <a-entity id="parkWorld" visible="false">
+    <a-plane id="parkDisplay"
+      width="2.15" height="1.43" position="0 0.03 0.02"
+      material="shader:flat;src:#parkCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
+      park-canvas></a-plane>
+
+    <a-plane class="clickable" pick-park="kind:tree"
+      position="-0.48 0.36 0.10" width="0.48" height="0.52"
+      material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
+
+    <a-plane class="clickable" pick-park="kind:flower"
+      position="-0.16 0.36 0.10" width="0.48" height="0.52"
+      material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
+
+    <a-plane class="clickable" pick-park="kind:bench"
+      position="0.16 0.36 0.10" width="0.48" height="0.52"
+      material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
+
+    <a-plane class="clickable" pick-park="kind:fountain"
+      position="0.48 0.36 0.10" width="0.48" height="0.52"
+      material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
+
+    <a-plane class="clickable" reset-park
+      position="0 -0.62 0.14" width="0.74" height="0.30"
+      material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
+  </a-entity>
+</a-scene>
+</body>
+</html>
