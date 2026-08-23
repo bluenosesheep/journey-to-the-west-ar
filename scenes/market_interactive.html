@@ -31,9 +31,9 @@ AFRAME.registerComponent("market-canvas",{
     this.c=document.getElementById("marketCanvas");
     this.ctx=this.c.getContext("2d");
     this.items={
-      peach:{emoji:"🍑",x:170,y:130,tx:346,ty:374,selected:false,start:0},
-      cabbage:{emoji:"🥬",x:384,y:115,tx:384,ty:366,selected:false,start:0},
-      egg:{emoji:"🥚",x:598,y:130,tx:422,ty:374,selected:false,start:0}
+      peach:{emoji:"🍑",x:170,y:130,tx:348,ty:352,selected:false,start:0},
+      cabbage:{emoji:"🥬",x:384,y:115,tx:384,ty:344,selected:false,start:0},
+      egg:{emoji:"🥚",x:598,y:130,tx:420,ty:352,selected:false,start:0}
     };
   },
   pick:function(kind){
@@ -65,20 +65,69 @@ AFRAME.registerComponent("market-canvas",{
         const arc=Math.sin(Math.PI*p)*75;
         x=item.x+(item.tx-item.x)*e;
         y=item.y+(item.ty-item.y)*e-arc;
-        s=1-.58*e;
+        s=1-.50*e;
       }
       ctx.save();ctx.translate(x,y);ctx.scale(s,s);
       ctx.font='96px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
       ctx.fillText(item.emoji,0,0);ctx.restore();
     });
 
-    // Draw basket last so its front edge naturally covers the lower part
-    // of selected food, making the food look like it is actually inside.
-    ctx.font='118px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-    ctx.fillText("🧺",w/2,400);
+    // Draw a consistent basket ourselves instead of using the system 🧺 emoji.
+    // This keeps the basket shape identical on iPhone, Android and desktop.
+    const basketCx=w/2;
+    const basketTop=360;
+    const basketW=220;
+    const basketH=112;
 
-    // Friendly rounded RESET button, rendered in the same canvas so it stays flat and clean.
-    const bx=w/2-74, by=458, bw=148, bh=38, br=19;
+    // handle
+    ctx.save();
+    ctx.lineWidth=18;
+    ctx.lineCap="round";
+    ctx.strokeStyle="#c88435";
+    ctx.beginPath();
+    ctx.arc(basketCx, basketTop-8, 58, Math.PI, 0);
+    ctx.stroke();
+
+    // basket body
+    const left=basketCx-basketW/2;
+    const right=basketCx+basketW/2;
+    const bottom=basketTop+basketH;
+    ctx.beginPath();
+    ctx.moveTo(left+18,basketTop);
+    ctx.lineTo(right-18,basketTop);
+    ctx.lineTo(right-38,bottom);
+    ctx.quadraticCurveTo(basketCx,bottom+14,left+38,bottom);
+    ctx.closePath();
+    ctx.fillStyle="#d9a45a";
+    ctx.fill();
+    ctx.lineWidth=5;
+    ctx.strokeStyle="#a96f2b";
+    ctx.stroke();
+
+    // rim
+    ctx.fillStyle="#e7b66d";
+    roundRect(ctx,left,basketTop-14,basketW,28,14);
+    ctx.fill();
+    ctx.lineWidth=4;
+    ctx.strokeStyle="#b7772e";
+    ctx.stroke();
+
+    // woven lines
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(left+20,basketTop+10,basketW-40,basketH-24);
+    ctx.clip();
+    ctx.strokeStyle="rgba(150,92,35,.55)";
+    ctx.lineWidth=4;
+    for(let x=left-40;x<right+40;x+=32){
+      ctx.beginPath();ctx.moveTo(x,basketTop+10);ctx.lineTo(x+90,bottom);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x+90,basketTop+10);ctx.lineTo(x,bottom);ctx.stroke();
+    }
+    ctx.restore();
+    ctx.restore();
+
+    // Friendly rounded RESET button with more space below the basket.
+    const bx=w/2-82, by=500, bw=164, bh=42, br=21;
     ctx.save();
     roundRect(ctx,bx,by,bw,bh,br);
     ctx.fillStyle="rgba(255,248,220,.96)";
@@ -156,8 +205,8 @@ AFRAME.registerComponent("reset-market",{
 
   <!-- Invisible reset hit area aligned with the canvas-rendered RESET button -->
   <a-plane class="clickable"
-    position="0 -0.69 0.11"
-    width="0.62" height="0.18"
+    position="0 -0.89 0.11"
+    width="0.78" height="0.26"
     material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"
     reset-market></a-plane>
 </a-entity>
