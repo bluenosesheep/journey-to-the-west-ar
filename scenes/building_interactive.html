@@ -164,15 +164,35 @@ AFRAME.registerComponent("building-canvas",{
     const anyLit=Object.values(this.items).some(item=>item.lit);
     if(anyLit){
       ctx.save();
-      ctx.fillStyle="rgba(8,14,28,.72)";
-      ctx.fillRect(0,0,w,h);
-      ctx.restore();
+
+      // Irregular curved night-sky shape instead of a hard rectangle.
+      ctx.fillStyle="rgba(8,14,28,.74)";
+      ctx.beginPath();
+      ctx.moveTo(72,72);
+      ctx.bezierCurveTo(165,20,285,48,370,30);
+      ctx.bezierCurveTo(470,8,620,42,696,104);
+      ctx.bezierCurveTo(742,150,725,245,706,300);
+      ctx.bezierCurveTo(688,348,718,405,662,448);
+      ctx.bezierCurveTo(600,492,485,462,395,476);
+      ctx.bezierCurveTo(300,492,175,470,110,432);
+      ctx.bezierCurveTo(52,398,66,320,54,260);
+      ctx.bezierCurveTo(42,194,24,116,72,72);
+      ctx.closePath();
+      ctx.fill();
+
+      // A few tiny stars, kept subtle.
+      ctx.fillStyle="rgba(255,242,180,.78)";
+      [[150,110],[245,78],[505,92],[612,135],[565,205]].forEach(([sx,sy])=>{
+        ctx.beginPath();
+        ctx.arc(sx,sy,2.6,0,Math.PI*2);
+        ctx.fill();
+      });
 
       // Redraw road lightly on top so the city still reads at night.
-      ctx.save();
-      ctx.fillStyle="rgba(58,63,72,.58)";
+      ctx.fillStyle="rgba(58,63,72,.60)";
       roundRect(ctx,105,365,558,88,24);
       ctx.fill();
+
       ctx.strokeStyle="rgba(255,233,140,.82)";
       ctx.lineWidth=5;
       ctx.setLineDash([30,22]);
@@ -181,6 +201,7 @@ AFRAME.registerComponent("building-canvas",{
       ctx.lineTo(635,410);
       ctx.stroke();
       ctx.setLineDash([]);
+
       ctx.restore();
     }
 
@@ -205,20 +226,28 @@ AFRAME.registerComponent("building-canvas",{
       ctx.fillText(item.emoji,0,0);
 
       if(item.lit){
-        ctx.fillStyle="rgba(255,225,105,.96)";
+        // Do not paint fake windows on top of system emoji:
+        // iPhone/Android/desktop building emoji have different window layouts.
+        // Use a warm architectural glow instead, which stays aligned on every device.
+        ctx.save();
+        ctx.globalCompositeOperation="screen";
 
-        const windowSets={
-          house:[[-14,-4],[14,-4],[-14,16],[14,16]],
-          tower:[[-18,-24],[0,-24],[18,-24],[-18,-6],[0,-6],[18,-6],[-18,12],[0,12],[18,12]],
-          school:[[-18,-10],[0,-10],[18,-10],[-18,10],[0,10],[18,10]],
-          shop:[[-14,-3],[14,-3],[-14,16],[14,16]]
-        };
+        const glow=ctx.createRadialGradient(0,8,8,0,8,56);
+        glow.addColorStop(0,"rgba(255,218,92,.50)");
+        glow.addColorStop(.55,"rgba(255,184,70,.22)");
+        glow.addColorStop(1,"rgba(255,160,50,0)");
+        ctx.fillStyle=glow;
+        ctx.beginPath();
+        ctx.arc(0,8,58,0,Math.PI*2);
+        ctx.fill();
 
-        const windows=windowSets[kind]||[];
-        windows.forEach(([wx,wy])=>{
-          roundRect(ctx,wx-4.5,wy-4.5,9,9,2);
-          ctx.fill();
-        });
+        // small pool of warm light at the base
+        ctx.fillStyle="rgba(255,210,100,.20)";
+        ctx.beginPath();
+        ctx.ellipse(0,40,34,10,0,0,Math.PI*2);
+        ctx.fill();
+
+        ctx.restore();
       }
 
       ctx.restore();
