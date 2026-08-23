@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>MAGIC 02 · Fire</title>
+
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+<style>
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:transparent!important;
+}
+video{
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  height:100vh!important;
+  object-fit:cover!important;
+  z-index:0!important;
+}
+a-scene{
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  height:100vh!important;
+  z-index:1!important;
+  background:transparent!important;
+}
+canvas.a-canvas{
+  background:transparent!important;
+}
+#hint{
+  position:fixed;
+  left:50%;
+  bottom:max(20px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  z-index:20;
+  padding:10px 14px;
+  border-radius:999px;
+  background:rgba(255,255,255,.92);
+  color:#222;
+  font:14px/1.35 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  white-space:nowrap;
+  box-shadow:0 6px 24px rgba(0,0,0,.16);
+}
+#fxCanvas{
+  display:none;
+}
+</style>
+
+<script>
+AFRAME.registerComponent("story-target-events",{
+  init:function(){
+    const hint=document.getElementById("hint");
+    this.el.addEventListener("targetFound",()=>{
+      hint.textContent="火光出现了！发生了什么 🔥";
+    });
+    this.el.addEventListener("targetLost",()=>{
+      hint.textContent="火焰还会停留 10 秒 🔥";
+    });
+  }
+});
+
+AFRAME.registerComponent("freeze-on-lost",{
+  schema:{
+    seconds:{type:"number",default:10},
+    ghost:{type:"selector"}
+  },
+
+  init:function(){
+    this.tracking=false;
+    this.hideTimer=null;
+
+    this.lastPos=new THREE.Vector3();
+    this.lastQuat=new THREE.Quaternion();
+    this.lastScale=new THREE.Vector3(1,1,1);
+
+    this.sourcePlane=this.el.querySelector("a-plane");
+    this.ghost=this.data.ghost;
+
+    if(this.ghost){
+      this.ghost.object3D.visible=false;
+    }
+
+    this.el.addEventListener("targetFound",()=>{
+      this.tracking=true;
+
+      if(this.hideTimer){
+        clearTimeout(this.hideTimer);
+        this.hideTimer=null;
+      }
+
+      if(this.ghost){
+        this.ghost.object3D.visible=false;
+      }
+    });
+
+    this.el.addEventListener("targetLost",()=>{
+      this.tracking=false;
+
+      if(!this.ghost || !this.sourcePlane)return;
+
+      const src=this.sourcePlane.object3D;
+      src.getWorldPosition(this.lastPos);
+      src.getWorldQuaternion(this.lastQuat);
+      src.getWorldScale(this.lastScale);
+
+      const g=this.ghost.object3D;
+      g.position.copy(this.lastPos);
+      g.quaternion.copy(this.lastQuat);
+      g.scale.copy(this.lastScale);
+      g.visible=true;
+
+      if(this.hideTimer){
+        clearTimeout(this.hideTimer);
+      }
+
+      this.hideTimer=setTimeout(()=>{
+        g.visible=false;
+        this.hideTimer=null;
+      },this.data.seconds*1000);
+    });
+  },
+
+  tick:function(){
+    if(this.tracking && this.sourcePlane){
+      const src=this.sourcePlane.object3D;
+      src.getWorldPosition(this.lastPos);
+      src.getWorldQuaternion(this.lastQuat);
+      src.getWorldScale(this.lastScale);
+    }
+  }
+});
+
+window.addEventListener("DOMContentLoaded",()=>{
+  const c=document.getElementById("fxCanvas");
+  const ctx=c.getContext("2d");
+
+  const sources={
+    fire:"../assets/fire/fire_main.png",
+    sparks:"../assets/fire/fire_sparks.png",
+    smoke:"../assets/fire/smoke.png",
+    heat:"../assets/fire/heat_wave.png"
+  };
+
+  const images={};
+  let loaded=0;
+  let loadingStarted=false;
+  let targetSeen=false;
+  let animationStarted=false;
+  let animStart=0;
+
+  const total=Object.keys(sources).length;
+
+  function drawCentered(img,cx,cy,width,height,rotation=0,alpha=1){
+    ctx.save();
+    ctx.globalAlpha=alpha;
+    ctx.translate(cx,cy);
+    ctx.rotate(rotation);
+    ctx.drawImage(img,-width/2,-height/2,width,height);
+    ctx.restore();
+  }
+
+  function loadFireAssets(){
+    if(loadingStarted)return;
+    loadingStarted=true;
+
+    Object.entries(sources).forEach(([key,src])=>{
+      const img=new Image();
+      img.crossOrigin="anonymous";
+
+      img.onload=()=>{
+        images[key]=img;
+        loaded++;
+        maybeStartAnimation();
+      };
+
+      img.src=src;
+    });
+  }
+
+  function refreshCanvasMaterials(){
+    ["#fireTrackedPlane","#fireGhost"].forEach(sel=>{
+      const el=document.querySelector(sel);
+      const mesh=el && el.getObject3D && el.getObject3D("mesh");
+      if(mesh && mesh.material && mesh.material.map){
+        mesh.material.map.needsUpdate=true;
+      }
+    });
+  }
+
+  function maybeStartAnimation(){
+    if(targetSeen && loaded===total && !animationStarted){
+      animationStarted=true;
+      animStart=performance.now();
+      render();
+    }
+  }
+
+  function render(){
+    if(!animationStarted)return;
+    requestAnimationFrame(render);
+
+    const w=c.width;
+    const h=c.height;
+    const t=(performance.now()-animStart)/1000;
+
+    ctx.clearRect(0,0,w,h);
+
+    // Preserve the original Fire animation timing and composition.
+
+    // Heat wave
+    const heatScale=0.94+0.10*(0.5+0.5*Math.sin(t*1.6));
+    const heatRot=4*Math.sin(t*0.9)*Math.PI/180;
+    drawCentered(
+      images.heat,
+      w*0.50,
+      h*0.61,
+      w*0.78*heatScale,
+      h*0.48*heatScale,
+      heatRot,
+      0.58
+    );
+
+    // Smoke
+    const smokeX=w*(0.50+0.035*Math.sin(t*1.2));
+    const smokeY=h*(0.42-0.035*Math.sin(t*1.0));
+    const smokeScale=0.92+0.10*(0.5+0.5*Math.sin(t*1.4));
+    drawCentered(
+      images.smoke,
+      smokeX,
+      smokeY,
+      w*0.62*smokeScale,
+      h*0.42*smokeScale,
+      2.5*Math.sin(t*1.1)*Math.PI/180,
+      0.48
+    );
+
+    // Main fire
+    const fireY=h*(0.54-0.06*Math.sin(t*2.2));
+    const fireScale=0.88+0.18*(0.5+0.5*Math.sin(t*2.6));
+    const fireRot=3.5*Math.sin(t*1.8)*Math.PI/180;
+    drawCentered(
+      images.fire,
+      w*0.47,
+      fireY,
+      w*0.52*fireScale,
+      h*0.42*fireScale,
+      fireRot,
+      1.0
+    );
+
+    // Sparse sparks
+    const sparkY=h*(0.42-0.08*Math.sin(t*1.7));
+    const sparkScale=0.88+0.22*(0.5+0.5*Math.sin(t*4.0));
+    const sparkAlpha=0.55+0.40*(0.5+0.5*Math.sin(t*5.2));
+    drawCentered(
+      images.sparks,
+      w*0.53,
+      sparkY,
+      w*0.66*sparkScale,
+      h*0.44*sparkScale,
+      0,
+      sparkAlpha
+    );
+
+    refreshCanvasMaterials();
+  }
+
+  const scene=document.querySelector("a-scene");
+  const target=document.querySelector("[mindar-image-target]");
+
+  // Same startup logic as Cloud:
+  // launcher has downloaded everything;
+  // wait until MindAR scanning is ready before decoding the Fire PNGs.
+  scene.addEventListener("arReady",()=>{
+    loadFireAssets();
+  });
+
+  target.addEventListener("targetFound",()=>{
+    targetSeen=true;
+    maybeStartAnimation();
+  });
+});
+</script>
+
+
+</head>
+<body>
+<div id="hint">请把镜头对准「Fire」魔法卡</div>
+<canvas id="fxCanvas" width="768" height="768"></canvas>
+
+<a-scene
+  mindar-image="imageTargetSrc: ../targets/fire.mind; autoStart: true;"
+  color-space="sRGB"
+  renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true"
+  vr-mode-ui="enabled:false"
+  device-orientation-permission-ui="enabled:false">
+
+  <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+
+  <a-entity
+    mindar-image-target="targetIndex:0"
+    story-target-events
+    freeze-on-lost="seconds:10; ghost:#fireGhost">
+
+    <a-plane
+      id="fireTrackedPlane"
+      width="1.65"
+      height="1.65"
+      position="0 0 0.03"
+      material="shader:flat;src:#fxCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double">
+    </a-plane>
+  </a-entity>
+
+  <a-plane
+    id="fireGhost"
+    width="1.65"
+    height="1.65"
+    position="0 0 -999"
+    visible="false"
+    material="shader:flat;src:#fxCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double">
+  </a-plane>
+
+</a-scene>
+</body>
+</html>
