@@ -1,7 +1,7 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Journey to the West AR</title>
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}canvas.a-canvas{background:transparent!important}.off{display:none}#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px system-ui;text-align:center}#holdHitLayer{position:fixed;inset:0;z-index:40;pointer-events:none}.hold-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}#parkDragLayer{position:fixed;inset:0;z-index:41;pointer-events:none}.park-drag-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}</style>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}canvas.a-canvas{background:transparent!important}.off{display:none}#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px system-ui;text-align:center}#holdHitLayer{position:fixed;inset:0;z-index:40;pointer-events:none}.hold-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}#parkDragLayer{position:fixed;inset:0;z-index:41;pointer-events:none}.park-drag-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}#cityHitLayer{position:fixed;inset:0;z-index:40;pointer-events:none}.city-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}</style>
 <script>
 AFRAME.registerComponent("city-world-controller",{
   init:function(){
@@ -10,6 +10,12 @@ AFRAME.registerComponent("city-world-controller",{
     this.park=document.getElementById("cityPark");
     this.market=document.getElementById("cityMarket");
     this.hint=document.getElementById("hint");
+    this.hitPark=document.getElementById("hitCityPark");
+    this.hitMarket=document.getElementById("hitCityMarket");
+    this.camera=null;
+
+    this.hitPark.addEventListener("click",()=>this.focusPark());
+    this.hitMarket.addEventListener("click",()=>this.focusMarket());
 
     this.tracking=false;
     this.lastMatrix=new THREE.Matrix4();
@@ -30,29 +36,81 @@ AFRAME.registerComponent("city-world-controller",{
     });
   },
 
-  tick:function(){
-    if(!this.tracking || !this.world)return;
+  getCamera:function(){
+    if(!this.camera){
+      const camEl=document.querySelector("a-camera");
+      this.camera=camEl&&camEl.getObject3D("camera");
+    }
+    return this.camera;
+  },
 
-    this.el.object3D.updateMatrixWorld(true);
-    this.lastMatrix.copy(this.el.object3D.matrixWorld);
+  projectWorld:function(v){
+    const cam=this.getCamera();
+    if(!cam)return null;
+    const p=v.clone().project(cam);
+    return{
+      x:(p.x*.5+.5)*window.innerWidth,
+      y:(-p.y*.5+.5)*window.innerHeight
+    };
+  },
 
-    const p=new THREE.Vector3();
-    const q=new THREE.Quaternion();
-    const s=new THREE.Vector3();
-    this.lastMatrix.decompose(p,q,s);
+  updateHitPositions:function(){
+    if(!this.world || this.hitPark.style.display==="none")return;
 
     const obj=this.world.object3D;
-    obj.position.copy(p);
-    obj.quaternion.copy(q);
-    obj.scale.copy(s);
     obj.updateMatrixWorld(true);
+
+    const placeHit=(el,local,wUnit,hUnit)=>{
+      const p=local.clone().applyMatrix4(obj.matrixWorld);
+      const s=this.projectWorld(p);
+      if(!s)return;
+
+      const c=this.projectWorld(new THREE.Vector3(0,0,0).applyMatrix4(obj.matrixWorld));
+      const r=this.projectWorld(new THREE.Vector3(.5,0,0).applyMatrix4(obj.matrixWorld));
+      const u=this.projectWorld(new THREE.Vector3(0,.5,0).applyMatrix4(obj.matrixWorld));
+      if(!c||!r||!u)return;
+
+      const px=Math.max(1,Math.abs(r.x-c.x)*2);
+      const py=Math.max(1,Math.abs(u.y-c.y)*2);
+      const bw=Math.max(90,wUnit*px);
+      const bh=Math.max(70,hUnit*py);
+
+      el.style.left=(s.x-bw/2)+"px";
+      el.style.top=(s.y-bh/2)+"px";
+      el.style.width=bw+"px";
+      el.style.height=bh+"px";
+    };
+
+    placeHit(this.hitPark,new THREE.Vector3(-.72,-.42,.03),1.20,.82);
+    placeHit(this.hitMarket,new THREE.Vector3(.72,-.42,.03),1.20,.82);
+  },
+
+  tick:function(){
+    if(this.tracking && this.world){
+      this.el.object3D.updateMatrixWorld(true);
+      this.lastMatrix.copy(this.el.object3D.matrixWorld);
+
+      const p=new THREE.Vector3();
+      const q=new THREE.Quaternion();
+      const s=new THREE.Vector3();
+      this.lastMatrix.decompose(p,q,s);
+
+      const obj=this.world.object3D;
+      obj.position.copy(p);
+      obj.quaternion.copy(q);
+      obj.scale.copy(s);
+      obj.updateMatrixWorld(true);
+    }
+
+    this.updateHitPositions();
   },
   showWorld:function(){
     this.setPanel(this.building,"0 0.34 0.02","1 1 1",1);
     this.setPanel(this.park,"-0.72 -0.42 0.03",".78 .78 .78",1);
     this.setPanel(this.market,"0.72 -0.42 0.03",".78 .78 .78",1);
-    this.park.classList.add("clickable");
-    this.market.classList.add("clickable");
+    this.hitPark.style.display="block";
+    this.hitMarket.style.display="block";
+    this.updateHitPositions();
   },
   setPanel:function(el,pos,scale,opacity){
     el.object3D.visible=true;
@@ -71,16 +129,16 @@ AFRAME.registerComponent("city-world-controller",{
     this.animatePanel(this.park,"0 0 0.03","1.28 1.28 1.28",1);
     this.animatePanel(this.building,"0 0.38 0.01",".8 .8 .8",0);
     this.animatePanel(this.market,"0.72 -0.42 0.01",".7 .7 .7",0);
-    this.park.classList.remove("clickable");
-    this.market.classList.remove("clickable");
+    this.hitPark.style.display="none";
+    this.hitMarket.style.display="none";
     this.hint.textContent="PARK 已放大 · 现在扫描 PARK 识别图";
   },
   focusMarket:function(){
     this.animatePanel(this.market,"0 0 0.03","1.28 1.28 1.28",1);
     this.animatePanel(this.building,"0 0.38 0.01",".8 .8 .8",0);
     this.animatePanel(this.park,"-0.72 -0.42 0.01",".7 .7 .7",0);
-    this.park.classList.remove("clickable");
-    this.market.classList.remove("clickable");
+    this.hitPark.style.display="none";
+    this.hitMarket.style.display="none";
     this.hint.textContent="MARKET 已放大 · 现在扫描 MARKET 识别图";
   }
 });
@@ -109,6 +167,10 @@ AFRAME.registerComponent("market-target-events",{init:function(){
 }});
 </script></head><body>
 <div id="hint">请先扫描 Building 识别图打开 City World</div>
+<div id="cityHitLayer">
+  <button id="hitCityPark" class="city-hit" aria-label="Park"></button>
+  <button id="hitCityMarket" class="city-hit" aria-label="Market"></button>
+</div>
 
 <a-scene
   mindar-image="imageTargetSrc: ./targets/city_world.mind; autoStart: true; maxTrack: 3;"
@@ -134,22 +196,18 @@ AFRAME.registerComponent("market-target-events",{init:function(){
       material="transparent:true;opacity:1;depthWrite:false"></a-image>
 
     <a-image id="cityPark"
-      class="clickable"
       src="./assets/city/park_scene.png"
       width="1.55" height="1.04"
       position="-0.72 -0.42 0.03"
       scale=".78 .78 .78"
-      material="transparent:true;opacity:1;depthWrite:false"
-      city-panel-click="kind:park"></a-image>
+      material="transparent:true;opacity:1;depthWrite:false"></a-image>
 
     <a-image id="cityMarket"
-      class="clickable"
       src="./assets/city/market_scene.png"
       width="1.55" height="1.04"
       position="0.72 -0.42 0.03"
       scale=".78 .78 .78"
-      material="transparent:true;opacity:1;depthWrite:false"
-      city-panel-click="kind:market"></a-image>
+      material="transparent:true;opacity:1;depthWrite:false"></a-image>
 
   </a-entity>
 </a-scene>
