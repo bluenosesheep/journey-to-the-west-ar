@@ -12,6 +12,8 @@ video{position:fixed!important;inset:0!important;width:100vw!important;height:10
 a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}
 canvas.a-canvas{background:transparent!important}.off{display:none}
 #hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px/1.4 system-ui;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.16)}
+#holdHitLayer{position:fixed;inset:0;z-index:40;pointer-events:none}
+.hold-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 </style>
 <script>
 function roundRect(ctx,x,y,w,h,r){
@@ -31,15 +33,45 @@ AFRAME.registerComponent("market-persist",{
     this.world=this.data.world;
     this.tracking=false;
     this.timer=null;
+    this.camera=null;
+
     this.lastMatrix=new THREE.Matrix4();
+
+    this.hits={
+      peach:document.getElementById("holdPeach"),
+      cabbage:document.getElementById("holdCabbage"),
+      egg:document.getElementById("holdEgg"),
+      reset:document.getElementById("holdReset")
+    };
+
+    this.localPoints={
+      peach:new THREE.Vector3(-0.38,0.35,0.10),
+      cabbage:new THREE.Vector3(0,0.38,0.10),
+      egg:new THREE.Vector3(0.38,0.35,0.10),
+      reset:new THREE.Vector3(0,-0.62,0.14)
+    };
+
+    this.localSizes={
+      peach:[0.58,0.58],
+      cabbage:[0.58,0.58],
+      egg:[0.58,0.58],
+      reset:[0.74,0.30]
+    };
+
+    const comp=()=>document.getElementById("marketDisplay")?.components?.["market-canvas"];
+
+    this.hits.peach.addEventListener("click",()=>comp()?.pick("peach"));
+    this.hits.cabbage.addEventListener("click",()=>comp()?.pick("cabbage"));
+    this.hits.egg.addEventListener("click",()=>comp()?.pick("egg"));
+    this.hits.reset.addEventListener("click",()=>comp()?.reset());
 
     if(this.world){
       this.world.object3D.visible=false;
-      this.world.object3D.matrixAutoUpdate=true;
     }
 
     this.el.addEventListener("targetFound",()=>{
       this.tracking=true;
+      this.hideHoldHits();
 
       if(this.timer){
         clearTimeout(this.timer);
@@ -54,25 +86,89 @@ AFRAME.registerComponent("market-persist",{
     this.el.addEventListener("targetLost",()=>{
       this.tracking=false;
 
-      // The world UI is NOT inside the MindAR target.
-      // Stop updating its transform and leave it at the last valid pose.
       if(this.world){
+        // Keep the same Market picture frozen at its last world pose.
         this.world.object3D.visible=true;
       }
+
+      // A-Frame raycaster is unreliable after targetLost on some mobile browsers.
+      // Switch interaction to fixed DOM hit zones based on the last visible screen positions.
+      this.updateHoldHits();
+      this.showHoldHits();
 
       if(this.timer)clearTimeout(this.timer);
       this.timer=setTimeout(()=>{
         if(this.world)this.world.object3D.visible=false;
+        this.hideHoldHits();
         this.timer=null;
       },this.data.seconds*1000);
     });
   },
 
+  getCamera:function(){
+    if(!this.camera){
+      const camEl=document.querySelector("a-camera");
+      this.camera=camEl && camEl.getObject3D("camera");
+    }
+    return this.camera;
+  },
+
+  projectWorld:function(v){
+    const cam=this.getCamera();
+    if(!cam)return null;
+    const p=v.clone().project(cam);
+    return {
+      x:(p.x*0.5+0.5)*window.innerWidth,
+      y:(-p.y*0.5+0.5)*window.innerHeight
+    };
+  },
+
+  updateHoldHits:function(){
+    if(!this.world)return;
+
+    const obj=this.world.object3D;
+    obj.updateMatrixWorld(true);
+
+    const centerWorld=new THREE.Vector3(0,0,0).applyMatrix4(obj.matrixWorld);
+    const rightWorld=new THREE.Vector3(0.5,0,0).applyMatrix4(obj.matrixWorld);
+    const upWorld=new THREE.Vector3(0,0.5,0).applyMatrix4(obj.matrixWorld);
+
+    const center=this.projectWorld(centerWorld);
+    const right=this.projectWorld(rightWorld);
+    const up=this.projectWorld(upWorld);
+    if(!center||!right||!up)return;
+
+    const pxPerUnitX=Math.max(1,Math.abs(right.x-center.x)*2);
+    const pxPerUnitY=Math.max(1,Math.abs(up.y-center.y)*2);
+
+    Object.entries(this.localPoints).forEach(([key,local])=>{
+      const worldPoint=local.clone().applyMatrix4(obj.matrixWorld);
+      const screen=this.projectWorld(worldPoint);
+      if(!screen)return;
+
+      const [wu,hu]=this.localSizes[key];
+      const bw=Math.max(key==="reset"?80:54,wu*pxPerUnitX);
+      const bh=Math.max(key==="reset"?42:54,hu*pxPerUnitY);
+
+      const b=this.hits[key];
+      b.style.left=(screen.x-bw/2)+"px";
+      b.style.top=(screen.y-bh/2)+"px";
+      b.style.width=bw+"px";
+      b.style.height=bh+"px";
+    });
+  },
+
+  showHoldHits:function(){
+    Object.values(this.hits).forEach(b=>b.style.display="block");
+  },
+
+  hideHoldHits:function(){
+    Object.values(this.hits).forEach(b=>b.style.display="none");
+  },
+
   tick:function(){
     if(!this.tracking || !this.world)return;
 
-    // Copy the target anchor's complete world matrix while tracking.
-    // Decompose into world-space position/quaternion/scale for the independent UI.
     this.el.object3D.updateMatrixWorld(true);
     this.lastMatrix.copy(this.el.object3D.matrixWorld);
 
@@ -243,6 +339,12 @@ AFRAME.registerComponent("reset-market",{
 </head>
 <body>
 <div id="hint">请把镜头对准 Market 识别图</div>
+<div id="holdHitLayer">
+  <button id="holdPeach" class="hold-hit" aria-label="Peach"></button>
+  <button id="holdCabbage" class="hold-hit" aria-label="Cabbage"></button>
+  <button id="holdEgg" class="hold-hit" aria-label="Egg"></button>
+  <button id="holdReset" class="hold-hit" aria-label="Reset"></button>
+</div>
 <canvas id="marketCanvas" class="off" width="768" height="512"></canvas>
 
 <a-scene mindar-image="imageTargetSrc: ../targets/market.mind; autoStart: true;"
