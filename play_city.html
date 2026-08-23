@@ -3,9 +3,42 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}canvas.a-canvas{background:transparent!important}.off{display:none}#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px system-ui;text-align:center}#holdHitLayer{position:fixed;inset:0;z-index:40;pointer-events:none}.hold-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}#parkDragLayer{position:fixed;inset:0;z-index:41;pointer-events:none}.park-drag-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}</style>
 <script>
-AFRAME.registerComponent("building-events",{init:function(){const h=document.getElementById("hint");this.el.addEventListener("targetFound",()=>h.textContent="CITY · 建筑出现啦！🏙️");this.el.addEventListener("targetLost",()=>h.textContent="选择一个城市场景或 MAGIC 卡吧！")}});
-AFRAME.registerComponent("park-events",{init:function(){const h=document.getElementById("hint");this.el.addEventListener("targetFound",()=>h.textContent="PARK · 拖动这些东西来布置公园吧！🌳");this.el.addEventListener("targetLost",()=>h.textContent="Park 还会停留 15 秒，可以继续拖动 🌿")}});
-AFRAME.registerComponent("market-events",{init:function(){const h=document.getElementById("hint");this.el.addEventListener("targetFound",()=>h.textContent="MARKET · 点一个食物放进篮筐吧！🧺");this.el.addEventListener("targetLost",()=>h.textContent="Market 还会停留 15 秒，可以继续选择 🧺");}});
+
+function hideOtherCityScenes(active){
+  const parkWorld=document.getElementById("parkWorld");
+  const marketWorld=document.getElementById("marketWorld");
+
+  if(active!=="park"){
+    if(parkWorld) parkWorld.object3D.visible=false;
+
+    const parkTarget=document.querySelector('[mindar-image-target="targetIndex:1"]');
+    const parkComp=parkTarget && parkTarget.components && parkTarget.components["park-drag-controller"];
+    if(parkComp){
+      parkComp.tracking=false;
+      parkComp.holding=false;
+      if(parkComp.timer){ clearTimeout(parkComp.timer); parkComp.timer=null; }
+      if(parkComp.dragState) parkComp.dragState=null;
+      if(parkComp.hideHits) parkComp.hideHits();
+    }
+  }
+
+  if(active!=="market"){
+    if(marketWorld) marketWorld.object3D.visible=false;
+
+    const marketTarget=document.querySelector('[mindar-image-target="targetIndex:2"]');
+    const marketComp=marketTarget && marketTarget.components && marketTarget.components["market-persist"];
+    if(marketComp){
+      marketComp.tracking=false;
+      marketComp.holding=false;
+      if(marketComp.timer){ clearTimeout(marketComp.timer); marketComp.timer=null; }
+      if(marketComp.hideHoldHits) marketComp.hideHoldHits();
+    }
+  }
+}
+
+AFRAME.registerComponent("building-events",{init:function(){const h=document.getElementById("hint");this.el.addEventListener("targetFound",()=>{hideOtherCityScenes("building");h.textContent="CITY · 建筑出现啦！🏙️"});this.el.addEventListener("targetLost",()=>h.textContent="选择一个城市场景或 MAGIC 卡吧！")}});
+AFRAME.registerComponent("park-events",{init:function(){const h=document.getElementById("hint");this.el.addEventListener("targetFound",()=>{hideOtherCityScenes("park");h.textContent="PARK · 拖动这些东西来布置公园吧！🌳"});this.el.addEventListener("targetLost",()=>h.textContent="Park 还会停留 15 秒，可以继续拖动 🌿")}});
+AFRAME.registerComponent("market-events",{init:function(){const h=document.getElementById("hint");this.el.addEventListener("targetFound",()=>{hideOtherCityScenes("market");h.textContent="MARKET · 点一个食物放进篮筐吧！🧺"});this.el.addEventListener("targetLost",()=>h.textContent="Market 还会停留 15 秒，可以继续选择 🧺");}});
 
 function makeUpdater(canvasId,sources,drawFn){return{init:function(){this.c=document.getElementById(canvasId);this.ctx=this.c.getContext("2d");this.img={};this.loaded=0;this.start=performance.now();Object.entries(sources).forEach(([k,s])=>{const i=new Image();i.crossOrigin="anonymous";i.onload=()=>{this.img[k]=i;this.loaded++};i.src=s})},tick:function(){if(this.loaded<Object.keys(sources).length)return;const w=this.c.width,h=this.c.height,t=(performance.now()-this.start)/1000;this.ctx.clearRect(0,0,w,h);drawFn(this.ctx,this.img,w,h,t);const m=this.el.getObject3D("mesh");if(m&&m.material&&m.material.map)m.material.map.needsUpdate=true;}}}
 const dc=(ctx,img,x,y,w,h,r=0,a=1)=>{ctx.save();ctx.globalAlpha=a;ctx.translate(x,y);ctx.rotate(r);ctx.drawImage(img,-w/2,-h/2,w,h);ctx.restore()};
