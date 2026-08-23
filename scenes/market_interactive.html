@@ -31,9 +31,9 @@ AFRAME.registerComponent("market-canvas",{
     this.c=document.getElementById("marketCanvas");
     this.ctx=this.c.getContext("2d");
     this.items={
-      peach:{emoji:"🍑",x:170,y:130,tx:350,ty:404,selected:false,start:0},
-      cabbage:{emoji:"🥬",x:384,y:115,tx:384,ty:398,selected:false,start:0},
-      egg:{emoji:"🥚",x:598,y:130,tx:418,ty:404,selected:false,start:0}
+      peach:{emoji:"🍑",x:170,y:130,tx:348,ty:338,selected:false,start:0},
+      cabbage:{emoji:"🥬",x:384,y:115,tx:384,ty:330,selected:false,start:0},
+      egg:{emoji:"🥚",x:598,y:130,tx:420,ty:338,selected:false,start:0}
     };
   },
   pick:function(kind){
@@ -65,7 +65,7 @@ AFRAME.registerComponent("market-canvas",{
         const arc=Math.sin(Math.PI*p)*75;
         x=item.x+(item.tx-item.x)*e;
         y=item.y+(item.ty-item.y)*e-arc;
-        s=1-.70*e;
+        s=1-.52*e;
       }
       ctx.save();ctx.translate(x,y);ctx.scale(s,s);
       ctx.font='96px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
@@ -76,6 +76,23 @@ AFRAME.registerComponent("market-canvas",{
     // of selected food, making the food look like it is actually inside.
     ctx.font='118px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
     ctx.fillText("🧺",w/2,400);
+
+    // Friendly rounded RESET button, rendered in the same canvas so it stays flat and clean.
+    const bx=w/2-74, by=458, bw=148, bh=38, br=19;
+    ctx.save();
+    roundRect(ctx,bx,by,bw,bh,br);
+    ctx.fillStyle="rgba(255,248,220,.96)";
+    ctx.fill();
+    ctx.lineWidth=3;
+    ctx.strokeStyle="#6f8e42";
+    ctx.stroke();
+
+    ctx.fillStyle="#8f2f2a";
+    ctx.font='700 20px system-ui, sans-serif';
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+    ctx.fillText("RESET",w/2,by+bh/2+1);
+    ctx.restore();
 
     const mesh=this.el.getObject3D("mesh");
     if(mesh&&mesh.material&&mesh.material.map)mesh.material.map.needsUpdate=true;
@@ -137,19 +154,12 @@ AFRAME.registerComponent("reset-market",{
     position="0.65 0.36 0.10" width="0.62" height="0.62"
     material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
 
-  <!-- RESET moves with the AR target and sits directly below the basket -->
+  <!-- Invisible reset hit area aligned with the canvas-rendered RESET button -->
   <a-plane class="clickable"
-    position="0 -0.72 0.11"
-    width="0.68" height="0.22"
-    material="color:#ffffff;opacity:0.92;transparent:true;depthWrite:false;side:double"
-    reset-market>
-    <a-text value="RESET"
-      align="center"
-      color="#8f2f2a"
-      width="1.6"
-      position="0 0 0.01">
-    </a-text>
-  </a-plane>
+    position="0 -0.69 0.11"
+    width="0.62" height="0.18"
+    material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"
+    reset-market></a-plane>
 </a-entity>
 </a-scene>
 </body></html>
