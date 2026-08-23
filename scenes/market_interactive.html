@@ -251,9 +251,9 @@ AFRAME.registerComponent("market-persist",{
       // Very small, slow motion so the AR still feels "alive" after the card is removed.
       // It is intentionally much steadier than real tracking jitter.
       const t=(performance.now()-this.holdStart)/1000;
-      const bob=Math.sin(t*1.55)*0.008;
-      const sway=Math.sin(t*1.10)*0.006;
-      const roll=Math.sin(t*1.25)*THREE.MathUtils.degToRad(0.7);
+      const bob=Math.sin(t*1.45)*0.022;
+      const sway=Math.sin(t*1.05)*0.014;
+      const roll=Math.sin(t*1.18)*THREE.MathUtils.degToRad(1.4);
 
       obj.position.copy(this.basePos);
       obj.position.x+=sway;
