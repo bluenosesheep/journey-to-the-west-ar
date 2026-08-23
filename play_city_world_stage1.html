@@ -3,6 +3,23 @@
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}canvas.a-canvas{background:transparent!important}.off{display:none}#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px system-ui;text-align:center}#holdHitLayer{position:fixed;inset:0;z-index:40;pointer-events:none}.hold-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}#parkDragLayer{position:fixed;inset:0;z-index:41;pointer-events:none}.park-drag-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}#cityHitLayer{position:fixed;inset:0;z-index:40;pointer-events:none}.city-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}</style>
 <script>
+window.cityAssetsReady = new Promise((resolve)=>{
+  const urls=[
+    "./assets/city/building_scene.png",
+    "./assets/city/park_scene.png",
+    "./assets/city/market_scene.png"
+  ];
+  let done=0;
+  urls.forEach(src=>{
+    const img=new Image();
+    img.onload=img.onerror=()=>{
+      done++;
+      if(done===urls.length)resolve();
+    };
+    img.src=src;
+  });
+});
+
 AFRAME.registerComponent("city-world-controller",{
   init:function(){
     this.world=document.getElementById("cityWorld");
@@ -24,15 +41,23 @@ AFRAME.registerComponent("city-world-controller",{
 
     this.el.addEventListener("targetFound",()=>{
       this.tracking=true;
-      this.world.object3D.visible=true;
-      this.showWorld();
-      this.hint.textContent="CITY WORLD · 点击 PARK 或 MARKET 进入场景";
+
+      // First cold load: do not reveal white a-image planes before PNG textures are ready.
+      this.world.object3D.visible=false;
+      this.hint.textContent="CITY WORLD · 正在加载场景…";
+
+      window.cityAssetsReady.then(()=>{
+        if(!this.world)return;
+        this.showWorld();
+        this.world.object3D.visible=true;
+        this.updateHitPositions();
+        this.hint.textContent="CITY WORLD · 点击 PARK 或 MARKET 进入场景";
+      });
     });
 
     this.el.addEventListener("targetLost",()=>{
-      // City World stays visible at the last tracked pose.
+      // City World stays at the last tracked pose once it has actually been loaded.
       this.tracking=false;
-      this.world.object3D.visible=true;
     });
   },
 
