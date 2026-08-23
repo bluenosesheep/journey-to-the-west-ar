@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Market Interactive AR</title>
+
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}
+video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}
+a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}
+canvas.a-canvas{background:transparent!important}
+#hint{
+  position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;
+  border-radius:999px;background:rgba(255,255,255,.92);color:#222;
+  font:14px/1.4 system-ui;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.16)
+}
+</style>
+
+<script>
+AFRAME.registerComponent("market-events",{
+  init:function(){
+    const hint=document.getElementById("hint");
+    this.el.addEventListener("targetFound",()=>{
+      hint.textContent="MARKET · 选一些东西放进篮筐吧！🧺";
+    });
+    this.el.addEventListener("targetLost",()=>{
+      hint.textContent="请把镜头对准 Market 识别图";
+    });
+  }
+});
+
+AFRAME.registerComponent("market-interaction",{
+  init:function(){
+    this.items={
+      peach:this.el.querySelector("#peach"),
+      cabbage:this.el.querySelector("#cabbage"),
+      egg:this.el.querySelector("#egg")
+    };
+    this.basket=this.el.querySelector("#basket");
+    this.hint=document.getElementById("hint");
+    this.selected=new Set();
+
+    Object.entries(this.items).forEach(([kind,el])=>{
+      el.addEventListener("click",()=>this.pick(kind,el));
+    });
+  },
+
+  pick:function(kind,el){
+    if(this.selected.has(kind)) return;
+    this.selected.add(kind);
+
+    const labels={
+      peach:"桃子",
+      cabbage:"白菜",
+      egg:"鸡蛋"
+    };
+
+    // Animate the selected emoji toward the basket.
+    el.setAttribute("animation__move",{
+      property:"position",
+      to:"0 -0.48 0.04",
+      dur:650,
+      easing:"easeOutCubic"
+    });
+
+    el.setAttribute("animation__scale",{
+      property:"scale",
+      to:"0.42 0.42 0.42",
+      dur:650,
+      easing:"easeOutCubic"
+    });
+
+    // Keep selected foods visible inside/above the basket,
+    // with a small horizontal offset so several items can coexist.
+    const order=this.selected.size;
+    const x=order===1?-0.14:order===2?0.02:0.16;
+
+    setTimeout(()=>{
+      el.setAttribute("position",`${x} -0.48 0.05`);
+      el.setAttribute("scale","0.42 0.42 0.42");
+      this.hint.textContent=`${labels[kind]}放进篮筐啦！`;
+    },660);
+  }
+});
+</script>
+</head>
+
+<body>
+<div id="hint">请把镜头对准 Market 识别图</div>
+
+<a-scene
+  mindar-image="imageTargetSrc: ../targets/market.mind; autoStart: true;"
+  color-space="sRGB"
+  renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true"
+  vr-mode-ui="enabled:false"
+  device-orientation-permission-ui="enabled:false"
+  cursor="rayOrigin:mouse"
+  raycaster="objects:.clickable">
+
+  <a-camera position="0 0 0" look-controls="enabled:false">
+    <a-cursor
+      fuse="false"
+      raycaster="objects:.clickable"
+      material="opacity:0">
+    </a-cursor>
+  </a-camera>
+
+  <a-entity
+    mindar-image-target="targetIndex:0"
+    market-events
+    market-interaction>
+
+    <!-- Three lightweight emoji choices -->
+    <a-text
+      id="peach"
+      class="clickable"
+      value="🍑"
+      align="center"
+      width="2.2"
+      position="-0.58 0.32 0.03"
+      scale="1 1 1">
+    </a-text>
+
+    <a-text
+      id="cabbage"
+      class="clickable"
+      value="🥬"
+      align="center"
+      width="2.2"
+      position="0 0.38 0.03"
+      scale="1 1 1">
+    </a-text>
+
+    <a-text
+      id="egg"
+      class="clickable"
+      value="🥚"
+      align="center"
+      width="2.2"
+      position="0.58 0.32 0.03"
+      scale="1 1 1">
+    </a-text>
+
+    <!-- Basket stays fixed -->
+    <a-text
+      id="basket"
+      value="🧺"
+      align="center"
+      width="2.6"
+      position="0 -0.48 0.02">
+    </a-text>
+
+  </a-entity>
+</a-scene>
+</body>
+</html>
