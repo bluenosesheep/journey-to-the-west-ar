@@ -31,9 +31,9 @@ AFRAME.registerComponent("market-canvas",{
     this.c=document.getElementById("marketCanvas");
     this.ctx=this.c.getContext("2d");
     this.items={
-      peach:{emoji:"🍑",x:170,y:130,tx:348,ty:352,selected:false,start:0},
-      cabbage:{emoji:"🥬",x:384,y:115,tx:384,ty:344,selected:false,start:0},
-      egg:{emoji:"🥚",x:598,y:130,tx:420,ty:352,selected:false,start:0}
+      peach:{emoji:"🍑",x:170,y:130,tx:348,ty:320,selected:false,start:0},
+      cabbage:{emoji:"🥬",x:384,y:115,tx:384,ty:312,selected:false,start:0},
+      egg:{emoji:"🥚",x:598,y:130,tx:420,ty:320,selected:false,start:0}
     };
   },
   pick:function(kind){
@@ -75,9 +75,9 @@ AFRAME.registerComponent("market-canvas",{
     // Draw a consistent basket ourselves instead of using the system 🧺 emoji.
     // This keeps the basket shape identical on iPhone, Android and desktop.
     const basketCx=w/2;
-    const basketTop=360;
+    const basketTop=330;
     const basketW=220;
-    const basketH=112;
+    const basketH=105;
 
     // handle
     ctx.save();
@@ -127,7 +127,7 @@ AFRAME.registerComponent("market-canvas",{
     ctx.restore();
 
     // Friendly rounded RESET button with more space below the basket.
-    const bx=w/2-82, by=500, bw=164, bh=42, br=21;
+    const bx=w/2-86, by=458, bw=172, bh=40, br=20;
     ctx.save();
     roundRect(ctx,bx,by,bw,bh,br);
     ctx.fillStyle="rgba(255,248,220,.96)";
@@ -205,8 +205,8 @@ AFRAME.registerComponent("reset-market",{
 
   <!-- Invisible reset hit area aligned with the canvas-rendered RESET button -->
   <a-plane class="clickable"
-    position="0 -0.89 0.11"
-    width="0.78" height="0.26"
+    position="0 -0.70 0.11"
+    width="0.82" height="0.26"
     material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"
     reset-market></a-plane>
 </a-entity>
