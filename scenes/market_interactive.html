@@ -11,7 +11,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
 video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}
 a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}
 canvas.a-canvas{background:transparent!important}.off{display:none}
-#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px/1.4 system-ui;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.16)}
+#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px/1.4 system-ui;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.16)}#resetBtn{position:fixed;right:16px;top:max(16px,env(safe-area-inset-top));z-index:30;border:0;border-radius:999px;padding:9px 13px;background:rgba(255,255,255,.94);color:#8f2f2a;font:700 13px system-ui;box-shadow:0 6px 18px rgba(0,0,0,.14);cursor:pointer}
 </style>
 <script>
 function roundRect(ctx,x,y,w,h,r){
@@ -31,16 +31,25 @@ AFRAME.registerComponent("market-canvas",{
     this.c=document.getElementById("marketCanvas");
     this.ctx=this.c.getContext("2d");
     this.items={
-      peach:{emoji:"🍑",x:170,y:130,tx:330,ty:365,selected:false,start:0},
-      cabbage:{emoji:"🥬",x:384,y:115,tx:384,ty:350,selected:false,start:0},
-      egg:{emoji:"🥚",x:598,y:130,tx:438,ty:365,selected:false,start:0}
+      peach:{emoji:"🍑",x:170,y:130,tx:342,ty:392,selected:false,start:0},
+      cabbage:{emoji:"🥬",x:384,y:115,tx:384,ty:382,selected:false,start:0},
+      egg:{emoji:"🥚",x:598,y:130,tx:426,ty:392,selected:false,start:0}
     };
   },
   pick:function(kind){
     const item=this.items[kind];
     if(!item||item.selected)return;
-    item.selected=true;item.start=performance.now();
+    item.selected=true;
+    item.start=performance.now();
     document.getElementById("hint").textContent="放进篮筐里！";
+  },
+
+  reset:function(){
+    Object.values(this.items).forEach(item=>{
+      item.selected=false;
+      item.start=0;
+    });
+    document.getElementById("hint").textContent="MARKET · 点一个食物放进篮筐吧！🧺";
   },
   tick:function(){
     const ctx=this.ctx,c=this.c,w=c.width,h=c.height;
@@ -58,7 +67,7 @@ AFRAME.registerComponent("market-canvas",{
         const arc=Math.sin(Math.PI*p)*75;
         x=item.x+(item.tx-item.x)*e;
         y=item.y+(item.ty-item.y)*e-arc;
-        s=1-.58*e;
+        s=1-.70*e;
       }
       ctx.save();ctx.translate(x,y);ctx.scale(s,s);
       ctx.font='96px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
@@ -84,6 +93,7 @@ AFRAME.registerComponent("pick-item",{
 </script>
 </head>
 <body>
+<button id="resetBtn" type="button">RESET</button>
 <div id="hint">请把镜头对准 Market 识别图</div>
 <canvas id="marketCanvas" class="off" width="768" height="512"></canvas>
 
@@ -115,4 +125,11 @@ AFRAME.registerComponent("pick-item",{
     material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
 </a-entity>
 </a-scene>
+<script>
+document.getElementById("resetBtn").addEventListener("click",()=>{
+  const plane=document.getElementById("marketDisplay");
+  const comp=plane && plane.components && plane.components["market-canvas"];
+  if(comp) comp.reset();
+});
+</script>
 </body></html>
