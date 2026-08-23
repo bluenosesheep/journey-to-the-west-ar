@@ -12,6 +12,8 @@ video{position:fixed!important;inset:0!important;width:100vw!important;height:10
 a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}
 canvas.a-canvas{background:transparent!important}.off{display:none}
 #hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px/1.4 system-ui;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.16)}
+#marketHitLayer{position:fixed;inset:0;z-index:25;pointer-events:none}
+.market-hit{position:fixed;display:none;border:0;background:rgba(255,255,255,0);pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 </style>
 <script>
 function roundRect(ctx,x,y,w,h,r){
@@ -21,70 +23,106 @@ function roundRect(ctx,x,y,w,h,r){
 }
 
 
-AFRAME.registerComponent("market-world-controller",{
-  schema:{
-    ui:{type:"selector"},
-    seconds:{type:"number",default:15}
-  },
-
+AFRAME.registerComponent("market-persistent-ui",{
+  schema:{seconds:{type:"number",default:15}},
   init:function(){
-    this.ui=this.data.ui;
-    this.tracking=false;
+    this.active=false;
+    this.holding=false;
     this.hideTimer=null;
 
-    this.worldPos=new THREE.Vector3();
-    this.worldQuat=new THREE.Quaternion();
-    this.worldScale=new THREE.Vector3(1,1,1);
+    this.anchor=this.el;
+    this.cameraEl=document.querySelector("a-camera");
+    this.camera=null;
 
-    if(this.ui){
-      this.ui.object3D.visible=false;
-    }
+    this.hits={
+      peach:document.getElementById("hitPeach"),
+      cabbage:document.getElementById("hitCabbage"),
+      egg:document.getElementById("hitEgg"),
+      reset:document.getElementById("hitReset")
+    };
+
+    this.localPoints={
+      peach:new THREE.Vector3(-0.38,0.35,0.10),
+      cabbage:new THREE.Vector3(0,0.38,0.10),
+      egg:new THREE.Vector3(0.38,0.35,0.10),
+      reset:new THREE.Vector3(0,-0.62,0.14)
+    };
+
+    this.sizes={
+      peach:[0.58,0.58],
+      cabbage:[0.58,0.58],
+      egg:[0.58,0.58],
+      reset:[0.74,0.30]
+    };
+
+    const comp=()=>document.getElementById("marketDisplay")?.components?.["market-canvas"];
+
+    this.hits.peach.addEventListener("click",()=>comp()?.pick("peach"));
+    this.hits.cabbage.addEventListener("click",()=>comp()?.pick("cabbage"));
+    this.hits.egg.addEventListener("click",()=>comp()?.pick("egg"));
+    this.hits.reset.addEventListener("click",()=>comp()?.reset());
 
     this.el.addEventListener("targetFound",()=>{
-      this.tracking=true;
-
-      if(this.hideTimer){
-        clearTimeout(this.hideTimer);
-        this.hideTimer=null;
-      }
-
-      if(this.ui){
-        this.ui.object3D.visible=true;
-      }
+      this.active=true;
+      this.holding=false;
+      if(this.hideTimer){clearTimeout(this.hideTimer);this.hideTimer=null;}
+      this.showHits(true);
     });
 
     this.el.addEventListener("targetLost",()=>{
-      this.tracking=false;
-
-      if(!this.ui)return;
-
-      // Keep the SAME visible/clickable group in world space.
-      // Because this group is not a child of MindAR target, its interactions remain active.
-      this.ui.object3D.visible=true;
-
-      if(this.hideTimer){
-        clearTimeout(this.hideTimer);
-      }
-
+      this.holding=true;
+      this.active=true;
+      this.showHits(true);
+      if(this.hideTimer)clearTimeout(this.hideTimer);
       this.hideTimer=setTimeout(()=>{
-        this.ui.object3D.visible=false;
-        this.hideTimer=null;
+        this.active=false;
+        this.holding=false;
+        this.showHits(false);
       },this.data.seconds*1000);
     });
   },
 
+  showHits:function(show){
+    Object.values(this.hits).forEach(b=>b.style.display=show?"block":"none");
+  },
+
+  projectToScreen:function(localPoint){
+    if(!this.camera){
+      this.camera=this.cameraEl?.getObject3D("camera");
+      if(!this.camera)return null;
+    }
+    const p=localPoint.clone();
+    this.anchor.object3D.localToWorld(p);
+    p.project(this.camera);
+    return {
+      x:(p.x*0.5+0.5)*window.innerWidth,
+      y:(-p.y*0.5+0.5)*window.innerHeight
+    };
+  },
+
   tick:function(){
-    if(!this.tracking || !this.ui)return;
+    if(!this.active)return;
 
-    const src=this.el.object3D;
-    src.getWorldPosition(this.worldPos);
-    src.getWorldQuaternion(this.worldQuat);
-    src.getWorldScale(this.worldScale);
+    const center=this.projectToScreen(new THREE.Vector3(0,0,0));
+    const right=this.projectToScreen(new THREE.Vector3(0.5,0,0));
+    const up=this.projectToScreen(new THREE.Vector3(0,0.5,0));
+    if(!center||!right||!up)return;
 
-    const dst=this.ui.object3D;
-    dst.position.copy(this.worldPos);
-    dst.quaternion.copy(this.worldQuat);
-    dst.scale.copy(this.worldScale);
+    const pxPerUnitX=Math.max(1,Math.abs(right.x-center.x)*2);
+    const pxPerUnitY=Math.max(1,Math.abs(up.y-center.y)*2);
+
+    Object.entries(this.localPoints).forEach(([key,p])=>{
+      const s=this.projectToScreen(p);
+      if(!s)return;
+      const b=this.hits[key];
+      const [wu,hu]=this.sizes[key];
+      const bw=Math.max(44,wu*pxPerUnitX);
+      const bh=Math.max(44,hu*pxPerUnitY);
+      b.style.left=(s.x-bw/2)+"px";
+      b.style.top=(s.y-bh/2)+"px";
+      b.style.width=bw+"px";
+      b.style.height=bh+"px";
+    });
   }
 });
 
@@ -219,8 +257,9 @@ AFRAME.registerComponent("market-canvas",{
 AFRAME.registerComponent("pick-item",{
   schema:{kind:{type:"string"}},
   init:function(){
-    this.el.addEventListener("click",()=>{
-      const display=document.getElementById("marketDisplay");
+    this.el.addEventListener("click",()=>{console.log("market click",this.data.kind);
+      const anchor=this.el.parentElement;
+      const display=anchor.querySelector("#marketDisplay");
       const comp=display&&display.components["market-canvas"];
       if(comp)comp.pick(this.data.kind);
     });
@@ -230,7 +269,8 @@ AFRAME.registerComponent("pick-item",{
 AFRAME.registerComponent("reset-market",{
   init:function(){
     this.el.addEventListener("click",()=>{
-      const display=document.getElementById("marketDisplay");
+      const anchor=this.el.parentElement;
+      const display=anchor.querySelector("#marketDisplay");
       const comp=display&&display.components["market-canvas"];
       if(comp)comp.reset();
     });
@@ -240,6 +280,12 @@ AFRAME.registerComponent("reset-market",{
 </head>
 <body>
 <div id="hint">请把镜头对准 Market 识别图</div>
+<div id="marketHitLayer">
+  <button class="market-hit" id="hitPeach" aria-label="Peach"></button>
+  <button class="market-hit" id="hitCabbage" aria-label="Cabbage"></button>
+  <button class="market-hit" id="hitEgg" aria-label="Egg"></button>
+  <button class="market-hit" id="hitReset" aria-label="Reset"></button>
+</div>
 <canvas id="marketCanvas" class="off" width="768" height="512"></canvas>
 
 <a-scene mindar-image="imageTargetSrc: ../targets/market.mind; autoStart: true;"
@@ -248,41 +294,32 @@ AFRAME.registerComponent("reset-market",{
  vr-mode-ui="enabled:false"
  device-orientation-permission-ui="enabled:false">
 
-<a-camera position="0 0 0" look-controls="enabled:false" cursor="fuse:false; rayOrigin:mouse" raycaster="objects:.clickable; far:10000"></a-camera>
+<a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
-<a-entity
-  mindar-image-target="targetIndex:0"
-  market-events
-  market-world-controller="ui:#marketWorldUI; seconds:15">
-</a-entity>
-
-<!-- This is the actual visible + interactive Market UI.
-     It lives OUTSIDE the MindAR target, so it remains clickable after targetLost. -->
-<a-entity id="marketWorldUI" visible="false">
-
+<a-entity mindar-image-target="targetIndex:0" market-events market-persistent-ui="seconds:15">
   <a-plane id="marketDisplay"
     width="2.15" height="1.43" position="0 0.03 0.02"
     material="shader:flat;src:#marketCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
     market-canvas></a-plane>
 
-  <a-plane class="clickable" pick-item="kind:peach"
+  <!-- Larger, almost invisible hit areas placed IN FRONT of display canvas -->
+  <a-plane pick-item="kind:peach"
     position="-0.38 0.35 0.10" width="0.58" height="0.58"
     material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
 
-  <a-plane class="clickable" pick-item="kind:cabbage"
+  <a-plane pick-item="kind:cabbage"
     position="0 0.38 0.10" width="0.58" height="0.58"
     material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
 
-  <a-plane class="clickable" pick-item="kind:egg"
+  <a-plane pick-item="kind:egg"
     position="0.38 0.35 0.10" width="0.58" height="0.58"
     material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
 
-  <a-plane class="clickable"
-    position="0 -0.62 0.14"
+  <!-- Invisible reset hit area aligned with the canvas-rendered RESET button -->
+  <a-plane position="0 -0.62 0.14"
     width="0.74" height="0.30"
     material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"
     reset-market></a-plane>
-
 </a-entity>
 </a-scene>
 </body></html>
