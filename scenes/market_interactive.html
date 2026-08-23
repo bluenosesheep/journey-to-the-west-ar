@@ -31,9 +31,9 @@ AFRAME.registerComponent("market-canvas",{
     this.c=document.getElementById("marketCanvas");
     this.ctx=this.c.getContext("2d");
     this.items={
-      peach:{emoji:"🍑",x:170,y:130,tx:348,ty:320,selected:false,start:0},
-      cabbage:{emoji:"🥬",x:384,y:115,tx:384,ty:312,selected:false,start:0},
-      egg:{emoji:"🥚",x:598,y:130,tx:420,ty:320,selected:false,start:0}
+      peach:{emoji:"🍑",x:250,y:135,tx:348,ty:320,selected:false,start:0},
+      cabbage:{emoji:"🥬",x:384,y:118,tx:384,ty:312,selected:false,start:0},
+      egg:{emoji:"🥚",x:518,y:135,tx:420,ty:320,selected:false,start:0}
     };
   },
   pick:function(kind){
@@ -186,21 +186,21 @@ AFRAME.registerComponent("reset-market",{
 
 <a-entity mindar-image-target="targetIndex:0" market-events>
   <a-plane id="marketDisplay"
-    width="2.35" height="1.57" position="0 0.03 0.02"
+    width="2.15" height="1.43" position="0 0.03 0.02"
     material="shader:flat;src:#marketCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
     market-canvas></a-plane>
 
   <!-- Larger, almost invisible hit areas placed IN FRONT of display canvas -->
   <a-plane class="clickable" pick-item="kind:peach"
-    position="-0.65 0.36 0.10" width="0.62" height="0.62"
+    position="-0.38 0.35 0.10" width="0.58" height="0.58"
     material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
 
   <a-plane class="clickable" pick-item="kind:cabbage"
-    position="0 0.40 0.10" width="0.62" height="0.62"
+    position="0 0.38 0.10" width="0.58" height="0.58"
     material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
 
   <a-plane class="clickable" pick-item="kind:egg"
-    position="0.65 0.36 0.10" width="0.62" height="0.62"
+    position="0.38 0.35 0.10" width="0.58" height="0.58"
     material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
 
   <!-- Invisible reset hit area aligned with the canvas-rendered RESET button -->
