@@ -20,10 +20,84 @@ function roundRect(ctx,x,y,w,h,r){
   ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
 }
 
+
+AFRAME.registerComponent("market-hold-after-lost",{
+  schema:{
+    seconds:{type:"number",default:15},
+    ghost:{type:"selector"}
+  },
+
+  init:function(){
+    this.tracking=false;
+    this.hideTimer=null;
+    this.ghost=this.data.ghost;
+
+    this.lastPos=new THREE.Vector3();
+    this.lastQuat=new THREE.Quaternion();
+    this.lastScale=new THREE.Vector3(1,1,1);
+
+    if(this.ghost){
+      this.ghost.object3D.visible=false;
+    }
+
+    this.el.addEventListener("targetFound",()=>{
+      this.tracking=true;
+
+      if(this.hideTimer){
+        clearTimeout(this.hideTimer);
+        this.hideTimer=null;
+      }
+
+      if(this.ghost){
+        this.ghost.object3D.visible=false;
+      }
+    });
+
+    this.el.addEventListener("targetLost",()=>{
+      this.tracking=false;
+
+      const display=this.el.querySelector("#marketDisplay");
+      if(!display || !this.ghost)return;
+
+      const src=display.object3D;
+      src.getWorldPosition(this.lastPos);
+      src.getWorldQuaternion(this.lastQuat);
+      src.getWorldScale(this.lastScale);
+
+      const g=this.ghost.object3D;
+      g.position.copy(this.lastPos);
+      g.quaternion.copy(this.lastQuat);
+      g.scale.copy(this.lastScale);
+      g.visible=true;
+
+      if(this.hideTimer){
+        clearTimeout(this.hideTimer);
+      }
+
+      this.hideTimer=setTimeout(()=>{
+        g.visible=false;
+        this.hideTimer=null;
+      },this.data.seconds*1000);
+    });
+  },
+
+  tick:function(){
+    if(this.tracking){
+      const display=this.el.querySelector("#marketDisplay");
+      if(display){
+        const src=display.object3D;
+        src.getWorldPosition(this.lastPos);
+        src.getWorldQuaternion(this.lastQuat);
+        src.getWorldScale(this.lastScale);
+      }
+    }
+  }
+});
+
 AFRAME.registerComponent("market-events",{init:function(){
   const h=document.getElementById("hint");
   this.el.addEventListener("targetFound",()=>h.textContent="MARKET · 点一个食物放进篮筐吧！🧺");
-  this.el.addEventListener("targetLost",()=>h.textContent="请把镜头对准 Market 识别图");
+  this.el.addEventListener("targetLost",()=>h.textContent="Market 还会停留 15 秒，可以继续选择 🧺");
 }});
 
 AFRAME.registerComponent("market-canvas",{
@@ -143,8 +217,11 @@ AFRAME.registerComponent("market-canvas",{
     ctx.fillText("RESET",w/2,by+bh/2+1);
     ctx.restore();
 
-    const mesh=this.el.getObject3D("mesh");
-    if(mesh&&mesh.material&&mesh.material.map)mesh.material.map.needsUpdate=true;
+    ["marketDisplay","marketGhostDisplay"].forEach(id=>{
+      const el=document.getElementById(id);
+      const mesh=el&&el.getObject3D&&el.getObject3D("mesh");
+      if(mesh&&mesh.material&&mesh.material.map)mesh.material.map.needsUpdate=true;
+    });
   }
 });
 
@@ -152,9 +229,8 @@ AFRAME.registerComponent("pick-item",{
   schema:{kind:{type:"string"}},
   init:function(){
     this.el.addEventListener("click",()=>{console.log("market click",this.data.kind);
-      const anchor=this.el.parentElement;
-      const display=anchor.querySelector("#marketDisplay");
-      const comp=display&&display.components["market-canvas"];
+      const tracked=document.getElementById("marketDisplay");
+      const comp=tracked&&tracked.components["market-canvas"];
       if(comp)comp.pick(this.data.kind);
     });
   }
@@ -163,9 +239,8 @@ AFRAME.registerComponent("pick-item",{
 AFRAME.registerComponent("reset-market",{
   init:function(){
     this.el.addEventListener("click",()=>{
-      const anchor=this.el.parentElement;
-      const display=anchor.querySelector("#marketDisplay");
-      const comp=display&&display.components["market-canvas"];
+      const tracked=document.getElementById("marketDisplay");
+      const comp=tracked&&tracked.components["market-canvas"];
       if(comp)comp.reset();
     });
   }
@@ -184,7 +259,7 @@ AFRAME.registerComponent("reset-market",{
 
 <a-camera position="0 0 0" look-controls="enabled:false" cursor="fuse:false; rayOrigin:mouse" raycaster="objects:.clickable; far:10000"></a-camera>
 
-<a-entity mindar-image-target="targetIndex:0" market-events>
+<a-entity mindar-image-target="targetIndex:0" market-events market-hold-after-lost="seconds:15; ghost:#marketGhost">
   <a-plane id="marketDisplay"
     width="2.15" height="1.43" position="0 0.03 0.02"
     material="shader:flat;src:#marketCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
@@ -209,6 +284,36 @@ AFRAME.registerComponent("reset-market",{
     width="0.74" height="0.30"
     material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"
     reset-market></a-plane>
+
+</a-entity>
+
+<!-- Persistent interactive copy shown after targetLost -->
+<a-entity id="marketGhost" visible="false">
+
+  <a-plane
+    id="marketGhostDisplay"
+    width="2.15" height="1.43" position="0 0 0"
+    material="shader:flat;src:#marketCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double">
+  </a-plane>
+
+  <a-plane class="clickable" pick-item="kind:peach"
+    position="-0.38 0.35 0.08" width="0.58" height="0.58"
+    material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
+
+  <a-plane class="clickable" pick-item="kind:cabbage"
+    position="0 0.38 0.08" width="0.58" height="0.58"
+    material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
+
+  <a-plane class="clickable" pick-item="kind:egg"
+    position="0.38 0.35 0.08" width="0.58" height="0.58"
+    material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
+
+  <a-plane class="clickable"
+    position="0 -0.62 0.08"
+    width="0.74" height="0.30"
+    material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"
+    reset-market></a-plane>
+
 </a-entity>
 </a-scene>
 </body></html>
