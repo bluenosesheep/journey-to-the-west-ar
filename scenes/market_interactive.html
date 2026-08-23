@@ -11,7 +11,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
 video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}
 a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}
 canvas.a-canvas{background:transparent!important}.off{display:none}
-#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px/1.4 system-ui;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.16)}#resetBtn{position:fixed;right:16px;top:max(16px,env(safe-area-inset-top));z-index:30;border:0;border-radius:999px;padding:9px 13px;background:rgba(255,255,255,.94);color:#8f2f2a;font:700 13px system-ui;box-shadow:0 6px 18px rgba(0,0,0,.14);cursor:pointer}
+#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px/1.4 system-ui;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.16)}
 </style>
 <script>
 function roundRect(ctx,x,y,w,h,r){
@@ -31,9 +31,9 @@ AFRAME.registerComponent("market-canvas",{
     this.c=document.getElementById("marketCanvas");
     this.ctx=this.c.getContext("2d");
     this.items={
-      peach:{emoji:"🍑",x:170,y:130,tx:342,ty:392,selected:false,start:0},
-      cabbage:{emoji:"🥬",x:384,y:115,tx:384,ty:382,selected:false,start:0},
-      egg:{emoji:"🥚",x:598,y:130,tx:426,ty:392,selected:false,start:0}
+      peach:{emoji:"🍑",x:170,y:130,tx:350,ty:404,selected:false,start:0},
+      cabbage:{emoji:"🥬",x:384,y:115,tx:384,ty:398,selected:false,start:0},
+      egg:{emoji:"🥚",x:598,y:130,tx:418,ty:404,selected:false,start:0}
     };
   },
   pick:function(kind){
@@ -56,8 +56,6 @@ AFRAME.registerComponent("market-canvas",{
     ctx.clearRect(0,0,w,h); // fully transparent canvas
 
     ctx.textAlign="center";ctx.textBaseline="middle";
-    ctx.font='118px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-    ctx.fillText("🧺",w/2,400);
 
     Object.values(this.items).forEach(item=>{
       let x=item.x,y=item.y,s=1;
@@ -73,6 +71,11 @@ AFRAME.registerComponent("market-canvas",{
       ctx.font='96px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
       ctx.fillText(item.emoji,0,0);ctx.restore();
     });
+
+    // Draw basket last so its front edge naturally covers the lower part
+    // of selected food, making the food look like it is actually inside.
+    ctx.font='118px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+    ctx.fillText("🧺",w/2,400);
 
     const mesh=this.el.getObject3D("mesh");
     if(mesh&&mesh.material&&mesh.material.map)mesh.material.map.needsUpdate=true;
@@ -90,10 +93,20 @@ AFRAME.registerComponent("pick-item",{
     });
   }
 });
+
+AFRAME.registerComponent("reset-market",{
+  init:function(){
+    this.el.addEventListener("click",()=>{
+      const anchor=this.el.parentElement;
+      const display=anchor.querySelector("#marketDisplay");
+      const comp=display&&display.components["market-canvas"];
+      if(comp)comp.reset();
+    });
+  }
+});
 </script>
 </head>
 <body>
-<button id="resetBtn" type="button">RESET</button>
 <div id="hint">请把镜头对准 Market 识别图</div>
 <canvas id="marketCanvas" class="off" width="768" height="512"></canvas>
 
@@ -123,13 +136,20 @@ AFRAME.registerComponent("pick-item",{
   <a-plane class="clickable" pick-item="kind:egg"
     position="0.65 0.36 0.10" width="0.62" height="0.62"
     material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
+
+  <!-- RESET moves with the AR target and sits directly below the basket -->
+  <a-plane class="clickable"
+    position="0 -0.72 0.11"
+    width="0.68" height="0.22"
+    material="color:#ffffff;opacity:0.92;transparent:true;depthWrite:false;side:double"
+    reset-market>
+    <a-text value="RESET"
+      align="center"
+      color="#8f2f2a"
+      width="1.6"
+      position="0 0 0.01">
+    </a-text>
+  </a-plane>
 </a-entity>
 </a-scene>
-<script>
-document.getElementById("resetBtn").addEventListener("click",()=>{
-  const plane=document.getElementById("marketDisplay");
-  const comp=plane && plane.components && plane.components["market-canvas"];
-  if(comp) comp.reset();
-});
-</script>
 </body></html>
