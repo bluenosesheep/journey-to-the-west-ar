@@ -47,7 +47,7 @@ AFRAME.registerComponent("city-world-controller",{
     this.market=document.getElementById("cityMarket");
     this.hint=document.getElementById("hint");
     this.backBtn=document.getElementById("sceneBackBtn");
-    this.backBtn.addEventListener("click",()=>this.showWorld());
+    this.backBtn.addEventListener("click",()=>this.exitToCity());
     window.citySelectedScene=null;
     this.parkInteraction=document.getElementById("parkInteractionWorld");
     this.marketInteraction=document.getElementById("marketInteractionWorld");
@@ -153,6 +153,45 @@ AFRAME.registerComponent("city-world-controller",{
 
     this.updateHitPositions();
   },
+  exitToCity:function(){
+    // Stop Park interaction/hold completely.
+    const parkTarget=document.querySelector('[mindar-image-target="targetIndex:1"]');
+    const parkComp=parkTarget&&parkTarget.components&&parkTarget.components["park-drag-controller"];
+    if(parkComp){
+      parkComp.tracking=false;
+      parkComp.holding=false;
+      if(parkComp.timer){clearTimeout(parkComp.timer);parkComp.timer=null;}
+      if(parkComp.dragState)parkComp.dragState=null;
+      if(parkComp.hideHits)parkComp.hideHits();
+    }
+
+    // Stop Market interaction/hold completely.
+    const marketTarget=document.querySelector('[mindar-image-target="targetIndex:2"]');
+    const marketComp=marketTarget&&marketTarget.components&&marketTarget.components["market-persist"];
+    if(marketComp){
+      marketComp.tracking=false;
+      marketComp.holding=false;
+      if(marketComp.timer){clearTimeout(marketComp.timer);marketComp.timer=null;}
+      if(marketComp.hideHoldHits)marketComp.hideHoldHits();
+    }
+
+    if(this.parkInteraction)this.parkInteraction.object3D.visible=false;
+    if(this.marketInteraction)this.marketInteraction.object3D.visible=false;
+
+    const parkBg=document.getElementById("parkDynamicBackground");
+    const marketBg=document.getElementById("marketDynamicBackground");
+    if(parkBg)parkBg.object3D.visible=false;
+    if(marketBg)marketBg.object3D.visible=false;
+
+    const parkLayer=document.getElementById("parkDragLayer");
+    const marketLayer=document.getElementById("marketHoldLayer");
+    if(parkLayer)parkLayer.style.display="none";
+    if(marketLayer)marketLayer.style.display="none";
+
+    this.showWorld();
+    this.hint.textContent="CITY WORLD · 点击 PARK 或 MARKET 进入场景";
+  },
+
   showWorld:function(){
     window.citySelectedScene=null;
     if(this.backBtn)this.backBtn.style.display="none";
@@ -214,7 +253,7 @@ AFRAME.registerComponent("city-world-controller",{
     this.hint.textContent="PARK 已放大 · 现在扫描 PARK 识别图";
   },
   activateParkInteraction:function(){
-    if(this.backBtn)this.backBtn.style.display="none";
+    if(this.backBtn)this.backBtn.style.display="block";
     if(!this.parkInteraction)return;
 
     // Once the Park target is scanned, stop using the CityWorld-fixed Park image.
@@ -230,7 +269,7 @@ AFRAME.registerComponent("city-world-controller",{
   },
 
   activateMarketInteraction:function(){
-    if(this.backBtn)this.backBtn.style.display="none";
+    if(this.backBtn)this.backBtn.style.display="block";
     if(!this.marketInteraction)return;
 
     // Once the Market target is scanned, stop using the CityWorld-fixed Market image.
@@ -636,27 +675,8 @@ AFRAME.registerComponent("park-drag-controller",{
       this.showHits();
       this.updateHitPositions();
 
-      if(this.timer)clearTimeout(this.timer);
-      this.timer=setTimeout(()=>{
-        if(this.world)this.world.object3D.visible=false;
-
-        const parkBg=document.getElementById("parkDynamicBackground");
-        if(parkBg)parkBg.object3D.visible=false;
-
-        this.holding=false;
-        this.hideHits();
-        this.timer=null;
-
-        // Park interaction is finished: return to the persistent City World
-        // so the child can choose Park or Market again without rescanning Building.
-        const city=document.querySelector('[mindar-image-target="targetIndex:0"]')
-          ?.components?.["city-world-controller"];
-        if(city){
-          city.world.object3D.visible=true;
-          city.showWorld();
-          city.hint.textContent="CITY WORLD · 点击 PARK 或 MARKET 进入场景";
-        }
-      },this.data.seconds*1000);
+      if(this.timer){clearTimeout(this.timer);this.timer=null;}
+      // Manual-exit mode: keep Park interaction visible until RETURN CITY is tapped.
     });
   },
 
@@ -1129,26 +1149,8 @@ AFRAME.registerComponent("market-persist",{
       this.updateHoldHits();
       this.showHoldHits();
 
-      if(this.timer)clearTimeout(this.timer);
-      this.timer=setTimeout(()=>{
-        if(this.world)this.world.object3D.visible=false;
-
-        const marketBg=document.getElementById("marketDynamicBackground");
-        if(marketBg)marketBg.object3D.visible=false;
-
-        this.holding=false;
-        this.hideHoldHits();
-        this.timer=null;
-
-        // Market interaction is finished: return to the persistent City World.
-        const city=document.querySelector('[mindar-image-target="targetIndex:0"]')
-          ?.components?.["city-world-controller"];
-        if(city){
-          city.world.object3D.visible=true;
-          city.showWorld();
-          city.hint.textContent="CITY WORLD · 点击 PARK 或 MARKET 进入场景";
-        }
-      },this.data.seconds*1000);
+      if(this.timer){clearTimeout(this.timer);this.timer=null;}
+      // Manual-exit mode: keep Market interaction visible until RETURN CITY is tapped.
     });
   },
 
