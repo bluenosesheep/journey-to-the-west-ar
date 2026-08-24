@@ -111,34 +111,26 @@ AFRAME.registerComponent("city-world-controller",{
       el.style.height=bh+"px";
     };
 
-    placeHit(this.hitPark,new THREE.Vector3(-.72,-.42,.03),1.20,.82);
-    placeHit(this.hitMarket,new THREE.Vector3(.72,-.42,.03),1.20,.82);
+    placeHit(this.hitPark,new THREE.Vector3(-.58,-.46,.03),.96,.68);
+    placeHit(this.hitMarket,new THREE.Vector3(.58,-.46,.03),.96,.68);
   },
 
   tick:function(){
-    if(this.tracking && this.world){
-      this.el.object3D.updateMatrixWorld(true);
-      this.lastMatrix.copy(this.el.object3D.matrixWorld);
-
-      const p=new THREE.Vector3();
-      const q=new THREE.Quaternion();
-      const s=new THREE.Vector3();
-      this.lastMatrix.decompose(p,q,s);
-
-      const obj=this.world.object3D;
-      obj.position.copy(p);
-      obj.quaternion.identity();
-      obj.scale.copy(s);
-      obj.updateMatrixWorld(true);
+    if(this.world && this.world.object3D.visible){
+      // Building is an unlock card only. Keep City World centered, upright,
+      // and at a stable distance from the camera.
+      this.world.object3D.position.set(0,0,-2.55);
+      this.world.object3D.quaternion.identity();
+      this.world.object3D.scale.set(1,1,1);
+      this.world.object3D.updateMatrixWorld(true);
     }
-
     this.updateHitPositions();
   },
   showWorld:function(){
     window.citySelectedScene=null;
-    this.setPanel(this.building,"0 0.34 0.02","1 1 1",1);
-    this.setPanel(this.park,"-0.72 -0.42 0.03",".78 .78 .78",1);
-    this.setPanel(this.market,"0.72 -0.42 0.03",".78 .78 .78",1);
+    this.setPanel(this.building,"0 0.30 0.02",".62 .62 .62",1);
+    this.setPanel(this.park,"-0.58 -0.46 0.03",".62 .62 .62",1);
+    this.setPanel(this.market,"0.58 -0.46 0.03",".62 .62 .62",1);
     this.hitPark.style.display="block";
     this.hitMarket.style.display="block";
     if(this.parkInteraction)this.parkInteraction.object3D.visible=false;
