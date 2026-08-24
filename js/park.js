@@ -286,8 +286,23 @@ AFRAME.registerComponent("park-drag-controller",{
     };
   },
 
-  hitKindAt:function(x,y){
+  hitKindAt:function(x,y,source){
+    // RESET is intentionally forgiving for hand input.
+    // A child should not need pixel-perfect pinch accuracy on a classroom display.
+    const resetEl=this.hits.reset;
+    if(resetEl && resetEl.style.display!=="none"){
+      const r=resetEl.getBoundingClientRect();
+      const pad=source==="hand"?28:8;
+      if(
+        x>=r.left-pad && x<=r.right+pad &&
+        y>=r.top-pad && y<=r.bottom+pad
+      ){
+        return "reset";
+      }
+    }
+
     for(const [kind,el] of Object.entries(this.hits)){
+      if(kind==="reset")continue;
       if(!el || el.style.display==="none")continue;
       const r=el.getBoundingClientRect();
       if(x>=r.left && x<=r.right && y>=r.top && y<=r.bottom){
@@ -300,7 +315,7 @@ AFRAME.registerComponent("park-drag-controller",{
   handleInputDown:function(input){
     if(window.citySelectedScene!=="park")return;
 
-    const kind=this.hitKindAt(input.x,input.y);
+    const kind=this.hitKindAt(input.x,input.y,input.source);
     if(!kind)return;
 
     if(input.nativeEvent)input.nativeEvent.preventDefault();
@@ -308,6 +323,7 @@ AFRAME.registerComponent("park-drag-controller",{
     if(kind==="reset"){
       const comp=this.getCanvasComp();
       if(comp)comp.reset();
+      document.getElementById("hint").textContent="PARK · 已恢复初始位置 🌳";
       return;
     }
 
@@ -414,8 +430,9 @@ AFRAME.registerComponent("park-drag-controller",{
     const rs=this.projectWorld(resetWorld);
 
     if(rs){
-      const bw=Math.max(90,.74*scale.pxPerUnitX);
-      const bh=Math.max(44,.30*scale.pxPerUnitY);
+      // Larger RESET hit area for classroom hand gestures.
+      const bw=Math.max(132,1.02*scale.pxPerUnitX);
+      const bh=Math.max(60,.42*scale.pxPerUnitY);
       this.hits.reset.style.left=(rs.x-bw/2)+"px";
       this.hits.reset.style.top=(rs.y-bh/2)+"px";
       this.hits.reset.style.width=bw+"px";
