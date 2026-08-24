@@ -4,19 +4,17 @@
 <style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}canvas.a-canvas{background:transparent!important}.off{display:none}#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px system-ui;text-align:center}#holdHitLayer{position:fixed;inset:0;z-index:40;pointer-events:none}.hold-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}#parkDragLayer{position:fixed;inset:0;z-index:41;pointer-events:none}.park-drag-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}#cityHitLayer{position:fixed;inset:0;z-index:40;pointer-events:none}.city-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}#parkDragLayer,#marketHoldLayer{position:fixed;inset:0;z-index:45;pointer-events:none;display:none}.park-drag-hit,.market-hold-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}
 #sceneBackBtn{
   position:fixed;
-  left:50%;
-  bottom:74px;
-  transform:translateX(-50%);
   z-index:50;
   display:none;
   border:0;
   border-radius:999px;
-  padding:10px 18px;
-  background:rgba(255,255,255,.94);
-  color:#4b4b4b;
-  font:700 14px system-ui;
+  padding:10px 14px;
+  background:rgba(255,248,220,.96);
+  color:#56713b;
+  font:700 13px/1.4 system-ui;
   box-shadow:0 6px 20px rgba(0,0,0,.16);
   cursor:pointer;
+  white-space:nowrap;
 }
 </style>
 <script>function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
@@ -38,6 +36,30 @@ window.cityAssetsReady = new Promise((resolve)=>{
     img.src=src;
   });
 });
+
+function alignBackButtonWithHint(){
+  const hint=document.getElementById("hint");
+  const btn=document.getElementById("sceneBackBtn");
+  if(!hint||!btn||btn.style.display==="none")return;
+
+  requestAnimationFrame(()=>{
+    const r=hint.getBoundingClientRect();
+    const gap=8;
+    const bw=btn.offsetWidth;
+    const bh=btn.offsetHeight;
+
+    let left=r.right+gap;
+    if(left+bw>window.innerWidth-8){
+      left=Math.max(8,r.left-bw-gap);
+    }
+
+    btn.style.left=left+"px";
+    btn.style.top=(r.top+(r.height-bh)/2)+"px";
+    btn.style.bottom="auto";
+    btn.style.transform="none";
+  });
+}
+window.addEventListener("resize",alignBackButtonWithHint);
 
 AFRAME.registerComponent("city-world-controller",{
   init:function(){
@@ -244,16 +266,16 @@ AFRAME.registerComponent("city-world-controller",{
   },
   focusPark:function(){
     window.citySelectedScene="park";
-    if(this.backBtn)this.backBtn.style.display="block";
+    if(this.backBtn){this.backBtn.style.display="block";alignBackButtonWithHint();}
     this.animatePanel(this.park,"0 0.08 0.03","1.95 1.95 1.95",1);
     this.animatePanel(this.building,"0 0.38 0.01",".8 .8 .8",0);
     this.animatePanel(this.market,"0.72 -0.42 0.01",".7 .7 .7",0);
     this.hitPark.style.display="none";
     this.hitMarket.style.display="none";
-    this.hint.textContent="PARK 已放大 · 现在扫描 PARK 识别图";
+    this.hint.textContent="PARK 已放大 · 现在扫描 PARK 识别图";alignBackButtonWithHint();
   },
   activateParkInteraction:function(){
-    if(this.backBtn)this.backBtn.style.display="block";
+    if(this.backBtn){this.backBtn.style.display="block";alignBackButtonWithHint();}
     if(!this.parkInteraction)return;
 
     // Once the Park target is scanned, stop using the CityWorld-fixed Park image.
@@ -269,7 +291,7 @@ AFRAME.registerComponent("city-world-controller",{
   },
 
   activateMarketInteraction:function(){
-    if(this.backBtn)this.backBtn.style.display="block";
+    if(this.backBtn){this.backBtn.style.display="block";alignBackButtonWithHint();}
     if(!this.marketInteraction)return;
 
     // Once the Market target is scanned, stop using the CityWorld-fixed Market image.
@@ -286,13 +308,13 @@ AFRAME.registerComponent("city-world-controller",{
 
   focusMarket:function(){
     window.citySelectedScene="market";
-    if(this.backBtn)this.backBtn.style.display="block";
+    if(this.backBtn){this.backBtn.style.display="block";alignBackButtonWithHint();}
     this.animatePanel(this.market,"0 0 0.03","1.28 1.28 1.28",1);
     this.animatePanel(this.building,"0 0.38 0.01",".8 .8 .8",0);
     this.animatePanel(this.park,"-0.72 -0.42 0.01",".7 .7 .7",0);
     this.hitPark.style.display="none";
     this.hitMarket.style.display="none";
-    this.hint.textContent="MARKET 已放大 · 现在扫描 MARKET 识别图";
+    this.hint.textContent="MARKET 已放大 · 现在扫描 MARKET 识别图";alignBackButtonWithHint();
   }
 });
 
@@ -413,7 +435,7 @@ AFRAME.registerComponent("park-target-events",{init:function(){
     clearOtherInteractiveScene("park");
     const city=document.querySelector('[mindar-image-target="targetIndex:0"]')?.components?.["city-world-controller"];
     if(city) city.activateParkInteraction();
-    h.textContent="PARK · 可以拖动来布置公园啦！🌳";
+    h.textContent="PARK · 可以拖动来布置公园啦！🌳";alignBackButtonWithHint();
   });
 }});
 
@@ -424,7 +446,7 @@ AFRAME.registerComponent("market-target-events",{init:function(){
     clearOtherInteractiveScene("market");
     const city=document.querySelector('[mindar-image-target="targetIndex:0"]')?.components?.["city-world-controller"];
     if(city) city.activateMarketInteraction();
-    h.textContent="MARKET · 选一些东西放进篮筐吧！🧺";
+    h.textContent="MARKET · 选一些东西放进篮筐吧！🧺";alignBackButtonWithHint();
   });
 }});
 
