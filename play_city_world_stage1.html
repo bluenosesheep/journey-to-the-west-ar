@@ -1067,7 +1067,26 @@ AFRAME.registerComponent("market-persist",{
 
 
 
+AFRAME.registerComponent("pick-item",{
+  schema:{kind:{type:"string"}},
+  init:function(){
+    this.el.addEventListener("click",()=>{console.log("market click",this.data.kind);
+      const anchor=this.el.parentElement;
+      const display=anchor.querySelector("#marketDisplay");
+      const comp=display&&display.components["market-canvas"];
+      if(comp)comp.pick(this.data.kind);
+    });
+  }
+});
 
+AFRAME.registerComponent("reset-market",{
+  init:function(){
+    this.el.addEventListener("click",()=>{
+      const anchor=this.el.parentElement;
+      const display=anchor.querySelector("#marketDisplay");
+      const comp=display&&display.components["market-canvas"];
+      if(comp)comp.reset();
+    });
   }
 });
 </script></head><body>
