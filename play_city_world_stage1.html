@@ -29,6 +29,7 @@ AFRAME.registerComponent("city-world-controller",{
     this.park=document.getElementById("cityPark");
     this.market=document.getElementById("cityMarket");
     this.hint=document.getElementById("hint");
+    window.citySelectedScene=null;
     this.parkInteraction=document.getElementById("parkInteractionWorld");
     this.marketInteraction=document.getElementById("marketInteractionWorld");
     this.hitPark=document.getElementById("hitCityPark");
@@ -134,6 +135,7 @@ AFRAME.registerComponent("city-world-controller",{
     this.updateHitPositions();
   },
   showWorld:function(){
+    window.citySelectedScene=null;
     this.setPanel(this.building,"0 0.34 0.02","1 1 1",1);
     this.setPanel(this.park,"-0.72 -0.42 0.03",".78 .78 .78",1);
     this.setPanel(this.market,"0.72 -0.42 0.03",".78 .78 .78",1);
@@ -182,6 +184,7 @@ AFRAME.registerComponent("city-world-controller",{
     if(opacity===0)setTimeout(()=>{el.object3D.visible=false;},520);
   },
   focusPark:function(){
+    window.citySelectedScene="park";
     this.animatePanel(this.park,"0 0.08 0.03","1.95 1.95 1.95",1);
     this.animatePanel(this.building,"0 0.38 0.01",".8 .8 .8",0);
     this.animatePanel(this.market,"0.72 -0.42 0.01",".7 .7 .7",0);
@@ -220,6 +223,7 @@ AFRAME.registerComponent("city-world-controller",{
   },
 
   focusMarket:function(){
+    window.citySelectedScene="market";
     this.animatePanel(this.market,"0 0 0.03","1.28 1.28 1.28",1);
     this.animatePanel(this.building,"0 0.38 0.01",".8 .8 .8",0);
     this.animatePanel(this.park,"-0.72 -0.42 0.01",".7 .7 .7",0);
@@ -328,6 +332,7 @@ function clearOtherInteractiveScene(active){
 AFRAME.registerComponent("park-target-events",{init:function(){
   const h=document.getElementById("hint");
   this.el.addEventListener("targetFound",()=>{
+    if(window.citySelectedScene!=="park")return;
     clearOtherInteractiveScene("park");
     const city=document.querySelector('[mindar-image-target="targetIndex:0"]')?.components?.["city-world-controller"];
     if(city) city.activateParkInteraction();
@@ -338,6 +343,7 @@ AFRAME.registerComponent("park-target-events",{init:function(){
 AFRAME.registerComponent("market-target-events",{init:function(){
   const h=document.getElementById("hint");
   this.el.addEventListener("targetFound",()=>{
+    if(window.citySelectedScene!=="market")return;
     clearOtherInteractiveScene("market");
     const city=document.querySelector('[mindar-image-target="targetIndex:0"]')?.components?.["city-world-controller"];
     if(city) city.activateMarketInteraction();
