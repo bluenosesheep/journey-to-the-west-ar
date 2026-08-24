@@ -158,13 +158,13 @@ AFRAME.registerComponent("city-world-controller",{
   },
   animatePanel:function(el,pos,scale,opacity){
     el.object3D.visible=true;
-    el.setAttribute("animation__pos","property: position; to: "+pos+"; dur: 650; easing: easeInOutCubic");
-    el.setAttribute("animation__scale","property: scale; to: "+scale+"; dur: 650; easing: easeInOutCubic");
+    el.setAttribute("animation__pos","property: position; to: "+pos+"; dur: 760; easing: easeInOutCubic");
+    el.setAttribute("animation__scale","property: scale; to: "+scale+"; dur: 760; easing: easeInOutCubic");
     el.setAttribute("animation__opacity","property: material.opacity; to: "+opacity+"; dur: 450; easing: easeInOutCubic");
     if(opacity===0)setTimeout(()=>{el.object3D.visible=false;},520);
   },
   focusPark:function(){
-    this.animatePanel(this.park,"0 0 0.03","1.28 1.28 1.28",1);
+    this.animatePanel(this.park,"0 0.08 0.03","1.95 1.95 1.95",1);
     this.animatePanel(this.building,"0 0.38 0.01",".8 .8 .8",0);
     this.animatePanel(this.market,"0.72 -0.42 0.01",".7 .7 .7",0);
     this.hitPark.style.display="none";
