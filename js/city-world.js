@@ -1,14 +1,28 @@
 
 window.ClassroomHandMode = {
   running:false,
+  mode:"off",
 
-  async startPark(){
+  setMode(mode){
+    this.mode=mode;
+
+    const status=document.getElementById("classroomHandStatus");
+    if(!status)return;
+
+    if(mode==="city")status.textContent="手势：CITY";
+    else if(mode==="park")status.textContent="手势：PARK";
+    else status.textContent="手势";
+  },
+
+  async ensureRunning(mode){
     const cursor=document.getElementById("classroomHandCursor");
     const status=document.getElementById("classroomHandStatus");
 
+    this.setMode(mode);
+
     if(status){
       status.style.display="block";
-      status.textContent="手势：启动中…";
+      if(!this.running)status.textContent="手势：启动中…";
     }
 
     try{
@@ -18,7 +32,7 @@ window.ClassroomHandMode = {
       }
 
       if(this.running){
-        if(status)status.textContent="手势：PARK";
+        this.setMode(mode);
         return;
       }
 
@@ -38,30 +52,50 @@ window.ClassroomHandMode = {
         pinchUpRatio:.44,
         reuseExistingVideo:true,
         onStatus:(msg)=>{
-          if(status)status.textContent="手势："+msg;
+          if(status && !this.running)status.textContent="手势："+msg;
         },
         onMetrics:(data)=>{
           if(!status)return;
+
           if(!data.handVisible){
             status.textContent="手势：请伸出一只手";
-          }else{
-            status.textContent=data.pinching?"手势：抓住":"手势：PARK";
+            return;
           }
+
+          if(data.pinching){
+            status.textContent="手势：抓住";
+            return;
+          }
+
+          if(this.mode==="city")status.textContent="手势：CITY";
+          else if(this.mode==="park")status.textContent="手势：PARK";
+          else status.textContent="手势";
         }
       });
 
       this.running=true;
-      if(status)status.textContent="手势：PARK";
+      this.setMode(mode);
     }catch(err){
       console.error("Classroom hand tracking failed",err);
       if(status)status.textContent="手势启动失败";
     }
   },
 
+  startCity(){
+    return this.ensureRunning("city");
+  },
+
+  startPark(){
+    return this.ensureRunning("park");
+  },
+
   stop(){
+    this.mode="off";
+
     if(window.ClassroomHandTracking){
       window.ClassroomHandTracking.stop({keepVideo:true});
     }
+
     this.running=false;
 
     const cursor=document.getElementById("classroomHandCursor");
@@ -100,6 +134,33 @@ AFRAME.registerComponent("city-world-controller",{
           input.y>=r.top-pad && input.y<=r.bottom+pad
         ){
           this.exitToCity();
+        }
+      }
+    });
+
+    // CITY scene gesture selection.
+    // A fresh pinch over PARK or MARKET is equivalent to the existing click.
+    window.CityInput.register("city-select",{
+      down:(input)=>{
+        if(input.source!=="hand")return;
+        if(window.citySelectedScene!==null)return;
+
+        const inside=(el,pad=8)=>{
+          if(!el || el.style.display==="none")return false;
+          const r=el.getBoundingClientRect();
+          return (
+            input.x>=r.left-pad && input.x<=r.right+pad &&
+            input.y>=r.top-pad && input.y<=r.bottom+pad
+          );
+        };
+
+        if(inside(this.hitPark)){
+          this.focusPark();
+          return;
+        }
+
+        if(inside(this.hitMarket)){
+          this.focusMarket();
         }
       }
     });
@@ -211,7 +272,6 @@ AFRAME.registerComponent("city-world-controller",{
     this.updateHitPositions();
   },
   exitToCity:function(){
-    window.ClassroomHandMode?.stop();
     // Stop Park interaction/hold completely.
     const parkTarget=document.querySelector('[mindar-image-target="targetIndex:1"]');
     const parkComp=parkTarget&&parkTarget.components&&parkTarget.components["park-drag-controller"];
@@ -251,8 +311,8 @@ AFRAME.registerComponent("city-world-controller",{
   },
 
   showWorld:function(){
-    window.ClassroomHandMode?.stop();
     window.citySelectedScene=null;
+    window.ClassroomHandMode?.startCity();
     if(this.backBtn)this.backBtn.style.display="none";
     this.setPanel(this.building,"0 0.34 0.02","1 1 1",1);
     this.setPanel(this.park,"-0.72 -0.42 0.03",".78 .78 .78",1);
@@ -302,6 +362,7 @@ AFRAME.registerComponent("city-world-controller",{
     if(opacity===0)setTimeout(()=>{el.object3D.visible=false;},520);
   },
   focusPark:function(){
+    window.ClassroomHandMode?.setMode("park");
     window.citySelectedScene="park";
     if(this.backBtn){this.backBtn.style.display="block";alignBackButtonWithHint();}
     this.animatePanel(this.park,"0 0.08 0.03","1.95 1.95 1.95",1);
