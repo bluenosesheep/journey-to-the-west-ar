@@ -261,6 +261,20 @@ AFRAME.registerComponent("scene-background-follow",{
     }
 
     this.el.addEventListener("targetFound",()=>{
+      const idx=this.el.components["mindar-image-target"]?.data?.targetIndex;
+
+      if(idx===1 && window.citySelectedScene!=="park"){
+        this.tracking=false;
+        if(this.world)this.world.object3D.visible=false;
+        return;
+      }
+
+      if(idx===2 && window.citySelectedScene!=="market"){
+        this.tracking=false;
+        if(this.world)this.world.object3D.visible=false;
+        return;
+      }
+
       this.tracking=true;
       if(this.world)this.world.object3D.visible=true;
     });
@@ -533,6 +547,14 @@ AFRAME.registerComponent("park-drag-controller",{
     if(this.world)this.world.object3D.visible=false;
 
     this.el.addEventListener("targetFound",()=>{
+      if(window.citySelectedScene!=="park"){
+        this.tracking=false;
+        this.holding=false;
+        if(this.world)this.world.object3D.visible=false;
+        this.hideHits();
+        return;
+      }
+
       this.tracking=true;
       this.holding=false;
       this.poseHistory=[];
@@ -547,6 +569,8 @@ AFRAME.registerComponent("park-drag-controller",{
     });
 
     this.el.addEventListener("targetLost",()=>{
+      if(window.citySelectedScene!=="park")return;
+
       this.tracking=false;
       this.holding=true;
       this.holdStart=performance.now();
@@ -1008,6 +1032,14 @@ AFRAME.registerComponent("market-persist",{
     }
 
     this.el.addEventListener("targetFound",()=>{
+      if(window.citySelectedScene!=="market"){
+        this.tracking=false;
+        this.holding=false;
+        if(this.world)this.world.object3D.visible=false;
+        this.hideHoldHits();
+        return;
+      }
+
       this.tracking=true;
       this.holding=false;
       this.poseHistory=[];
@@ -1024,6 +1056,8 @@ AFRAME.registerComponent("market-persist",{
     });
 
     this.el.addEventListener("targetLost",()=>{
+      if(window.citySelectedScene!=="market")return;
+
       this.tracking=false;
       this.holding=true;
       this.holdStart=performance.now();
