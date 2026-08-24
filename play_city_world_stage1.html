@@ -288,9 +288,47 @@ AFRAME.registerComponent("scene-background-follow",{
   }
 });
 
+
+function clearOtherInteractiveScene(active){
+  const parkWorld=document.getElementById("parkInteractionWorld");
+  const parkBg=document.getElementById("parkDynamicBackground");
+  const marketWorld=document.getElementById("marketInteractionWorld");
+  const marketBg=document.getElementById("marketDynamicBackground");
+
+  if(active!=="park"){
+    if(parkWorld)parkWorld.object3D.visible=false;
+    if(parkBg)parkBg.object3D.visible=false;
+
+    const parkTarget=document.querySelector('[mindar-image-target="targetIndex:1"]');
+    const parkComp=parkTarget && parkTarget.components && parkTarget.components["park-drag-controller"];
+    if(parkComp){
+      parkComp.tracking=false;
+      parkComp.holding=false;
+      if(parkComp.timer){clearTimeout(parkComp.timer);parkComp.timer=null;}
+      if(parkComp.dragState)parkComp.dragState=null;
+      if(parkComp.hideHits)parkComp.hideHits();
+    }
+  }
+
+  if(active!=="market"){
+    if(marketWorld)marketWorld.object3D.visible=false;
+    if(marketBg)marketBg.object3D.visible=false;
+
+    const marketTarget=document.querySelector('[mindar-image-target="targetIndex:2"]');
+    const marketComp=marketTarget && marketTarget.components && marketTarget.components["market-persist"];
+    if(marketComp){
+      marketComp.tracking=false;
+      marketComp.holding=false;
+      if(marketComp.timer){clearTimeout(marketComp.timer);marketComp.timer=null;}
+      if(marketComp.hideHoldHits)marketComp.hideHoldHits();
+    }
+  }
+}
+
 AFRAME.registerComponent("park-target-events",{init:function(){
   const h=document.getElementById("hint");
   this.el.addEventListener("targetFound",()=>{
+    clearOtherInteractiveScene("park");
     const city=document.querySelector('[mindar-image-target="targetIndex:0"]')?.components?.["city-world-controller"];
     if(city) city.activateParkInteraction();
     h.textContent="PARK · 可以拖动来布置公园啦！🌳";
@@ -300,6 +338,7 @@ AFRAME.registerComponent("park-target-events",{init:function(){
 AFRAME.registerComponent("market-target-events",{init:function(){
   const h=document.getElementById("hint");
   this.el.addEventListener("targetFound",()=>{
+    clearOtherInteractiveScene("market");
     const city=document.querySelector('[mindar-image-target="targetIndex:0"]')?.components?.["city-world-controller"];
     if(city) city.activateMarketInteraction();
     h.textContent="MARKET · 选一些东西放进篮筐吧！🧺";
