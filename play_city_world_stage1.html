@@ -46,18 +46,10 @@ AFRAME.registerComponent("city-world-controller",{
 
     this.el.addEventListener("targetFound",()=>{
       this.tracking=true;
-
-      // First cold load: do not reveal white a-image planes before PNG textures are ready.
-      this.world.object3D.visible=false;
-      this.hint.textContent="CITY WORLD · 正在加载场景…";
-
-      window.cityAssetsReady.then(()=>{
-        if(!this.world)return;
-        this.showWorld();
-        this.world.object3D.visible=true;
-        this.updateHitPositions();
-        this.hint.textContent="CITY WORLD · 点击 PARK 或 MARKET 进入场景";
-      });
+      this.world.object3D.visible=true;
+      this.showWorld();
+      this.hint.textContent="CITY WORLD · 点击 PARK 或 MARKET 进入场景";
+    });
     });
 
     this.el.addEventListener("targetLost",()=>{
@@ -116,14 +108,6 @@ AFRAME.registerComponent("city-world-controller",{
   },
 
   tick:function(){
-    if(this.world && this.world.object3D.visible){
-      // Building is an unlock card only. Keep City World centered, upright,
-      // and at a stable distance from the camera.
-      this.world.object3D.position.set(0,0,-2.55);
-      this.world.object3D.quaternion.identity();
-      this.world.object3D.scale.set(1,1,1);
-      this.world.object3D.updateMatrixWorld(true);
-    }
     this.updateHitPositions();
   },
   showWorld:function(){
@@ -1294,38 +1278,37 @@ AFRAME.registerComponent("reset-market",{
 
   <a-camera position="0 0 0" look-controls="enabled:false"
     cursor="fuse:false; rayOrigin:mouse"
-    raycaster="objects:.clickable; far:10000"></a-camera>
-
-  <a-entity mindar-image-target="targetIndex:0" city-world-controller></a-entity>
-  <a-entity mindar-image-target="targetIndex:1" park-target-events scene-background-follow="world:#parkDynamicBackground" park-drag-controller="seconds:15; world:#parkInteractionWorld"></a-entity>
-  <a-entity mindar-image-target="targetIndex:2" market-target-events scene-background-follow="world:#marketDynamicBackground" market-persist="seconds:15; world:#marketInteractionWorld"></a-entity>
-
-  <a-entity id="cityWorld" visible="false">
+    raycaster="objects:.clickable; far:10000">
+  <a-entity id="cityWorld" visible="false" position="0 0 -2.55">
 
     <a-image id="cityBuilding"
       src="./assets/city/building_scene.png"
       width="1.25" height="1.88"
-      position="0 0.34 0.02"
+      position="0 0.30 0.02"
+      scale=".62 .62 .62"
       material="transparent:true;opacity:1;depthWrite:false"></a-image>
 
     <a-image id="cityPark"
       src="./assets/city/park_scene.png"
       width="1.55" height="1.04"
-      position="-0.72 -0.42 0.03"
-      scale=".78 .78 .78"
+      position="-0.58 -0.46 0.03"
+      scale=".62 .62 .62"
       material="transparent:true;opacity:1;depthWrite:false"></a-image>
 
     <a-image id="cityMarket"
       src="./assets/city/market_scene.png"
       width="1.55" height="1.04"
-      position="0.72 -0.42 0.03"
-      scale=".78 .78 .78"
+      position="0.58 -0.46 0.03"
+      scale=".62 .62 .62"
       material="transparent:true;opacity:1;depthWrite:false"></a-image>
 
   </a-entity>
+</a-camera>
 
-  
-  <!-- Dynamic Park background:
+  <a-entity mindar-image-target="targetIndex:0" city-world-controller></a-entity>
+  <a-entity mindar-image-target="targetIndex:1" park-target-events scene-background-follow="world:#parkDynamicBackground" park-drag-controller="seconds:15; world:#parkInteractionWorld"></a-entity>
+  <a-entity mindar-image-target="targetIndex:2" market-target-events scene-background-follow="world:#marketDynamicBackground" market-persist="seconds:15; world:#marketInteractionWorld"></a-entity>
+<!-- Dynamic Park background:
        outer entity follows Park target pose,
        child image keeps a fixed relative offset from the interaction -->
   <a-entity id="parkDynamicBackground" visible="false">
