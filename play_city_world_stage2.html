@@ -358,6 +358,30 @@ AFRAME.registerComponent("city-world-controller",{
       if(m)m.style.display="block";
     },540);
   }
+  focusMarket:function(){
+    window.citySelectedScene="market";
+    if(this.backBtn){this.backBtn.style.display="block";alignBackButtonWithHint();}
+
+    // Start from a clean state so Market can zoom every time.
+    [this.market,this.park,this.building].forEach(el=>{
+      if(!el)return;
+      el.removeAttribute("animation__pos");
+      el.removeAttribute("animation__scale");
+      el.removeAttribute("animation__opacity");
+      el.object3D.visible=true;
+    });
+
+    this.animatePanel(this.market,"0 0 0.03","1.28 1.28 1.28",1);
+    this.animatePanel(this.building,"0 0.38 0.01",".8 .8 .8",0);
+    this.animatePanel(this.park,"-0.72 -0.42 0.01",".7 .7 .7",0);
+
+    this.hitPark.style.display="none";
+    this.hitMarket.style.display="none";
+    this.hint.textContent="MARKET 已放大 · 现在扫描 MARKET 识别图";
+    alignBackButtonWithHint();
+  },
+
+
 });
 
 AFRAME.registerComponent("city-panel-click",{
