@@ -169,10 +169,10 @@ AFRAME.registerComponent("city-world-controller",{
   activateParkInteraction:function(){
     if(!this.parkInteraction)return;
     // Keep the enlarged Park scene as a background and bring interaction forward.
-    this.park.setAttribute("animation__scale","property:scale;to:.88 .88 .88;dur:620;easing:easeInOutCubic");
-    this.park.setAttribute("animation__pos","property:position;to:0 0.34 -0.68;dur:620;easing:easeInOutCubic");
+    this.park.setAttribute("animation__scale","property:scale;to:.74 .74 .74;dur:700;easing:easeInOutCubic");
+    this.park.setAttribute("animation__pos","property:position;to:-0.42 0.58 -0.95;dur:700;easing:easeInOutCubic");
     this.parkInteraction.object3D.visible=true;
-    this.parkInteraction.setAttribute("position","0 -0.28 0.18");
+    this.parkInteraction.setAttribute("position","0.18 -0.34 0.22");
     this.parkInteraction.setAttribute("scale",".78 .78 .78");
     this.marketInteraction.object3D.visible=false;
     document.getElementById("parkDragLayer").style.display="block";
