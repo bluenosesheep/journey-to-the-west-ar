@@ -54,8 +54,8 @@ AFRAME.registerComponent("city-world-controller",{
       window.cityAssetsReady.then(()=>{
         if(!this.world)return;
         this.showWorld();
+        this.attachCityWorldToCamera();
         this.world.object3D.visible=true;
-        this.centerCityWorld();
         this.updateHitPositions();
         this.hint.textContent="CITY WORLD · 点击 PARK 或 MARKET 进入场景";
       });
@@ -112,43 +112,45 @@ AFRAME.registerComponent("city-world-controller",{
       el.style.height=bh+"px";
     };
 
-    placeHit(this.hitPark,new THREE.Vector3(-.62,-.45,.03),1.02,.72);
-    placeHit(this.hitMarket,new THREE.Vector3(.62,-.45,.03),1.02,.72);
+    placeHit(this.hitPark,new THREE.Vector3(-.60,-.46,.03),1.00,.70);
+    placeHit(this.hitMarket,new THREE.Vector3(.60,-.46,.03),1.00,.70);
   },
 
-  centerCityWorld:function(){
-    if(!this.world)return;
+  attachCityWorldToCamera:function(){
+    if(!this.world)return false;
 
-    const cam=this.getCamera();
-    if(!cam)return;
-
-    cam.updateMatrixWorld(true);
-
-    // Put the City World at a fixed point directly in front of the camera.
-    // Building is only the unlock trigger; card position / tilt / distance
-    // no longer changes the City World layout.
-    const p=new THREE.Vector3(0,0,-3.15).applyMatrix4(cam.matrixWorld);
-    const q=new THREE.Quaternion();
-    cam.getWorldQuaternion(q);
+    const camEl=document.querySelector("a-camera");
+    const camObj=camEl && camEl.object3D;
+    if(!camObj)return false;
 
     const obj=this.world.object3D;
-    obj.position.copy(p);
-    obj.quaternion.copy(q);
+
+    // Re-parent only the Three.js object. The A-Frame / MindAR DOM hierarchy
+    // stays untouched, so target recognition is not affected.
+    if(obj.parent!==camObj){
+      if(obj.parent)obj.parent.remove(obj);
+      camObj.add(obj);
+    }
+
+    // Local camera coordinates: always centered, upright and at a stable distance.
+    obj.position.set(0,0,-2.9);
+    obj.quaternion.identity();
     obj.scale.set(1,1,1);
     obj.updateMatrixWorld(true);
+    return true;
   },
 
   tick:function(){
     if(this.world && this.world.object3D.visible){
-      this.centerCityWorld();
+      this.attachCityWorldToCamera();
     }
     this.updateHitPositions();
   },
   showWorld:function(){
     window.citySelectedScene=null;
-    this.setPanel(this.building,"0 0.30 0.02",".76 .76 .76",1);
-    this.setPanel(this.park,"-0.62 -0.45 0.03",".66 .66 .66",1);
-    this.setPanel(this.market,"0.62 -0.45 0.03",".66 .66 .66",1);
+    this.setPanel(this.building,"0 0.26 0.02",".72 .72 .72",1);
+    this.setPanel(this.park,"-0.60 -0.46 0.03",".64 .64 .64",1);
+    this.setPanel(this.market,"0.60 -0.46 0.03",".64 .64 .64",1);
     this.hitPark.style.display="block";
     this.hitMarket.style.display="block";
     if(this.parkInteraction)this.parkInteraction.object3D.visible=false;
