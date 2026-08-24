@@ -169,11 +169,11 @@ AFRAME.registerComponent("city-world-controller",{
   activateParkInteraction:function(){
     if(!this.parkInteraction)return;
     // Keep the enlarged Park scene as a background and bring interaction forward.
-    this.park.setAttribute("animation__scale","property:scale;to:.78 .78 .78;dur:420;easing:easeInOutCubic");
-    this.park.setAttribute("animation__pos","property:position;to:0 0.18 0.01;dur:420;easing:easeInOutCubic");
+    this.park.setAttribute("animation__scale","property:scale;to:.96 .96 .96;dur:520;easing:easeInOutCubic");
+    this.park.setAttribute("animation__pos","property:position;to:0 0.14 -0.38;dur:520;easing:easeInOutCubic");
     this.parkInteraction.object3D.visible=true;
-    this.parkInteraction.setAttribute("position","0 -0.18 0.10");
-    this.parkInteraction.setAttribute("scale",".72 .72 .72");
+    this.parkInteraction.setAttribute("position","0 -0.14 0.08");
+    this.parkInteraction.setAttribute("scale",".78 .78 .78");
     this.marketInteraction.object3D.visible=false;
     document.getElementById("parkDragLayer").style.display="block";
     document.getElementById("marketHoldLayer").style.display="none";
@@ -182,11 +182,11 @@ AFRAME.registerComponent("city-world-controller",{
   activateMarketInteraction:function(){
     if(!this.marketInteraction)return;
     // Keep the enlarged Market scene as a background and bring interaction forward.
-    this.market.setAttribute("animation__scale","property:scale;to:.78 .78 .78;dur:420;easing:easeInOutCubic");
-    this.market.setAttribute("animation__pos","property:position;to:0 0.18 0.01;dur:420;easing:easeInOutCubic");
+    this.market.setAttribute("animation__scale","property:scale;to:.96 .96 .96;dur:520;easing:easeInOutCubic");
+    this.market.setAttribute("animation__pos","property:position;to:0 0.14 -0.38;dur:520;easing:easeInOutCubic");
     this.marketInteraction.object3D.visible=true;
-    this.marketInteraction.setAttribute("position","0 -0.18 0.10");
-    this.marketInteraction.setAttribute("scale",".72 .72 .72");
+    this.marketInteraction.setAttribute("position","0 -0.14 0.08");
+    this.marketInteraction.setAttribute("scale",".78 .78 .78");
     this.parkInteraction.object3D.visible=false;
     document.getElementById("marketHoldLayer").style.display="block";
     document.getElementById("parkDragLayer").style.display="none";
