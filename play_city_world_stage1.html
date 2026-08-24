@@ -215,13 +215,25 @@ AFRAME.registerComponent("scene-background-follow",{
     this.el.object3D.matrixWorld.decompose(p,q,s);
 
     const obj=this.world.object3D;
-    obj.position.copy(p);
-    obj.quaternion.identity();
-    obj.scale.copy(s);
-    obj.updateMatrixWorld(true);
+    placeCenteredInCamera(obj,-2.30,1);
   }
 });
 
+
+function placeCenteredInCamera(obj,z,scale){
+  if(!obj)return;
+  const camEl=document.querySelector("a-camera");
+  const cam=camEl&&camEl.getObject3D("camera");
+  if(!cam)return;
+  cam.updateMatrixWorld(true);
+  const p=new THREE.Vector3(0,0,z).applyMatrix4(cam.matrixWorld);
+  const q=new THREE.Quaternion();
+  cam.getWorldQuaternion(q);
+  obj.position.copy(p);
+  obj.quaternion.copy(q);
+  if(scale!==undefined)obj.scale.set(scale,scale,scale);
+  obj.updateMatrixWorld(true);
+}
 
 function clearOtherInteractiveScene(active){
   const parkWorld=document.getElementById("parkInteractionWorld");
@@ -729,11 +741,7 @@ AFRAME.registerComponent("park-drag-controller",{
         this.poseHistory.shift();
       }
 
-      obj.position.copy(p);
-      obj.quaternion.identity();
-      obj.scale.copy(s);
-      obj.updateMatrixWorld(true);
-
+      placeCenteredInCamera(obj,-2.05,.74);
       this.updateHitPositions();
       return;
     }
@@ -997,21 +1005,10 @@ AFRAME.registerComponent("market-persist",{
           stablePose=this.poseHistory[0];
         }
 
-        if(stablePose){
-          this.basePos.copy(stablePose.pos);
-          this.baseQuat.copy(stablePose.quat);
-          this.baseScale.copy(stablePose.scale);
-
-          obj.position.copy(this.basePos);
-          obj.quaternion.identity();
-          obj.scale.copy(this.baseScale);
-          obj.updateMatrixWorld(true);
-        }else{
-          this.basePos.copy(obj.position);
-          this.baseQuat.copy(obj.quaternion);
-          this.baseScale.copy(obj.scale);
-        }
-
+        placeCenteredInCamera(obj,-2.05,.72);
+        this.basePos.copy(obj.position);
+        this.baseQuat.copy(obj.quaternion);
+        this.baseScale.copy(obj.scale);
         obj.visible=true;
       }
 
@@ -1128,10 +1125,8 @@ AFRAME.registerComponent("market-persist",{
         this.poseHistory.shift();
       }
 
-      obj.position.copy(pos);
-      obj.quaternion.identity();
-      obj.scale.copy(scale);
-      obj.updateMatrixWorld(true);
+      placeCenteredInCamera(obj,-2.05,.72);
+      this.updateHoldHits();
       return;
     }
 
