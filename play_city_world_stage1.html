@@ -1,50 +1,7 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Journey to the West AR</title>
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}canvas.a-canvas{background:transparent!important}.off{display:none}#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px system-ui;text-align:center}#holdHitLayer{position:fixed;inset:0;z-index:40;pointer-events:none}.hold-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}#parkDragLayer{position:fixed;inset:0;z-index:41;pointer-events:none}.park-drag-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}#cityHitLayer{position:fixed;inset:0;z-index:40;pointer-events:none}.city-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}#parkDragLayer,#marketHoldLayer{position:fixed;inset:0;z-index:45;pointer-events:none;display:none}.park-drag-hit,.market-hold-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}
-#cityWorldDOM{
-  position:fixed; inset:0; z-index:18; display:none;
-  pointer-events:none;
-}
-.city-scene{
-  position:absolute;
-  left:50%; top:50%;
-  transform-origin:center center;
-  transition:transform .75s ease, opacity .45s ease;
-  pointer-events:none;
-  user-select:none; -webkit-user-drag:none;
-}
-#cityBuildingDOM{
-  width:min(42vw,320px);
-  transform:translate(-50%,-68%) scale(1);
-}
-#cityParkDOM{
-  width:min(34vw,260px);
-  transform:translate(-125%,18%) scale(1);
-  pointer-events:auto;
-}
-#cityMarketDOM{
-  width:min(34vw,260px);
-  transform:translate(25%,18%) scale(1);
-  pointer-events:auto;
-}
-#cityWorldDOM.focus-park #cityParkDOM{
-  transform:translate(-50%,-50%) scale(1.9);
-}
-#cityWorldDOM.focus-park #cityBuildingDOM,
-#cityWorldDOM.focus-park #cityMarketDOM{
-  opacity:0;
-  pointer-events:none;
-}
-#cityWorldDOM.focus-market #cityMarketDOM{
-  transform:translate(-50%,-50%) scale(1.9);
-}
-#cityWorldDOM.focus-market #cityBuildingDOM,
-#cityWorldDOM.focus-market #cityParkDOM{
-  opacity:0;
-  pointer-events:none;
-}
-</style>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}canvas.a-canvas{background:transparent!important}.off{display:none}#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px system-ui;text-align:center}#holdHitLayer{position:fixed;inset:0;z-index:40;pointer-events:none}.hold-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}#parkDragLayer{position:fixed;inset:0;z-index:41;pointer-events:none}.park-drag-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}#cityHitLayer{position:fixed;inset:0;z-index:40;pointer-events:none}.city-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}#parkDragLayer,#marketHoldLayer{position:fixed;inset:0;z-index:45;pointer-events:none;display:none}.park-drag-hit,.market-hold-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}</style>
 <script>function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
 
 
@@ -67,37 +24,123 @@ window.cityAssetsReady = new Promise((resolve)=>{
 
 AFRAME.registerComponent("city-world-controller",{
   init:function(){
+    this.world=document.getElementById("cityWorld");
+    this.building=document.getElementById("cityBuilding");
+    this.park=document.getElementById("cityPark");
+    this.market=document.getElementById("cityMarket");
     this.hint=document.getElementById("hint");
-    this.domWorld=document.getElementById("cityWorldDOM");
-    this.domPark=document.getElementById("cityParkDOM");
-    this.domMarket=document.getElementById("cityMarketDOM");
+    window.citySelectedScene=null;
     this.parkInteraction=document.getElementById("parkInteractionWorld");
     this.marketInteraction=document.getElementById("marketInteractionWorld");
+    this.hitPark=document.getElementById("hitCityPark");
+    this.hitMarket=document.getElementById("hitCityMarket");
+    this.camera=null;
 
-    window.citySelectedScene=null;
+    this.hitPark.addEventListener("click",()=>this.focusPark());
+    this.hitMarket.addEventListener("click",()=>this.focusMarket());
 
-    this.domPark.addEventListener("click",()=>this.focusPark());
-    this.domMarket.addEventListener("click",()=>this.focusMarket());
+    this.tracking=false;
+    this.lastMatrix=new THREE.Matrix4();
+
+    this.world.object3D.visible=false;
 
     this.el.addEventListener("targetFound",()=>{
+      this.tracking=true;
+
+      // First cold load: do not reveal white a-image planes before PNG textures are ready.
+      this.world.object3D.visible=false;
       this.hint.textContent="CITY WORLD · 正在加载场景…";
 
       window.cityAssetsReady.then(()=>{
+        if(!this.world)return;
         this.showWorld();
+        this.world.object3D.visible=true;
+        this.updateHitPositions();
         this.hint.textContent="CITY WORLD · 点击 PARK 或 MARKET 进入场景";
       });
     });
+
+    this.el.addEventListener("targetLost",()=>{
+      // City World stays at the last tracked pose once it has actually been loaded.
+      this.tracking=false;
+    });
   },
 
+  getCamera:function(){
+    if(!this.camera){
+      const camEl=document.querySelector("a-camera");
+      this.camera=camEl&&camEl.getObject3D("camera");
+    }
+    return this.camera;
+  },
+
+  projectWorld:function(v){
+    const cam=this.getCamera();
+    if(!cam)return null;
+    const p=v.clone().project(cam);
+    return{
+      x:(p.x*.5+.5)*window.innerWidth,
+      y:(-p.y*.5+.5)*window.innerHeight
+    };
+  },
+
+  updateHitPositions:function(){
+    if(!this.world || this.hitPark.style.display==="none")return;
+
+    const obj=this.world.object3D;
+    obj.updateMatrixWorld(true);
+
+    const placeHit=(el,local,wUnit,hUnit)=>{
+      const p=local.clone().applyMatrix4(obj.matrixWorld);
+      const s=this.projectWorld(p);
+      if(!s)return;
+
+      const c=this.projectWorld(new THREE.Vector3(0,0,0).applyMatrix4(obj.matrixWorld));
+      const r=this.projectWorld(new THREE.Vector3(.5,0,0).applyMatrix4(obj.matrixWorld));
+      const u=this.projectWorld(new THREE.Vector3(0,.5,0).applyMatrix4(obj.matrixWorld));
+      if(!c||!r||!u)return;
+
+      const px=Math.max(1,Math.abs(r.x-c.x)*2);
+      const py=Math.max(1,Math.abs(u.y-c.y)*2);
+      const bw=Math.max(90,wUnit*px);
+      const bh=Math.max(70,hUnit*py);
+
+      el.style.left=(s.x-bw/2)+"px";
+      el.style.top=(s.y-bh/2)+"px";
+      el.style.width=bw+"px";
+      el.style.height=bh+"px";
+    };
+
+    placeHit(this.hitPark,new THREE.Vector3(-.72,-.42,.03),1.20,.82);
+    placeHit(this.hitMarket,new THREE.Vector3(.72,-.42,.03),1.20,.82);
+  },
+
+  tick:function(){
+    if(this.tracking && this.world){
+      this.el.object3D.updateMatrixWorld(true);
+      this.lastMatrix.copy(this.el.object3D.matrixWorld);
+
+      const p=new THREE.Vector3();
+      const q=new THREE.Quaternion();
+      const s=new THREE.Vector3();
+      this.lastMatrix.decompose(p,q,s);
+
+      const obj=this.world.object3D;
+      obj.position.copy(p);
+      obj.quaternion.identity();
+      obj.scale.copy(s);
+      obj.updateMatrixWorld(true);
+    }
+
+    this.updateHitPositions();
+  },
   showWorld:function(){
     window.citySelectedScene=null;
-
-    this.domWorld.classList.remove("focus-park","focus-market");
-    this.domWorld.style.display="block";
-
-    this.domPark.style.pointerEvents="auto";
-    this.domMarket.style.pointerEvents="auto";
-
+    this.setPanel(this.building,"0 0.34 0.02","1 1 1",1);
+    this.setPanel(this.park,"-0.72 -0.42 0.03",".78 .78 .78",1);
+    this.setPanel(this.market,"0.72 -0.42 0.03",".78 .78 .78",1);
+    this.hitPark.style.display="block";
+    this.hitMarket.style.display="block";
     if(this.parkInteraction)this.parkInteraction.object3D.visible=false;
     if(this.marketInteraction)this.marketInteraction.object3D.visible=false;
 
@@ -105,63 +148,104 @@ AFRAME.registerComponent("city-world-controller",{
     const marketBg=document.getElementById("marketDynamicBackground");
     if(parkBg)parkBg.object3D.visible=false;
     if(marketBg)marketBg.object3D.visible=false;
-
-    const parkLayer=document.getElementById("parkDragLayer");
-    const marketLayer=document.getElementById("marketHoldLayer");
-    if(parkLayer)parkLayer.style.display="none";
-    if(marketLayer)marketLayer.style.display="none";
+    document.getElementById("parkDragLayer").style.display="none";
+    document.getElementById("marketHoldLayer").style.display="none";
+    this.updateHitPositions();
   },
+  setPanel:function(el,pos,scale,opacity){
+    el.object3D.visible=true;
 
+    // Clear old animation components first.
+    // Otherwise after returning to Building, the previous Park/Market zoom
+    // animation can keep controlling transform/material and the second click
+    // appears to do nothing.
+    el.removeAttribute("animation__pos");
+    el.removeAttribute("animation__scale");
+    el.removeAttribute("animation__opacity");
+
+    el.setAttribute("position",pos);
+    el.setAttribute("scale",scale);
+    el.setAttribute("material","opacity",opacity);
+  },
+  animatePanel:function(el,pos,scale,opacity){
+    el.object3D.visible=true;
+
+    el.removeAttribute("animation__pos");
+    el.removeAttribute("animation__scale");
+    el.removeAttribute("animation__opacity");
+
+    // Force A-Frame to commit the current transform before creating
+    // a fresh animation component for this new transition.
+    void el.object3D.position.x;
+
+    el.setAttribute("animation__pos","property: position; to: "+pos+"; dur: 760; easing: easeInOutCubic");
+    el.setAttribute("animation__scale","property: scale; to: "+scale+"; dur: 760; easing: easeInOutCubic");
+    el.setAttribute("animation__opacity","property: material.opacity; to: "+opacity+"; dur: 450; easing: easeInOutCubic");
+    if(opacity===0)setTimeout(()=>{el.object3D.visible=false;},520);
+  },
   focusPark:function(){
     window.citySelectedScene="park";
-    this.domWorld.classList.remove("focus-market");
-    this.domWorld.classList.add("focus-park");
-    this.domPark.style.pointerEvents="none";
-    this.domMarket.style.pointerEvents="none";
+    this.animatePanel(this.park,"0 0.08 0.03","1.95 1.95 1.95",1);
+    this.animatePanel(this.building,"0 0.38 0.01",".8 .8 .8",0);
+    this.animatePanel(this.market,"0.72 -0.42 0.01",".7 .7 .7",0);
+    this.hitPark.style.display="none";
+    this.hitMarket.style.display="none";
     this.hint.textContent="PARK 已放大 · 现在扫描 PARK 识别图";
   },
-
-  focusMarket:function(){
-    window.citySelectedScene="market";
-    this.domWorld.classList.remove("focus-park");
-    this.domWorld.classList.add("focus-market");
-    this.domPark.style.pointerEvents="none";
-    this.domMarket.style.pointerEvents="none";
-    this.hint.textContent="MARKET 已放大 · 现在扫描 MARKET 识别图";
-  },
-
   activateParkInteraction:function(){
-    this.domWorld.style.display="none";
     if(!this.parkInteraction)return;
+
+    // Once the Park target is scanned, stop using the CityWorld-fixed Park image.
+    // A new Park background is driven by the REAL Park target pose instead.
+    this.park.object3D.visible=false;
 
     this.parkInteraction.object3D.visible=true;
     this.parkInteraction.setAttribute("position","0.22 -0.24 0.24");
     this.parkInteraction.setAttribute("scale",".74 .74 .74");
-
-    if(this.marketInteraction)this.marketInteraction.object3D.visible=false;
-
-    const p=document.getElementById("parkDragLayer");
-    const m=document.getElementById("marketHoldLayer");
-    if(p)p.style.display="block";
-    if(m)m.style.display="none";
+    this.marketInteraction.object3D.visible=false;
+    document.getElementById("parkDragLayer").style.display="block";
+    document.getElementById("marketHoldLayer").style.display="none";
   },
 
   activateMarketInteraction:function(){
-    this.domWorld.style.display="none";
     if(!this.marketInteraction)return;
+
+    // Once the Market target is scanned, stop using the CityWorld-fixed Market image.
+    // A new Market background is driven by the REAL Market target pose instead.
+    this.market.object3D.visible=false;
 
     this.marketInteraction.object3D.visible=true;
     this.marketInteraction.setAttribute("position","0.24 -0.22 0.22");
     this.marketInteraction.setAttribute("scale",".72 .72 .72");
+    this.parkInteraction.object3D.visible=false;
+    document.getElementById("marketHoldLayer").style.display="block";
+    document.getElementById("parkDragLayer").style.display="none";
+  },
 
-    if(this.parkInteraction)this.parkInteraction.object3D.visible=false;
-
-    const p=document.getElementById("parkDragLayer");
-    const m=document.getElementById("marketHoldLayer");
-    if(p)p.style.display="none";
-    if(m)m.style.display="block";
+  focusMarket:function(){
+    window.citySelectedScene="market";
+    this.animatePanel(this.market,"0 0 0.03","1.28 1.28 1.28",1);
+    this.animatePanel(this.building,"0 0.38 0.01",".8 .8 .8",0);
+    this.animatePanel(this.park,"-0.72 -0.42 0.01",".7 .7 .7",0);
+    this.hitPark.style.display="none";
+    this.hitMarket.style.display="none";
+    this.hint.textContent="MARKET 已放大 · 现在扫描 MARKET 识别图";
   }
 });
+
+AFRAME.registerComponent("city-panel-click",{
+  schema:{kind:{type:"string"}},
+  init:function(){
+    this.el.addEventListener("click",()=>{
+      const anchor=document.querySelector('[mindar-image-target="targetIndex:0"]');
+      const c=anchor&&anchor.components["city-world-controller"];
+      if(!c)return;
+      if(this.data.kind==="park")c.focusPark();
+      if(this.data.kind==="market")c.focusMarket();
+    });
+  }
+});
+
 
 AFRAME.registerComponent("scene-background-follow",{
   schema:{
@@ -215,25 +299,13 @@ AFRAME.registerComponent("scene-background-follow",{
     this.el.object3D.matrixWorld.decompose(p,q,s);
 
     const obj=this.world.object3D;
-    placeCenteredInCamera(obj,-2.30,1);
+    obj.position.copy(p);
+    obj.quaternion.identity();
+    obj.scale.copy(s);
+    obj.updateMatrixWorld(true);
   }
 });
 
-
-function placeCenteredInCamera(obj,z,scale){
-  if(!obj)return;
-  const camEl=document.querySelector("a-camera");
-  const cam=camEl&&camEl.getObject3D("camera");
-  if(!cam)return;
-  cam.updateMatrixWorld(true);
-  const p=new THREE.Vector3(0,0,z).applyMatrix4(cam.matrixWorld);
-  const q=new THREE.Quaternion();
-  cam.getWorldQuaternion(q);
-  obj.position.copy(p);
-  obj.quaternion.copy(q);
-  if(scale!==undefined)obj.scale.set(scale,scale,scale);
-  obj.updateMatrixWorld(true);
-}
 
 function clearOtherInteractiveScene(active){
   const parkWorld=document.getElementById("parkInteractionWorld");
@@ -556,6 +628,7 @@ AFRAME.registerComponent("park-drag-controller",{
         const city=document.querySelector('[mindar-image-target="targetIndex:0"]')
           ?.components?.["city-world-controller"];
         if(city){
+          city.world.object3D.visible=true;
           city.showWorld();
           city.hint.textContent="CITY WORLD · 点击 PARK 或 MARKET 进入场景";
         }
@@ -741,7 +814,11 @@ AFRAME.registerComponent("park-drag-controller",{
         this.poseHistory.shift();
       }
 
-      placeCenteredInCamera(obj,-2.05,.74);
+      obj.position.copy(p);
+      obj.quaternion.identity();
+      obj.scale.copy(s);
+      obj.updateMatrixWorld(true);
+
       this.updateHitPositions();
       return;
     }
@@ -1005,10 +1082,21 @@ AFRAME.registerComponent("market-persist",{
           stablePose=this.poseHistory[0];
         }
 
-        placeCenteredInCamera(obj,-2.05,.72);
-        this.basePos.copy(obj.position);
-        this.baseQuat.copy(obj.quaternion);
-        this.baseScale.copy(obj.scale);
+        if(stablePose){
+          this.basePos.copy(stablePose.pos);
+          this.baseQuat.copy(stablePose.quat);
+          this.baseScale.copy(stablePose.scale);
+
+          obj.position.copy(this.basePos);
+          obj.quaternion.identity();
+          obj.scale.copy(this.baseScale);
+          obj.updateMatrixWorld(true);
+        }else{
+          this.basePos.copy(obj.position);
+          this.baseQuat.copy(obj.quaternion);
+          this.baseScale.copy(obj.scale);
+        }
+
         obj.visible=true;
       }
 
@@ -1032,6 +1120,7 @@ AFRAME.registerComponent("market-persist",{
         const city=document.querySelector('[mindar-image-target="targetIndex:0"]')
           ?.components?.["city-world-controller"];
         if(city){
+          city.world.object3D.visible=true;
           city.showWorld();
           city.hint.textContent="CITY WORLD · 点击 PARK 或 MARKET 进入场景";
         }
@@ -1125,8 +1214,10 @@ AFRAME.registerComponent("market-persist",{
         this.poseHistory.shift();
       }
 
-      placeCenteredInCamera(obj,-2.05,.72);
-      this.updateHoldHits();
+      obj.position.copy(pos);
+      obj.quaternion.identity();
+      obj.scale.copy(scale);
+      obj.updateMatrixWorld(true);
       return;
     }
 
@@ -1179,11 +1270,11 @@ AFRAME.registerComponent("reset-market",{
 });
 </script></head><body>
 <div id="hint">请先扫描 Building 识别图打开 City World</div>
-<div id="cityWorldDOM">
-  <img id="cityBuildingDOM" class="city-scene" src="./assets/city/building_scene.png" alt="">
-  <img id="cityParkDOM" class="city-scene" src="./assets/city/park_scene.png" alt="">
-  <img id="cityMarketDOM" class="city-scene" src="./assets/city/market_scene.png" alt="">
+<div id="cityHitLayer">
+  <button id="hitCityPark" class="city-hit" aria-label="Park"></button>
+  <button id="hitCityMarket" class="city-hit" aria-label="Market"></button>
 </div>
+
 <div id="parkDragLayer">
 <button id="parkDragTree" class="park-drag-hit"></button>
 <button id="parkDragFlower" class="park-drag-hit"></button>
@@ -1216,7 +1307,33 @@ AFRAME.registerComponent("reset-market",{
   <a-entity mindar-image-target="targetIndex:0" city-world-controller></a-entity>
   <a-entity mindar-image-target="targetIndex:1" park-target-events scene-background-follow="world:#parkDynamicBackground" park-drag-controller="seconds:15; world:#parkInteractionWorld"></a-entity>
   <a-entity mindar-image-target="targetIndex:2" market-target-events scene-background-follow="world:#marketDynamicBackground" market-persist="seconds:15; world:#marketInteractionWorld"></a-entity>
-<!-- Dynamic Park background:
+
+  <a-entity id="cityWorld" visible="false">
+
+    <a-image id="cityBuilding"
+      src="./assets/city/building_scene.png"
+      width="1.25" height="1.88"
+      position="0 0.34 0.02"
+      material="transparent:true;opacity:1;depthWrite:false"></a-image>
+
+    <a-image id="cityPark"
+      src="./assets/city/park_scene.png"
+      width="1.55" height="1.04"
+      position="-0.72 -0.42 0.03"
+      scale=".78 .78 .78"
+      material="transparent:true;opacity:1;depthWrite:false"></a-image>
+
+    <a-image id="cityMarket"
+      src="./assets/city/market_scene.png"
+      width="1.55" height="1.04"
+      position="0.72 -0.42 0.03"
+      scale=".78 .78 .78"
+      material="transparent:true;opacity:1;depthWrite:false"></a-image>
+
+  </a-entity>
+
+  
+  <!-- Dynamic Park background:
        outer entity follows Park target pose,
        child image keeps a fixed relative offset from the interaction -->
   <a-entity id="parkDynamicBackground" visible="false">
