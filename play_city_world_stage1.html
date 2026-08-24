@@ -152,12 +152,30 @@ AFRAME.registerComponent("city-world-controller",{
   },
   setPanel:function(el,pos,scale,opacity){
     el.object3D.visible=true;
+
+    // Clear old animation components first.
+    // Otherwise after returning to Building, the previous Park/Market zoom
+    // animation can keep controlling transform/material and the second click
+    // appears to do nothing.
+    el.removeAttribute("animation__pos");
+    el.removeAttribute("animation__scale");
+    el.removeAttribute("animation__opacity");
+
     el.setAttribute("position",pos);
     el.setAttribute("scale",scale);
     el.setAttribute("material","opacity",opacity);
   },
   animatePanel:function(el,pos,scale,opacity){
     el.object3D.visible=true;
+
+    el.removeAttribute("animation__pos");
+    el.removeAttribute("animation__scale");
+    el.removeAttribute("animation__opacity");
+
+    // Force A-Frame to commit the current transform before creating
+    // a fresh animation component for this new transition.
+    void el.object3D.position.x;
+
     el.setAttribute("animation__pos","property: position; to: "+pos+"; dur: 760; easing: easeInOutCubic");
     el.setAttribute("animation__scale","property: scale; to: "+scale+"; dur: 760; easing: easeInOutCubic");
     el.setAttribute("animation__opacity","property: material.opacity; to: "+opacity+"; dur: 450; easing: easeInOutCubic");
