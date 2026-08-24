@@ -528,6 +528,10 @@ AFRAME.registerComponent("park-drag-controller",{
       if(this.timer)clearTimeout(this.timer);
       this.timer=setTimeout(()=>{
         if(this.world)this.world.object3D.visible=false;
+
+        const parkBg=document.getElementById("parkDynamicBackground");
+        if(parkBg)parkBg.object3D.visible=false;
+
         this.holding=false;
         this.hideHits();
         this.timer=null;
