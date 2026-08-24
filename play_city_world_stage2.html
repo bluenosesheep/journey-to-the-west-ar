@@ -300,6 +300,14 @@ AFRAME.registerComponent("city-world-controller",{
 
     // Then reveal the Park interaction.
     setTimeout(()=>{
+      // Transition finished: remove the CityWorld Park copy.
+      parkScene.object3D.visible=false;
+
+      // Reveal the single dynamic Park mini scene at the tracked Park pose.
+      const parkBg=document.getElementById("parkDynamicBackground");
+      if(parkBg)parkBg.object3D.visible=true;
+
+      // Then reveal the interaction.
       this.parkInteraction.object3D.visible=true;
       this.parkInteraction.setAttribute("position","0.22 -0.24 0.24");
       this.parkInteraction.setAttribute("scale",".74 .74 .74");
@@ -334,6 +342,14 @@ AFRAME.registerComponent("city-world-controller",{
     if(m)m.style.display="none";
 
     setTimeout(()=>{
+      // Transition finished: remove the CityWorld Market copy.
+      marketScene.object3D.visible=false;
+
+      // Reveal the single dynamic Market mini scene.
+      const marketBg=document.getElementById("marketDynamicBackground");
+      if(marketBg)marketBg.object3D.visible=true;
+
+      // Then reveal the interaction.
       this.marketInteraction.object3D.visible=true;
       this.marketInteraction.setAttribute("position","0.24 -0.22 0.22");
       this.marketInteraction.setAttribute("scale",".72 .72 .72");
@@ -387,7 +403,8 @@ AFRAME.registerComponent("scene-background-follow",{
       }
 
       this.tracking=true;
-      if(this.world)this.world.object3D.visible=true;
+      // Keep the mini background hidden until the shrink transition finishes.
+      if(this.world)this.world.object3D.visible=false;
     });
 
     this.el.addEventListener("targetLost",()=>{
