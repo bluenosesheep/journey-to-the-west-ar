@@ -1,3 +1,10 @@
 // STEP 4 placeholder.
-// Hand landmark tracking will be added only after the modular classroom
-// version behavior-matches the Stable version.
+//
+// This file is intentionally NOT loaded by classroom_city.html yet.
+// In Step 4 it will convert hand landmarks into:
+//
+//   CityInput.move(x, y, {source:"hand", pointerId:"hand-1"})
+//   CityInput.down(x, y, {source:"hand", pointerId:"hand-1"})
+//   CityInput.up(x, y, {source:"hand", pointerId:"hand-1"})
+//
+// Park and Market will not need another interaction rewrite.

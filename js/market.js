@@ -171,10 +171,10 @@ AFRAME.registerComponent("market-persist",{
 
     const comp=()=>document.getElementById("marketInteractiveDisplay")?.components?.["market-canvas"];
 
-    this.hits.peach.addEventListener("click",()=>comp()?.pick("peach"));
-    this.hits.cabbage.addEventListener("click",()=>comp()?.pick("cabbage"));
-    this.hits.egg.addEventListener("click",()=>comp()?.pick("egg"));
-    this.hits.reset.addEventListener("click",()=>comp()?.reset());
+    // STEP 3: Market receives normalized input from CityInput.
+    window.CityInput.register("market",{
+      down:(input)=>this.handleInputDown(input)
+    });
 
     if(this.world){
       this.world.object3D.visible=false;
@@ -257,6 +257,33 @@ AFRAME.registerComponent("market-persist",{
       if(this.timer){clearTimeout(this.timer);this.timer=null;}
       // Manual-exit mode: keep Market interaction visible until RETURN CITY is tapped.
     });
+  },
+
+  hitKindAt:function(x,y){
+    for(const [kind,el] of Object.entries(this.hits)){
+      if(!el || el.style.display==="none")continue;
+      const r=el.getBoundingClientRect();
+      if(x>=r.left && x<=r.right && y>=r.top && y<=r.bottom){
+        return kind;
+      }
+    }
+    return null;
+  },
+
+  handleInputDown:function(input){
+    if(window.citySelectedScene!=="market")return;
+
+    const kind=this.hitKindAt(input.x,input.y);
+    if(!kind)return;
+
+    if(input.nativeEvent)input.nativeEvent.preventDefault();
+
+    const comp=document.getElementById("marketInteractiveDisplay")
+      ?.components?.["market-canvas"];
+    if(!comp)return;
+
+    if(kind==="reset")comp.reset();
+    else comp.pick(kind);
   },
 
   getCamera:function(){

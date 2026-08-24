@@ -157,21 +157,14 @@ AFRAME.registerComponent("park-drag-controller",{
 
     this.dragState=null;
 
-    Object.entries(this.hits).forEach(([kind,el])=>{
-      if(kind==="reset"){
-        el.addEventListener("pointerdown",(e)=>{
-          e.preventDefault();
-          const comp=this.getCanvasComp();
-          if(comp)comp.reset();
-        });
-      }else{
-        el.addEventListener("pointerdown",(e)=>this.startDrag(e,kind));
-      }
+    // STEP 3: Park receives normalized input from CityInput.
+    // Mouse and future hand tracking share these same callbacks.
+    window.CityInput.register("park",{
+      down:(input)=>this.handleInputDown(input),
+      move:(input)=>this.handleInputMove(input),
+      up:(input)=>this.handleInputUp(input),
+      cancel:(input)=>this.handleInputUp(input)
     });
-
-    window.addEventListener("pointermove",(e)=>this.moveDrag(e),{passive:false});
-    window.addEventListener("pointerup",(e)=>this.endDrag(e));
-    window.addEventListener("pointercancel",(e)=>this.endDrag(e));
 
     if(this.world)this.world.object3D.visible=false;
 
@@ -293,20 +286,48 @@ AFRAME.registerComponent("park-drag-controller",{
     };
   },
 
-  startDrag:function(e,kind){
+  hitKindAt:function(x,y){
+    for(const [kind,el] of Object.entries(this.hits)){
+      if(!el || el.style.display==="none")continue;
+      const r=el.getBoundingClientRect();
+      if(x>=r.left && x<=r.right && y>=r.top && y<=r.bottom){
+        return kind;
+      }
+    }
+    return null;
+  },
+
+  handleInputDown:function(input){
+    if(window.citySelectedScene!=="park")return;
+
+    const kind=this.hitKindAt(input.x,input.y);
+    if(!kind)return;
+
+    if(input.nativeEvent)input.nativeEvent.preventDefault();
+
+    if(kind==="reset"){
+      const comp=this.getCanvasComp();
+      if(comp)comp.reset();
+      return;
+    }
+
+    this.startDragInput(input,kind);
+  },
+
+  startDragInput:function(input,kind){
     const comp=this.getCanvasComp();
     const scale=this.getScreenScale();
     if(!comp||!scale)return;
 
-    e.preventDefault();
-
     const item=comp.items[kind];
+    if(!item)return;
 
     this.dragState={
-      pointerId:e.pointerId,
+      pointerId:input.pointerId,
+      source:input.source,
       kind,
-      startScreenX:e.clientX,
-      startScreenY:e.clientY,
+      startScreenX:input.x,
+      startScreenY:input.y,
       startCanvasX:item.x,
       startCanvasY:item.y,
       pxPerUnitX:scale.pxPerUnitX,
@@ -316,16 +337,17 @@ AFRAME.registerComponent("park-drag-controller",{
     document.getElementById("hint").textContent="拖到你喜欢的位置！";
   },
 
-  moveDrag:function(e){
-    if(!this.dragState||e.pointerId!==this.dragState.pointerId)return;
+  handleInputMove:function(input){
+    if(!this.dragState)return;
+    if(this.dragState.pointerId!==input.pointerId)return;
 
-    e.preventDefault();
+    if(input.nativeEvent)input.nativeEvent.preventDefault();
 
     const comp=this.getCanvasComp();
     if(!comp)return;
 
-    const dx=e.clientX-this.dragState.startScreenX;
-    const dy=e.clientY-this.dragState.startScreenY;
+    const dx=input.x-this.dragState.startScreenX;
+    const dy=input.y-this.dragState.startScreenY;
 
     const screenPxPerCanvasX=(this.dragState.pxPerUnitX*this.planeWidth)/this.canvasW;
     const screenPxPerCanvasY=(this.dragState.pxPerUnitY*this.planeHeight)/this.canvasH;
@@ -342,8 +364,10 @@ AFRAME.registerComponent("park-drag-controller",{
     this.updateHitPositions();
   },
 
-  endDrag:function(e){
-    if(!this.dragState||e.pointerId!==this.dragState.pointerId)return;
+  handleInputUp:function(input){
+    if(!this.dragState)return;
+    if(this.dragState.pointerId!==input.pointerId)return;
+
     this.dragState=null;
     document.getElementById("hint").textContent="PARK · 继续拖动来布置公园吧！🌳";
   },
