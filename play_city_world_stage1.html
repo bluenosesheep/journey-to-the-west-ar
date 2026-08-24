@@ -1001,6 +1001,10 @@ AFRAME.registerComponent("market-persist",{
       if(this.timer)clearTimeout(this.timer);
       this.timer=setTimeout(()=>{
         if(this.world)this.world.object3D.visible=false;
+
+        const marketBg=document.getElementById("marketDynamicBackground");
+        if(marketBg)marketBg.object3D.visible=false;
+
         this.holding=false;
         this.hideHoldHits();
         this.timer=null;
