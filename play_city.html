@@ -16,6 +16,13 @@
   cursor:pointer;
   white-space:nowrap;
 }
+
+body.city-started .mindar-ui-scanning{
+  display:none !important;
+  opacity:0 !important;
+  visibility:hidden !important;
+  pointer-events:none !important;
+}
 </style>
 <script>function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
 
@@ -87,6 +94,7 @@ AFRAME.registerComponent("city-world-controller",{
 
     this.el.addEventListener("targetFound",()=>{
       this.tracking=true;
+      document.body.classList.add("city-started");
 
       // First cold load: do not reveal white a-image planes before PNG textures are ready.
       this.world.object3D.visible=false;
