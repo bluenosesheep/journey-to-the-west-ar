@@ -292,7 +292,7 @@ AFRAME.registerComponent("park-drag-controller",{
     const resetEl=this.hits.reset;
     if(resetEl && resetEl.style.display!=="none"){
       const r=resetEl.getBoundingClientRect();
-      const pad=source==="hand"?28:8;
+      const pad=source==="hand"?8:4;
       if(
         x>=r.left-pad && x<=r.right+pad &&
         y>=r.top-pad && y<=r.bottom+pad
@@ -321,6 +321,10 @@ AFRAME.registerComponent("park-drag-controller",{
     if(input.nativeEvent)input.nativeEvent.preventDefault();
 
     if(kind==="reset"){
+      // RESET is click/pinch-to-activate only.
+      // It never activates from moving a currently dragged object across it.
+      if(this.dragState)return;
+
       const comp=this.getCanvasComp();
       if(comp)comp.reset();
       document.getElementById("hint").textContent="PARK · 已恢复初始位置 🌳";
@@ -430,9 +434,10 @@ AFRAME.registerComponent("park-drag-controller",{
     const rs=this.projectWorld(resetWorld);
 
     if(rs){
-      // Larger RESET hit area for classroom hand gestures.
-      const bw=Math.max(132,1.02*scale.pxPerUnitX);
-      const bh=Math.max(60,.42*scale.pxPerUnitY);
+      // Keep RESET easy to hit, but not so large that nearby dragged
+      // Park objects accidentally enter its gesture zone.
+      const bw=Math.max(102,.80*scale.pxPerUnitX);
+      const bh=Math.max(48,.32*scale.pxPerUnitY);
       this.hits.reset.style.left=(rs.x-bw/2)+"px";
       this.hits.reset.style.top=(rs.y-bh/2)+"px";
       this.hits.reset.style.width=bw+"px";
