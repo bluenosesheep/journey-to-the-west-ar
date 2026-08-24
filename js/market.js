@@ -259,11 +259,29 @@ AFRAME.registerComponent("market-persist",{
     });
   },
 
-  hitKindAt:function(x,y){
+  hitKindAt:function(x,y,source){
+    // RESET gets a small dedicated hand margin and is checked first.
+    const resetEl=this.hits.reset;
+    if(resetEl && resetEl.style.display!=="none"){
+      const r=resetEl.getBoundingClientRect();
+      const pad=source==="hand"?10:4;
+      if(
+        x>=r.left-pad && x<=r.right+pad &&
+        y>=r.top-pad && y<=r.bottom+pad
+      ){
+        return "reset";
+      }
+    }
+
     for(const [kind,el] of Object.entries(this.hits)){
+      if(kind==="reset")continue;
       if(!el || el.style.display==="none")continue;
       const r=el.getBoundingClientRect();
-      if(x>=r.left && x<=r.right && y>=r.top && y<=r.bottom){
+      const pad=source==="hand"?8:0;
+      if(
+        x>=r.left-pad && x<=r.right+pad &&
+        y>=r.top-pad && y<=r.bottom+pad
+      ){
         return kind;
       }
     }
@@ -273,7 +291,7 @@ AFRAME.registerComponent("market-persist",{
   handleInputDown:function(input){
     if(window.citySelectedScene!=="market")return;
 
-    const kind=this.hitKindAt(input.x,input.y);
+    const kind=this.hitKindAt(input.x,input.y,input.source);
     if(!kind)return;
 
     if(input.nativeEvent)input.nativeEvent.preventDefault();
@@ -282,8 +300,12 @@ AFRAME.registerComponent("market-persist",{
       ?.components?.["market-canvas"];
     if(!comp)return;
 
-    if(kind==="reset")comp.reset();
-    else comp.pick(kind);
+    if(kind==="reset"){
+      comp.reset();
+      document.getElementById("hint").textContent="MARKET · 已清空篮筐 🧺";
+    }else{
+      comp.pick(kind);
+    }
   },
 
   getCamera:function(){
@@ -328,8 +350,8 @@ AFRAME.registerComponent("market-persist",{
       if(!screen)return;
 
       const [wu,hu]=this.localSizes[key];
-      const bw=Math.max(key==="reset"?80:54,wu*pxPerUnitX);
-      const bh=Math.max(key==="reset"?42:54,hu*pxPerUnitY);
+      const bw=Math.max(key==="reset"?104:58,wu*pxPerUnitX);
+      const bh=Math.max(key==="reset"?50:58,hu*pxPerUnitY);
 
       const b=this.hits[key];
       b.style.left=(screen.x-bw/2)+"px";

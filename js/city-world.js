@@ -11,6 +11,7 @@ window.ClassroomHandMode = {
 
     if(mode==="city")status.textContent="手势：CITY";
     else if(mode==="park")status.textContent="手势：PARK";
+    else if(mode==="market")status.textContent="手势：MARKET";
     else status.textContent="手势";
   },
 
@@ -69,6 +70,7 @@ window.ClassroomHandMode = {
 
           if(this.mode==="city")status.textContent="手势：CITY";
           else if(this.mode==="park")status.textContent="手势：PARK";
+          else if(this.mode==="market")status.textContent="手势：MARKET";
           else status.textContent="手势";
         }
       });
@@ -87,6 +89,10 @@ window.ClassroomHandMode = {
 
   startPark(){
     return this.ensureRunning("park");
+  },
+
+  startMarket(){
+    return this.ensureRunning("market");
   },
 
   stop(){
@@ -456,10 +462,13 @@ AFRAME.registerComponent("city-world-controller",{
 
       if(p)p.style.display="none";
       if(m)m.style.display="block";
+
+      // STEP 6: Market now uses the same hand cursor / pinch input.
+      window.ClassroomHandMode?.startMarket();
     },540);
   },
   focusMarket:function(){
-    window.ClassroomHandMode?.stop();
+    window.ClassroomHandMode?.setMode("market");
     window.citySelectedScene="market";
     if(this.backBtn){this.backBtn.style.display="block";alignBackButtonWithHint();}
 
