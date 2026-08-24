@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Classroom Hand Test</title>
+<style>
+*{box-sizing:border-box}
+html,body{
+  margin:0;width:100%;height:100%;overflow:hidden;
+  background:#111;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+#camera{
+  position:fixed;inset:0;width:100%;height:100%;
+  object-fit:cover;transform:scaleX(-1);
+  background:#111;
+}
+#shade{
+  position:fixed;inset:0;
+  background:linear-gradient(to bottom,rgba(0,0,0,.18),transparent 30%,transparent 72%,rgba(0,0,0,.28));
+  pointer-events:none;
+}
+#status{
+  position:fixed;left:50%;top:18px;transform:translateX(-50%);
+  z-index:20;background:rgba(255,255,255,.94);padding:10px 16px;
+  border-radius:999px;font-weight:700;color:#222;
+  box-shadow:0 5px 18px rgba(0,0,0,.22);
+  white-space:nowrap;
+}
+#metrics{
+  position:fixed;left:18px;bottom:18px;z-index:20;
+  background:rgba(20,20,20,.72);color:white;padding:10px 12px;
+  border-radius:12px;font:13px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;
+  min-width:210px;
+}
+#help{
+  position:fixed;right:18px;bottom:18px;z-index:20;
+  background:rgba(255,255,255,.92);color:#222;padding:12px 15px;
+  border-radius:14px;font:14px/1.55 system-ui;
+  max-width:320px;box-shadow:0 5px 18px rgba(0,0,0,.20);
+}
+#cursor{
+  position:fixed;z-index:40;
+  width:62px;height:62px;margin:-31px 0 0 -31px;
+  border-radius:50%;display:none;place-items:center;
+  transform:translateZ(0);
+  background:rgba(255,255,255,.88);
+  box-shadow:0 4px 24px rgba(0,0,0,.28);
+  font-size:31px;
+  pointer-events:none;
+  transition:width .08s,height .08s,margin .08s,background .08s;
+}
+#cursor.pinching{
+  width:74px;height:74px;margin:-37px 0 0 -37px;
+  background:rgba(255,240,170,.95);
+}
+#demo{
+  position:fixed;left:50%;top:52%;
+  transform:translate(-50%,-50%);
+  width:190px;height:190px;border-radius:50%;
+  display:grid;place-items:center;
+  background:rgba(255,255,255,.88);
+  border:4px solid rgba(255,255,255,.95);
+  box-shadow:0 14px 40px rgba(0,0,0,.24);
+  color:#333;font-weight:800;font-size:19px;
+  user-select:none;touch-action:none;
+}
+#demo .big{font-size:64px;line-height:1}
+#start{
+  position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
+  z-index:60;border:0;border-radius:999px;padding:15px 24px;
+  font:800 17px system-ui;background:white;color:#222;
+  box-shadow:0 10px 30px rgba(0,0,0,.30);cursor:pointer;
+}
+</style>
+</head>
+<body>
+<video id="camera" autoplay muted playsinline></video>
+<div id="shade"></div>
+
+<div id="status">Step 4 · Hand Test</div>
+
+<div id="demo">
+  <div style="text-align:center">
+    <div class="big">⭐</div>
+    <div>捏住我拖动</div>
+  </div>
+</div>
+
+<div id="cursor">✨</div>
+
+<div id="metrics">
+hand: waiting<br>
+pinch: false<br>
+ratio: -
+</div>
+
+<div id="help">
+<b>测试方法</b><br>
+1. 食指移动：✨ 跟着手指走<br>
+2. 拇指 + 食指捏合：变成 🤏<br>
+3. 捏住 ⭐ 后移动：拖动测试物体<br>
+4. 松开：放下 ⭐<br><br>
+鼠标也可以拖动同一个 ⭐，用于对照 Input Router。
+</div>
+
+<button id="start">开启手势测试</button>
+
+<script src="./js/input-router.js"></script>
+
+<script>
+(function(){
+  const demo=document.getElementById("demo");
+  let drag=null;
+
+  function pointInside(el,x,y){
+    const r=el.getBoundingClientRect();
+    return x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom;
+  }
+
+  CityInput.register("hand-test-demo",{
+    down(input){
+      if(!pointInside(demo,input.x,input.y))return;
+      const r=demo.getBoundingClientRect();
+      drag={
+        pointerId:input.pointerId,
+        offsetX:input.x-(r.left+r.width/2),
+        offsetY:input.y-(r.top+r.height/2)
+      };
+      demo.style.boxShadow="0 0 0 7px rgba(255,235,120,.55),0 14px 40px rgba(0,0,0,.24)";
+    },
+
+    move(input){
+      if(!drag||drag.pointerId!==input.pointerId)return;
+      demo.style.left=(input.x-drag.offsetX)+"px";
+      demo.style.top=(input.y-drag.offsetY)+"px";
+    },
+
+    up(input){
+      if(!drag||drag.pointerId!==input.pointerId)return;
+      drag=null;
+      demo.style.boxShadow="0 14px 40px rgba(0,0,0,.24)";
+    },
+
+    cancel(input){
+      if(!drag||drag.pointerId!==input.pointerId)return;
+      drag=null;
+      demo.style.boxShadow="0 14px 40px rgba(0,0,0,.24)";
+    }
+  });
+})();
+</script>
+
+<script type="module">
+import "./js/hand-tracking.js";
+
+const startBtn=document.getElementById("start");
+const video=document.getElementById("camera");
+const cursor=document.getElementById("cursor");
+const status=document.getElementById("status");
+const metrics=document.getElementById("metrics");
+
+function setStatus(text){
+  status.textContent=text;
+}
+
+function setMetrics(data){
+  metrics.innerHTML=
+    "hand: "+(data.handVisible?"visible":"not found")+"<br>"+
+    "pinch: "+(data.pinching?"true":"false")+"<br>"+
+    "ratio: "+(data.pinchRatio==null?"-":data.pinchRatio.toFixed(3));
+}
+
+startBtn.addEventListener("click",async()=>{
+  startBtn.disabled=true;
+  startBtn.textContent="启动中…";
+
+  try{
+    await window.ClassroomHandTracking.start({
+      video,
+      cursor,
+      mirror:true,
+      maxFps:30,
+      smoothing:.38,
+      pinchDownRatio:.34,
+      pinchUpRatio:.44,
+      onStatus:setStatus,
+      onMetrics:setMetrics
+    });
+
+    startBtn.style.display="none";
+  }catch(err){
+    console.error(err);
+    setStatus("启动失败，请看 Console");
+    startBtn.disabled=false;
+    startBtn.textContent="重新开启";
+  }
+});
+</script>
+</body>
+</html>
