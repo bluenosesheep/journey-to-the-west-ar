@@ -1,7 +1,24 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Journey to the West AR</title>
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}canvas.a-canvas{background:transparent!important}.off{display:none}#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px system-ui;text-align:center}#holdHitLayer{position:fixed;inset:0;z-index:40;pointer-events:none}.hold-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}#parkDragLayer{position:fixed;inset:0;z-index:41;pointer-events:none}.park-drag-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}#cityHitLayer{position:fixed;inset:0;z-index:40;pointer-events:none}.city-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}#parkDragLayer,#marketHoldLayer{position:fixed;inset:0;z-index:45;pointer-events:none;display:none}.park-drag-hit,.market-hold-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}</style>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}canvas.a-canvas{background:transparent!important}.off{display:none}#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px system-ui;text-align:center}#holdHitLayer{position:fixed;inset:0;z-index:40;pointer-events:none}.hold-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}#parkDragLayer{position:fixed;inset:0;z-index:41;pointer-events:none}.park-drag-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}#cityHitLayer{position:fixed;inset:0;z-index:40;pointer-events:none}.city-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}#parkDragLayer,#marketHoldLayer{position:fixed;inset:0;z-index:45;pointer-events:none;display:none}.park-drag-hit,.market-hold-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}
+#sceneBackBtn{
+  position:fixed;
+  left:50%;
+  bottom:74px;
+  transform:translateX(-50%);
+  z-index:50;
+  display:none;
+  border:0;
+  border-radius:999px;
+  padding:10px 18px;
+  background:rgba(255,255,255,.94);
+  color:#4b4b4b;
+  font:700 14px system-ui;
+  box-shadow:0 6px 20px rgba(0,0,0,.16);
+  cursor:pointer;
+}
+</style>
 <script>function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
 
 
@@ -29,6 +46,8 @@ AFRAME.registerComponent("city-world-controller",{
     this.park=document.getElementById("cityPark");
     this.market=document.getElementById("cityMarket");
     this.hint=document.getElementById("hint");
+    this.backBtn=document.getElementById("sceneBackBtn");
+    this.backBtn.addEventListener("click",()=>this.showWorld());
     window.citySelectedScene=null;
     this.parkInteraction=document.getElementById("parkInteractionWorld");
     this.marketInteraction=document.getElementById("marketInteractionWorld");
@@ -136,6 +155,7 @@ AFRAME.registerComponent("city-world-controller",{
   },
   showWorld:function(){
     window.citySelectedScene=null;
+    if(this.backBtn)this.backBtn.style.display="none";
     this.setPanel(this.building,"0 0.34 0.02","1 1 1",1);
     this.setPanel(this.park,"-0.72 -0.42 0.03",".78 .78 .78",1);
     this.setPanel(this.market,"0.72 -0.42 0.03",".78 .78 .78",1);
@@ -185,6 +205,7 @@ AFRAME.registerComponent("city-world-controller",{
   },
   focusPark:function(){
     window.citySelectedScene="park";
+    if(this.backBtn)this.backBtn.style.display="block";
     this.animatePanel(this.park,"0 0.08 0.03","1.95 1.95 1.95",1);
     this.animatePanel(this.building,"0 0.38 0.01",".8 .8 .8",0);
     this.animatePanel(this.market,"0.72 -0.42 0.01",".7 .7 .7",0);
@@ -193,6 +214,7 @@ AFRAME.registerComponent("city-world-controller",{
     this.hint.textContent="PARK 已放大 · 现在扫描 PARK 识别图";
   },
   activateParkInteraction:function(){
+    if(this.backBtn)this.backBtn.style.display="none";
     if(!this.parkInteraction)return;
 
     // Once the Park target is scanned, stop using the CityWorld-fixed Park image.
@@ -208,6 +230,7 @@ AFRAME.registerComponent("city-world-controller",{
   },
 
   activateMarketInteraction:function(){
+    if(this.backBtn)this.backBtn.style.display="none";
     if(!this.marketInteraction)return;
 
     // Once the Market target is scanned, stop using the CityWorld-fixed Market image.
@@ -224,6 +247,7 @@ AFRAME.registerComponent("city-world-controller",{
 
   focusMarket:function(){
     window.citySelectedScene="market";
+    if(this.backBtn)this.backBtn.style.display="block";
     this.animatePanel(this.market,"0 0 0.03","1.28 1.28 1.28",1);
     this.animatePanel(this.building,"0 0.38 0.01",".8 .8 .8",0);
     this.animatePanel(this.park,"-0.72 -0.42 0.01",".7 .7 .7",0);
@@ -1270,6 +1294,7 @@ AFRAME.registerComponent("reset-market",{
 });
 </script></head><body>
 <div id="hint">请先扫描 Building 识别图打开 City World</div>
+<button id="sceneBackBtn" type="button">返回 CITY</button>
 <div id="cityHitLayer">
   <button id="hitCityPark" class="city-hit" aria-label="Park"></button>
   <button id="hitCityMarket" class="city-hit" aria-label="Market"></button>
