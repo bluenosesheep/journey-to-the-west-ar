@@ -141,6 +141,11 @@ AFRAME.registerComponent("city-world-controller",{
     this.hitMarket.style.display="block";
     if(this.parkInteraction)this.parkInteraction.object3D.visible=false;
     if(this.marketInteraction)this.marketInteraction.object3D.visible=false;
+
+    const parkBg=document.getElementById("parkDynamicBackground");
+    const marketBg=document.getElementById("marketDynamicBackground");
+    if(parkBg)parkBg.object3D.visible=false;
+    if(marketBg)marketBg.object3D.visible=false;
     document.getElementById("parkDragLayer").style.display="none";
     document.getElementById("marketHoldLayer").style.display="none";
     this.updateHitPositions();
@@ -168,11 +173,13 @@ AFRAME.registerComponent("city-world-controller",{
   },
   activateParkInteraction:function(){
     if(!this.parkInteraction)return;
-    // Keep the enlarged Park scene as a background and bring interaction forward.
-    this.park.setAttribute("animation__scale","property:scale;to:.64 .64 .64;dur:760;easing:easeInOutCubic");
-    this.park.setAttribute("animation__pos","property:position;to:-0.62 0.86 -1.18;dur:760;easing:easeInOutCubic");
+
+    // Once the Park target is scanned, stop using the CityWorld-fixed Park image.
+    // A new Park background is driven by the REAL Park target pose instead.
+    this.park.object3D.visible=false;
+
     this.parkInteraction.object3D.visible=true;
-    this.parkInteraction.setAttribute("position","0.22 -0.40 0.26");
+    this.parkInteraction.setAttribute("position","0 -0.08 0.16");
     this.parkInteraction.setAttribute("scale",".78 .78 .78");
     this.marketInteraction.object3D.visible=false;
     document.getElementById("parkDragLayer").style.display="block";
@@ -181,11 +188,13 @@ AFRAME.registerComponent("city-world-controller",{
 
   activateMarketInteraction:function(){
     if(!this.marketInteraction)return;
-    // Keep the enlarged Market scene as a background and bring interaction forward.
-    this.market.setAttribute("animation__scale","property:scale;to:.88 .88 .88;dur:620;easing:easeInOutCubic");
-    this.market.setAttribute("animation__pos","property:position;to:0 0.34 -0.68;dur:620;easing:easeInOutCubic");
+
+    // Once the Market target is scanned, stop using the CityWorld-fixed Market image.
+    // A new Market background is driven by the REAL Market target pose instead.
+    this.market.object3D.visible=false;
+
     this.marketInteraction.object3D.visible=true;
-    this.marketInteraction.setAttribute("position","0 -0.28 0.18");
+    this.marketInteraction.setAttribute("position","0 -0.08 0.16");
     this.marketInteraction.setAttribute("scale",".78 .78 .78");
     this.parkInteraction.object3D.visible=false;
     document.getElementById("marketHoldLayer").style.display="block";
@@ -212,6 +221,52 @@ AFRAME.registerComponent("city-panel-click",{
       if(this.data.kind==="park")c.focusPark();
       if(this.data.kind==="market")c.focusMarket();
     });
+  }
+});
+
+
+AFRAME.registerComponent("scene-background-follow",{
+  schema:{
+    world:{type:"selector"}
+  },
+
+  init:function(){
+    this.world=this.data.world;
+    this.tracking=false;
+
+    if(this.world){
+      this.world.object3D.visible=false;
+    }
+
+    this.el.addEventListener("targetFound",()=>{
+      this.tracking=true;
+      if(this.world)this.world.object3D.visible=true;
+    });
+
+    this.el.addEventListener("targetLost",()=>{
+      // Freeze at the last tracked pose. The interaction controller has
+      // its own hold logic; keeping the background at the last pose makes
+      // the two remain spatially related instead of jumping elsewhere.
+      this.tracking=false;
+    });
+  },
+
+  tick:function(){
+    if(!this.tracking || !this.world)return;
+
+    this.el.object3D.updateMatrixWorld(true);
+
+    const p=new THREE.Vector3();
+    const q=new THREE.Quaternion();
+    const s=new THREE.Vector3();
+
+    this.el.object3D.matrixWorld.decompose(p,q,s);
+
+    const obj=this.world.object3D;
+    obj.position.copy(p);
+    obj.quaternion.copy(q);
+    obj.scale.copy(s);
+    obj.updateMatrixWorld(true);
   }
 });
 
@@ -1126,8 +1181,8 @@ AFRAME.registerComponent("reset-market",{
     raycaster="objects:.clickable; far:10000"></a-camera>
 
   <a-entity mindar-image-target="targetIndex:0" city-world-controller></a-entity>
-  <a-entity mindar-image-target="targetIndex:1" park-target-events park-drag-controller="seconds:15; world:#parkInteractionWorld"></a-entity>
-  <a-entity mindar-image-target="targetIndex:2" market-target-events market-persist="seconds:15; world:#marketInteractionWorld"></a-entity>
+  <a-entity mindar-image-target="targetIndex:1" park-target-events scene-background-follow="world:#parkDynamicBackground" park-drag-controller="seconds:15; world:#parkInteractionWorld"></a-entity>
+  <a-entity mindar-image-target="targetIndex:2" market-target-events scene-background-follow="world:#marketDynamicBackground" market-persist="seconds:15; world:#marketInteractionWorld"></a-entity>
 
   <a-entity id="cityWorld" visible="false">
 
@@ -1153,7 +1208,36 @@ AFRAME.registerComponent("reset-market",{
 
   </a-entity>
 
-  <!-- Park interaction layer, revealed only after Park target is scanned -->
+  
+  <!-- Dynamic Park background:
+       outer entity follows Park target pose,
+       child image keeps a fixed relative offset from the interaction -->
+  <a-entity id="parkDynamicBackground" visible="false">
+    <a-image
+      src="./assets/city/park_scene.png"
+      width="1.55"
+      height="1.04"
+      position="-0.92 0.80 -0.72"
+      scale=".68 .68 .68"
+      material="transparent:true;opacity:1;depthWrite:false">
+    </a-image>
+  </a-entity>
+
+  <!-- Dynamic Market background:
+       outer entity follows Market target pose,
+       child image keeps a fixed relative offset from the interaction -->
+  <a-entity id="marketDynamicBackground" visible="false">
+    <a-image
+      src="./assets/city/market_scene.png"
+      width="1.55"
+      height="1.04"
+      position="-0.82 0.76 -0.68"
+      scale=".70 .70 .70"
+      material="transparent:true;opacity:1;depthWrite:false">
+    </a-image>
+  </a-entity>
+
+<!-- Park interaction layer, revealed only after Park target is scanned -->
   <a-entity id="parkInteractionWorld" visible="false">
     <a-plane id="parkInteractiveDisplay"
       width="2.15" height="1.43"
