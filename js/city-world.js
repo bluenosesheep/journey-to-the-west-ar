@@ -83,6 +83,27 @@ AFRAME.registerComponent("city-world-controller",{
     this.hint=document.getElementById("hint");
     this.backBtn=document.getElementById("sceneBackBtn");
     this.backBtn.addEventListener("click",()=>this.exitToCity());
+
+    // STEP 5: RETURN CITY also accepts a fresh hand pinch through CityInput.
+    // We intentionally handle hand input only here so the existing mouse
+    // click behavior remains untouched and cannot fire twice.
+    window.CityInput.register("city-return",{
+      down:(input)=>{
+        if(input.source!=="hand")return;
+        if(!this.backBtn || this.backBtn.style.display==="none")return;
+
+        const r=this.backBtn.getBoundingClientRect();
+        const pad=10;
+
+        if(
+          input.x>=r.left-pad && input.x<=r.right+pad &&
+          input.y>=r.top-pad && input.y<=r.bottom+pad
+        ){
+          this.exitToCity();
+        }
+      }
+    });
+
     window.citySelectedScene=null;
     this.parkInteraction=document.getElementById("parkInteractionWorld");
     this.marketInteraction=document.getElementById("marketInteractionWorld");
