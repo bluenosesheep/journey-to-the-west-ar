@@ -26,6 +26,7 @@ const WASM_URL =
 
 let handLandmarker = null;
 let stream = null;
+let ownsStream = false;
 let running = false;
 let rafId = null;
 let lastVideoTime = -1;
@@ -124,20 +125,34 @@ async function start(options={}){
   // Coordinate smoothing reduces hand jitter on a large classroom display.
   const smoothing = options.smoothing ?? 0.35;
 
-  onStatus("正在启动摄像头…");
+  if(options.reuseExistingVideo){
+    stream = video.srcObject || null;
+    ownsStream = false;
 
-  stream = await navigator.mediaDevices.getUserMedia({
-    video:{
-      facingMode:"user",
-      width:{ideal:1280},
-      height:{ideal:720},
-      frameRate:{ideal:30,max:30}
-    },
-    audio:false
-  });
+    if(video.readyState < 2){
+      onStatus("等待 AR 相机…");
+      await new Promise((resolve)=>{
+        const done=()=>resolve();
+        video.addEventListener("loadeddata",done,{once:true});
+      });
+    }
+  }else{
+    onStatus("正在启动摄像头…");
 
-  video.srcObject = stream;
-  await video.play();
+    stream = await navigator.mediaDevices.getUserMedia({
+      video:{
+        facingMode:"user",
+        width:{ideal:1280},
+        height:{ideal:720},
+        frameRate:{ideal:30,max:30}
+      },
+      audio:false
+    });
+
+    ownsStream = true;
+    video.srcObject = stream;
+    await video.play();
+  }
 
   onStatus("正在加载手势识别…");
   handLandmarker = await createLandmarker(onStatus);
@@ -252,7 +267,7 @@ async function start(options={}){
   rafId=requestAnimationFrame(loop);
 }
 
-function stop(){
+function stop(options={}){
   running=false;
 
   if(rafId){
@@ -269,10 +284,12 @@ function stop(){
     );
   }
 
-  if(stream){
+  if(stream && ownsStream && !options.keepVideo){
     stream.getTracks().forEach(track=>track.stop());
-    stream=null;
   }
+
+  stream=null;
+  ownsStream=false;
 
   if(handLandmarker){
     try{ handLandmarker.close(); }catch(_){}

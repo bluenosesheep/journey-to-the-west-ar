@@ -20,3 +20,35 @@ body.city-started .mindar-ui-scanning{
   visibility:hidden !important;
   pointer-events:none !important;
 }
+
+#classroomHandCursor{
+  position:fixed;
+  z-index:80;
+  width:68px;height:68px;
+  margin:-34px 0 0 -34px;
+  border-radius:50%;
+  display:none;
+  place-items:center;
+  pointer-events:none;
+  font-size:34px;
+  background:rgba(255,255,255,.90);
+  box-shadow:0 6px 26px rgba(0,0,0,.26);
+  transform:translateZ(0);
+}
+#classroomHandCursor.pinching{
+  width:80px;height:80px;
+  margin:-40px 0 0 -40px;
+  background:rgba(255,238,165,.96);
+}
+#classroomHandStatus{
+  position:fixed;
+  right:18px;top:18px;
+  z-index:78;
+  display:none;
+  padding:8px 12px;
+  border-radius:999px;
+  background:rgba(255,255,255,.90);
+  color:#333;
+  font:700 13px/1.2 system-ui,sans-serif;
+  box-shadow:0 4px 16px rgba(0,0,0,.16);
+}
