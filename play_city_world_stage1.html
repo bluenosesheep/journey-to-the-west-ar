@@ -115,9 +115,22 @@ AFRAME.registerComponent("city-world-controller",{
   },
 
   tick:function(){
-    if(this.world && this.world.object3D.visible){
-      lockToScreen(this.world.object3D,0,0,-2.35,1);
+    if(this.tracking && this.world){
+      this.el.object3D.updateMatrixWorld(true);
+      this.lastMatrix.copy(this.el.object3D.matrixWorld);
+
+      const p=new THREE.Vector3();
+      const q=new THREE.Quaternion();
+      const s=new THREE.Vector3();
+      this.lastMatrix.decompose(p,q,s);
+
+      const obj=this.world.object3D;
+      obj.position.copy(p);
+      obj.quaternion.identity();
+      obj.scale.copy(s);
+      obj.updateMatrixWorld(true);
     }
+
     this.updateHitPositions();
   },
   showWorld:function(){
@@ -184,7 +197,7 @@ AFRAME.registerComponent("city-world-controller",{
     this.park.object3D.visible=false;
 
     this.parkInteraction.object3D.visible=true;
-    this.parkInteraction.setAttribute("position","0.20 -0.22 -1.82");
+    this.parkInteraction.setAttribute("position","0.22 -0.24 0.24");
     this.parkInteraction.setAttribute("scale",".74 .74 .74");
     this.marketInteraction.object3D.visible=false;
     document.getElementById("parkDragLayer").style.display="block";
@@ -199,7 +212,7 @@ AFRAME.registerComponent("city-world-controller",{
     this.market.object3D.visible=false;
 
     this.marketInteraction.object3D.visible=true;
-    this.marketInteraction.setAttribute("position","0.20 -0.20 -1.82");
+    this.marketInteraction.setAttribute("position","0.24 -0.22 0.22");
     this.marketInteraction.setAttribute("scale",".72 .72 .72");
     this.parkInteraction.object3D.visible=false;
     document.getElementById("marketHoldLayer").style.display="block";
@@ -231,28 +244,47 @@ AFRAME.registerComponent("city-panel-click",{
 
 
 AFRAME.registerComponent("scene-background-follow",{
-  schema:{world:{type:"selector"}},
+  schema:{
+    world:{type:"selector"}
+  },
 
   init:function(){
     this.world=this.data.world;
-    if(this.world)this.world.object3D.visible=false;
+    this.tracking=false;
+
+    if(this.world){
+      this.world.object3D.visible=false;
+    }
 
     this.el.addEventListener("targetFound",()=>{
-      if(!this.world)return;
-      this.world.object3D.visible=true;
-      lockToScreen(this.world.object3D,0,0,-2.05,1);
+      this.tracking=true;
+      if(this.world)this.world.object3D.visible=true;
     });
 
     this.el.addEventListener("targetLost",()=>{
-      // Keep the background upright at its screen-locked position
-      // until the 15-second interaction hold finishes.
+      // Freeze at the last tracked pose. The interaction controller has
+      // its own hold logic; keeping the background at the last pose makes
+      // the two remain spatially related instead of jumping elsewhere.
+      this.tracking=false;
     });
   },
 
   tick:function(){
-    if(this.world && this.world.object3D.visible){
-      lockToScreen(this.world.object3D,0,0,-2.05,1);
-    }
+    if(!this.tracking || !this.world)return;
+
+    this.el.object3D.updateMatrixWorld(true);
+
+    const p=new THREE.Vector3();
+    const q=new THREE.Quaternion();
+    const s=new THREE.Vector3();
+
+    this.el.object3D.matrixWorld.decompose(p,q,s);
+
+    const obj=this.world.object3D;
+    obj.position.copy(p);
+    obj.quaternion.identity();
+    obj.scale.copy(s);
+    obj.updateMatrixWorld(true);
   }
 });
 
@@ -504,10 +536,7 @@ AFRAME.registerComponent("park-drag-controller",{
         this.timer=null;
       }
 
-      if(this.world){
-        this.world.object3D.visible=true;
-        lockToScreen(this.world.object3D,0.20,-0.22,-1.82);
-      }
+      if(this.world)this.world.object3D.visible=true;
       this.showHits();
     });
 
@@ -518,10 +547,35 @@ AFRAME.registerComponent("park-drag-controller",{
 
       if(this.world){
         const obj=this.world.object3D;
-        lockToScreen(obj,0.20,-0.22,-1.82);
-        this.basePos.copy(obj.position);
-        this.baseQuat.copy(obj.quaternion);
-        this.baseScale.copy(obj.scale);
+        let stable=null;
+        const now=performance.now();
+
+        for(let i=this.poseHistory.length-1;i>=0;i--){
+          if(now-this.poseHistory[i].time>=280){
+            stable=this.poseHistory[i];
+            break;
+          }
+        }
+
+        if(!stable&&this.poseHistory.length){
+          stable=this.poseHistory[0];
+        }
+
+        if(stable){
+          this.basePos.copy(stable.pos);
+          this.baseQuat.copy(stable.quat);
+          this.baseScale.copy(stable.scale);
+
+          obj.position.copy(this.basePos);
+          obj.quaternion.identity();
+          obj.scale.copy(this.baseScale);
+          obj.updateMatrixWorld(true);
+        }else{
+          this.basePos.copy(obj.position);
+          this.baseQuat.copy(obj.quaternion);
+          this.baseScale.copy(obj.scale);
+        }
+
         obj.visible=true;
       }
 
@@ -707,16 +761,41 @@ AFRAME.registerComponent("park-drag-controller",{
 
   tick:function(){
     if(!this.world)return;
+
     const obj=this.world.object3D;
 
     if(this.tracking){
-      lockToScreen(obj,0.20,-0.22,-1.82);
+      this.el.object3D.updateMatrixWorld(true);
+      this.lastMatrix.copy(this.el.object3D.matrixWorld);
+
+      const p=new THREE.Vector3();
+      const q=new THREE.Quaternion();
+      const s=new THREE.Vector3();
+      this.lastMatrix.decompose(p,q,s);
+
+      this.poseHistory.push({
+        pos:p.clone(),
+        quat:q.clone(),
+        scale:s.clone(),
+        time:performance.now()
+      });
+
+      if(this.poseHistory.length>this.maxPoseHistory){
+        this.poseHistory.shift();
+      }
+
+      obj.position.copy(p);
+      obj.quaternion.identity();
+      obj.scale.copy(s);
+      obj.updateMatrixWorld(true);
+
       this.updateHitPositions();
       return;
     }
 
     if(this.holding){
       const t=(performance.now()-this.holdStart)/1000;
+
       const bob=Math.sin(t*1.35)*.014;
       const sway=Math.sin(t*.95)*.008;
       const roll=Math.sin(t*1.05)*THREE.MathUtils.degToRad(.8);
@@ -725,10 +804,13 @@ AFRAME.registerComponent("park-drag-controller",{
       obj.position.x+=sway;
       obj.position.y+=bob;
 
-      const qr=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),roll);
-      obj.quaternion.copy(this.baseQuat).multiply(qr);
+      const qr=new THREE.Quaternion()
+        .setFromAxisAngle(new THREE.Vector3(0,0,1),roll);
+
+      obj.quaternion.identity().multiply(qr);
       obj.scale.copy(this.baseScale);
       obj.updateMatrixWorld(true);
+
       this.updateHitPositions();
     }
   }
@@ -932,7 +1014,6 @@ AFRAME.registerComponent("market-persist",{
 
       if(this.world){
         this.world.object3D.visible=true;
-        lockToScreen(this.world.object3D,0.20,-0.20,-1.82);
       }
     });
 
@@ -943,10 +1024,39 @@ AFRAME.registerComponent("market-persist",{
 
       if(this.world){
         const obj=this.world.object3D;
-        lockToScreen(obj,0.20,-0.20,-1.82);
-        this.basePos.copy(obj.position);
-        this.baseQuat.copy(obj.quaternion);
-        this.baseScale.copy(obj.scale);
+
+        // Use a pose from roughly 250-350ms BEFORE targetLost.
+        // That avoids freezing the bad skew/tilt that often happens while the card is being pulled away.
+        let stablePose=null;
+        const now=performance.now();
+        for(let i=this.poseHistory.length-1;i>=0;i--){
+          const age=now-this.poseHistory[i].time;
+          if(age>=280){
+            stablePose=this.poseHistory[i];
+            break;
+          }
+        }
+
+        // Fallback to the oldest available recent pose, then finally current pose.
+        if(!stablePose && this.poseHistory.length){
+          stablePose=this.poseHistory[0];
+        }
+
+        if(stablePose){
+          this.basePos.copy(stablePose.pos);
+          this.baseQuat.copy(stablePose.quat);
+          this.baseScale.copy(stablePose.scale);
+
+          obj.position.copy(this.basePos);
+          obj.quaternion.identity();
+          obj.scale.copy(this.baseScale);
+          obj.updateMatrixWorld(true);
+        }else{
+          this.basePos.copy(obj.position);
+          this.baseQuat.copy(obj.quaternion);
+          this.baseScale.copy(obj.scale);
+        }
+
         obj.visible=true;
       }
 
@@ -1041,15 +1151,39 @@ AFRAME.registerComponent("market-persist",{
 
   tick:function(){
     if(!this.world)return;
+
     const obj=this.world.object3D;
 
     if(this.tracking){
-      lockToScreen(obj,0.20,-0.20,-1.82);
-      this.updateHoldHits();
+      this.el.object3D.updateMatrixWorld(true);
+      this.lastMatrix.copy(this.el.object3D.matrixWorld);
+
+      const pos=new THREE.Vector3();
+      const quat=new THREE.Quaternion();
+      const scale=new THREE.Vector3();
+      this.lastMatrix.decompose(pos,quat,scale);
+
+      // Save recent poses. About 20-24 frames gives us a few hundred ms of history.
+      this.poseHistory.push({
+        pos:pos.clone(),
+        quat:quat.clone(),
+        scale:scale.clone(),
+        time:performance.now()
+      });
+      if(this.poseHistory.length>this.maxPoseHistory){
+        this.poseHistory.shift();
+      }
+
+      obj.position.copy(pos);
+      obj.quaternion.identity();
+      obj.scale.copy(scale);
+      obj.updateMatrixWorld(true);
       return;
     }
 
     if(this.holding){
+      // Very small, slow motion so the AR still feels "alive" after the card is removed.
+      // It is intentionally much steadier than real tracking jitter.
       const t=(performance.now()-this.holdStart)/1000;
       const bob=Math.sin(t*1.45)*0.022;
       const sway=Math.sin(t*1.05)*0.014;
@@ -1060,9 +1194,11 @@ AFRAME.registerComponent("market-persist",{
       obj.position.y+=bob;
 
       const qRoll=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),roll);
-      obj.quaternion.copy(this.baseQuat).multiply(qRoll);
+      obj.quaternion.identity().multiply(qRoll);
       obj.scale.copy(this.baseScale);
       obj.updateMatrixWorld(true);
+
+      // Keep the HTML tap zones exactly on top of the gently moving AR UI.
       this.updateHoldHits();
     }
   }
