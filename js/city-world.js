@@ -6,13 +6,27 @@ window.ClassroomHandMode = {
   setMode(mode){
     this.mode=mode;
 
-    const status=document.getElementById("classroomHandStatus");
-    if(!status)return;
+    document.body.classList.remove("hand-city","hand-park","hand-market");
+    if(mode==="city")document.body.classList.add("hand-city");
+    if(mode==="park")document.body.classList.add("hand-park");
+    if(mode==="market")document.body.classList.add("hand-market");
 
-    if(mode==="city")status.textContent="手势：CITY";
-    else if(mode==="park")status.textContent="手势：PARK";
-    else if(mode==="market")status.textContent="手势：MARKET";
-    else status.textContent="手势";
+    const status=document.getElementById("classroomHandStatus");
+
+    if(status){
+      if(mode==="city")status.textContent="手势：CITY";
+      else if(mode==="park")status.textContent="手势：PARK";
+      else if(mode==="market")status.textContent="手势：MARKET";
+      else status.textContent="手势";
+    }
+
+    // The Market mode moves the bottom hint upward. Reposition RETURN CITY
+    // beside it after the browser has applied the new CSS.
+    requestAnimationFrame(()=>{
+      if(typeof alignBackButtonWithHint==="function"){
+        alignBackButtonWithHint();
+      }
+    });
   },
 
   async ensureRunning(mode){
@@ -97,6 +111,7 @@ window.ClassroomHandMode = {
 
   stop(){
     this.mode="off";
+    document.body.classList.remove("hand-city","hand-park","hand-market");
 
     if(window.ClassroomHandTracking){
       window.ClassroomHandTracking.stop({keepVideo:true});

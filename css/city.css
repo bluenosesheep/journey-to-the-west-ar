@@ -52,3 +52,10 @@ body.city-started .mindar-ui-scanning{
   font:700 13px/1.2 system-ui,sans-serif;
   box-shadow:0 4px 16px rgba(0,0,0,.16);
 }
+
+/* Market gesture-safe control zone.
+   Keeping the bottom controls away from the screen edge also keeps the
+   child's hand comfortably inside the laptop camera's field of view. */
+body.hand-market #hint{
+  bottom:max(92px,calc(env(safe-area-inset-bottom) + 72px));
+}
