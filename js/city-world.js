@@ -345,8 +345,14 @@ AFRAME.registerComponent("city-world-controller",{
 
   showWorld:function(){
     window.citySelectedScene=null;
-    window.ClassroomHandMode?.startCity();
-    window.ClassroomHandTracking?.arm();
+
+    // CITY also uses release-to-arm.
+    // This prevents the pinch used to hold the Building card (or RETURN CITY)
+    // from immediately selecting PARK / MARKET as soon as CITY appears.
+    Promise.resolve(window.ClassroomHandMode?.startCity()).then(()=>{
+      window.ClassroomHandTracking?.requireReleaseToArm(300);
+    });
+
     if(this.backBtn)this.backBtn.style.display="none";
     this.setPanel(this.building,"0 0.34 0.02","1 1 1",1);
     this.setPanel(this.park,"-0.72 -0.42 0.03",".78 .78 .78",1);
