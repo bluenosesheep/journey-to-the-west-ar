@@ -361,6 +361,7 @@ AFRAME.registerComponent("city-world-controller",{
     this.hitMarket=document.getElementById("hitCityMarket");
     this.camera=null;
     this.cityInteractTransitioning=false;
+    this.cityInteractCentered=false;
     this.cityNarrativeMode="story";
 
     this.hitPark.addEventListener("click",()=>this.focusPark());
@@ -452,12 +453,17 @@ AFRAME.registerComponent("city-world-controller",{
 
   tick:function(){
     if(this.tracking && this.world){
-      // Always keep the latest Building target pose, including during STORY
-      // when the real AR city is deliberately hidden.
+      // Always keep the latest Building target pose for future returns / STORY.
       this.el.object3D.updateMatrixWorld(true);
       this.lastMatrix.copy(this.el.object3D.matrixWorld);
 
-      if(this.world.object3D.visible && !this.cityInteractTransitioning){
+      // Before INTERACT centering, preserve normal target-follow behavior.
+      // Once CITY has moved to the narrative center, keep it fixed there.
+      if(
+        this.world.object3D.visible &&
+        !this.cityInteractTransitioning &&
+        !this.cityInteractCentered
+      ){
         const p=new THREE.Vector3();
         const q=new THREE.Quaternion();
         const s=new THREE.Vector3();
@@ -639,30 +645,31 @@ AFRAME.registerComponent("city-world-controller",{
   },
 
   enterCityInteractView:function(){
-    // Move the screen-space miniature toward center and hand off to the
-    // real A-Frame CITY at the last remembered Building pose.
+    // Move the STORY miniature toward center, then reveal the real CITY
+    // at a stable centered screen pose rather than at the original target pose.
     this.hideStoryCityMini(true);
 
     if(this.world){
       this.world.removeAttribute("animation__storyin");
 
+      const obj=this.world.object3D;
+
+      // Use the last known target scale only as a reference for overall size.
+      // Position is deliberately centered for narrative clarity.
       const p=new THREE.Vector3();
       const q=new THREE.Quaternion();
       const s=new THREE.Vector3();
       this.lastMatrix.decompose(p,q,s);
 
-      // If the target is still visible, refresh the remembered pose first.
-      if(this.tracking){
-        this.el.object3D.updateMatrixWorld(true);
-        this.lastMatrix.copy(this.el.object3D.matrixWorld);
-        this.lastMatrix.decompose(p,q,s);
-      }
+      // Slightly smaller than the previous full-size CITY so nothing clips.
+      const endScale=s.clone().multiplyScalar(.86);
+      const startScale=endScale.clone().multiplyScalar(.62);
 
-      const obj=this.world.object3D;
-      const startScale=s.clone().multiplyScalar(.52);
-      const endScale=s.clone();
+      // Screen-space narrative center.
+      // Keeping z from the tracked pose preserves projection depth.
+      const endPos=new THREE.Vector3(0,0.02,p.z);
 
-      obj.position.copy(p);
+      obj.position.copy(endPos);
       obj.quaternion.identity();
       obj.scale.copy(startScale);
       obj.visible=true;
@@ -672,38 +679,26 @@ AFRAME.registerComponent("city-world-controller",{
       const duration=760;
       const ease=t=>1-Math.pow(1-t,3);
 
+      this.cityInteractTransitioning=true;
+
       const step=(now)=>{
         const t=Math.min(1,(now-started)/duration);
         const e=ease(t);
 
-        // While the Building target is still being shown, keep position tied
-        // to it, but do not let tick overwrite this scale transition.
-        if(this.tracking){
-          this.el.object3D.updateMatrixWorld(true);
-          this.lastMatrix.copy(this.el.object3D.matrixWorld);
-          const cp=new THREE.Vector3();
-          const cq=new THREE.Quaternion();
-          const cs=new THREE.Vector3();
-          this.lastMatrix.decompose(cp,cq,cs);
-          obj.position.copy(cp);
-          obj.scale.copy(cs).multiplyScalar(.52 + .48*e);
-        }else{
-          obj.position.copy(p);
-          obj.scale.lerpVectors(startScale,endScale,e);
-        }
-
+        obj.position.copy(endPos);
         obj.quaternion.identity();
+        obj.scale.lerpVectors(startScale,endScale,e);
         obj.updateMatrixWorld(true);
 
         if(t<1){
           requestAnimationFrame(step);
         }else{
           this.cityInteractTransitioning=false;
+          this.cityInteractCentered=true;
           this.updateHitPositions();
         }
       };
 
-      this.cityInteractTransitioning=true;
       requestAnimationFrame(step);
     }
 
@@ -713,6 +708,7 @@ AFRAME.registerComponent("city-world-controller",{
 
   showWorld:function(){
     window.citySelectedScene=null;
+    this.cityInteractCentered=false;
     window.ClassroomActivityMode?.setScene("city");
 
     window.ClassroomHandMode?.startCity();
