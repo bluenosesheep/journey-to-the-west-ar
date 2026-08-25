@@ -314,6 +314,7 @@ AFRAME.registerComponent("park-drag-controller",{
 
   handleInputDown:function(input){
     if(window.citySelectedScene!=="park")return;
+    if(input.source==="hand" && !window.ClassroomActivityMode?.isInteract())return;
 
     const kind=this.hitKindAt(input.x,input.y,input.source);
     if(!kind)return;
@@ -358,6 +359,7 @@ AFRAME.registerComponent("park-drag-controller",{
   },
 
   handleInputMove:function(input){
+    if(input.source==="hand" && !window.ClassroomActivityMode?.isInteract())return;
     if(!this.dragState)return;
     if(this.dragState.pointerId!==input.pointerId)return;
 

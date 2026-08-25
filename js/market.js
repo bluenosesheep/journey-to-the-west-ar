@@ -290,6 +290,7 @@ AFRAME.registerComponent("market-persist",{
 
   handleInputDown:function(input){
     if(window.citySelectedScene!=="market")return;
+    if(input.source==="hand" && !window.ClassroomActivityMode?.isInteract())return;
 
     const kind=this.hitKindAt(input.x,input.y,input.source);
     if(!kind)return;

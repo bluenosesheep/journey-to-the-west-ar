@@ -1,4 +1,45 @@
 
+window.ClassroomActivityMode={
+ mode:"interact",scene:"city",
+ init(){
+  this.switchEl=document.getElementById("classroomModeSwitch");
+  this.storyBtn=document.getElementById("storyModeBtn");
+  this.interactBtn=document.getElementById("interactModeBtn");
+  this.storyBtn?.addEventListener("click",()=>this.setStory());
+  this.interactBtn?.addEventListener("click",()=>this.setInteract());
+  this.apply();
+ },
+ setScene(scene){
+  this.scene=scene;
+  if(scene==="city"){this.mode="interact";if(this.switchEl)this.switchEl.style.display="none";}
+  else{this.mode="story";if(this.switchEl)this.switchEl.style.display="flex";}
+  this.apply();
+ },
+ setStory(){if(this.scene==="city")return;this.mode="story";this.apply();},
+ setInteract(){
+  if(this.scene==="city")return;
+  this.mode="interact";this.apply();
+  window.ClassroomHandTracking?.requireReleaseToArm(300);
+ },
+ isInteract(){return this.scene==="city"||this.mode==="interact";},
+ apply(){
+  const story=this.mode==="story"&&this.scene!=="city";
+  document.body.classList.toggle("story-mode",story);
+  document.body.classList.toggle("interact-mode",!story);
+  this.storyBtn?.classList.toggle("active",this.mode==="story");
+  this.interactBtn?.classList.toggle("active",this.mode==="interact");
+  const cursor=document.getElementById("classroomHandCursor");
+  const status=document.getElementById("classroomHandStatus");
+  if(story){if(cursor)cursor.style.display="none";if(status)status.style.display="none";}
+  const hint=document.getElementById("hint");
+  if(hint&&this.scene==="park")hint.textContent=story?"PARK · 🎭 STORY MODE · 用玩偶讲故事":"PARK · ✨ INTERACT MODE · 用手势布置公园";
+  if(hint&&this.scene==="market")hint.textContent=story?"MARKET · 🎭 STORY MODE · 用玩偶讲故事":"MARKET · ✨ INTERACT MODE · 用手势选择商品";
+  requestAnimationFrame(()=>{if(typeof alignBackButtonWithHint==="function")alignBackButtonWithHint();});
+ }
+};
+document.addEventListener("DOMContentLoaded",()=>window.ClassroomActivityMode?.init());
+
+
 window.ClassroomHandMode = {
   running:false,
   mode:"off",
@@ -157,6 +198,7 @@ AFRAME.registerComponent("city-world-controller",{
     window.CityInput.register("city-return",{
       down:(input)=>{
         if(input.source!=="hand")return;
+        if(!window.ClassroomActivityMode?.isInteract())return;
         if(!this.backBtn || this.backBtn.style.display==="none")return;
 
         const r=this.backBtn.getBoundingClientRect();
@@ -345,6 +387,7 @@ AFRAME.registerComponent("city-world-controller",{
 
   showWorld:function(){
     window.citySelectedScene=null;
+    window.ClassroomActivityMode?.setScene("city");
 
     // CITY also uses release-to-arm.
     // This prevents the pinch used to hold the Building card (or RETURN CITY)
@@ -402,6 +445,7 @@ AFRAME.registerComponent("city-world-controller",{
     if(opacity===0)setTimeout(()=>{el.object3D.visible=false;},520);
   },
   focusPark:function(){
+    if(window.ClassroomActivityMode?.switchEl)window.ClassroomActivityMode.switchEl.style.display="none";
     window.ClassroomHandMode?.setMode("park");
     window.ClassroomHandTracking?.requireReleaseToArm(300);
     window.citySelectedScene="park";
@@ -456,6 +500,7 @@ AFRAME.registerComponent("city-world-controller",{
 
       window.ClassroomHandMode?.startPark();
       window.ClassroomHandTracking?.requireReleaseToArm(300);
+      window.ClassroomActivityMode?.setScene("park");
     },540);
   },
 
@@ -502,9 +547,11 @@ AFRAME.registerComponent("city-world-controller",{
       // STEP 6: Market now uses the same hand cursor / pinch input.
       window.ClassroomHandMode?.startMarket();
       window.ClassroomHandTracking?.requireReleaseToArm(300);
+      window.ClassroomActivityMode?.setScene("market");
     },540);
   },
   focusMarket:function(){
+    if(window.ClassroomActivityMode?.switchEl)window.ClassroomActivityMode.switchEl.style.display="none";
     window.ClassroomHandMode?.setMode("market");
     window.ClassroomHandTracking?.requireReleaseToArm(300);
     window.citySelectedScene="market";

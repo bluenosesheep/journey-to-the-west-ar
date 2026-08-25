@@ -74,3 +74,8 @@ video{
   transform:none !important;
   -webkit-transform:none !important;
 }
+
+#classroomModeSwitch{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:82;display:none;gap:6px;padding:5px;border-radius:999px;background:rgba(255,255,255,.9);box-shadow:0 5px 18px rgba(0,0,0,.18)}
+#classroomModeSwitch button{border:0;border-radius:999px;padding:8px 12px;background:transparent;color:#444;font:800 12px/1 system-ui;cursor:pointer}
+#classroomModeSwitch button.active{background:rgba(255,234,150,.95)}
+body.story-mode #classroomHandCursor,body.story-mode #classroomHandStatus{display:none !important}
