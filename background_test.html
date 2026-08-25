@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Classroom Background Test</title>
+<style>
+*{box-sizing:border-box}
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:#111;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+#camera{
+  position:fixed;
+  width:1px;
+  height:1px;
+  opacity:0;
+  pointer-events:none;
+}
+#output{
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  background:#111;
+}
+#topbar{
+  position:fixed;
+  left:50%;
+  top:18px;
+  transform:translateX(-50%);
+  z-index:20;
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+  justify-content:center;
+  width:min(94vw,900px);
+}
+.pill{
+  border:0;
+  border-radius:999px;
+  padding:10px 15px;
+  background:rgba(255,255,255,.94);
+  color:#222;
+  font:700 14px system-ui;
+  box-shadow:0 5px 20px rgba(0,0,0,.20);
+}
+button.pill{
+  cursor:pointer;
+}
+button.pill.active{
+  outline:4px solid rgba(255,226,120,.9);
+}
+#status{
+  min-width:190px;
+  text-align:center;
+}
+#panel{
+  position:fixed;
+  left:18px;
+  bottom:18px;
+  z-index:20;
+  width:min(340px,calc(100vw - 36px));
+  padding:14px 16px;
+  border-radius:16px;
+  background:rgba(255,255,255,.92);
+  color:#222;
+  box-shadow:0 8px 28px rgba(0,0,0,.22);
+  font:14px/1.5 system-ui;
+}
+#panel label{
+  display:grid;
+  grid-template-columns:95px 1fr 45px;
+  align-items:center;
+  gap:8px;
+  margin-top:9px;
+}
+#panel input{width:100%}
+#stats{
+  margin-top:10px;
+  font:12px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;
+  color:#555;
+}
+#help{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  z-index:20;
+  width:min(370px,calc(100vw - 36px));
+  padding:14px 16px;
+  border-radius:16px;
+  background:rgba(20,20,20,.72);
+  color:white;
+  font:14px/1.55 system-ui;
+}
+#start{
+  position:fixed;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  z-index:50;
+  border:0;
+  border-radius:999px;
+  padding:16px 26px;
+  background:white;
+  color:#222;
+  font:800 18px system-ui;
+  box-shadow:0 10px 30px rgba(0,0,0,.30);
+  cursor:pointer;
+}
+@media (max-width:800px){
+  #help{display:none}
+}
+</style>
+</head>
+<body>
+
+<video id="camera" autoplay muted playsinline></video>
+<canvas id="output"></canvas>
+
+<div id="topbar">
+  <button class="pill mode" data-mode="original">Original</button>
+  <button class="pill mode active" data-mode="soft">Soft Blur</button>
+  <button class="pill mode" data-mode="strong">Strong Blur</button>
+  <div id="status" class="pill">Step 7 · Background Test</div>
+</div>
+
+<div id="panel">
+  <b>边缘测试</b><br>
+  拿真实玩偶、识别卡、手在镜头前移动，重点观察它们有没有被错误虚化。
+
+  <label>
+    <span>Person 阈值</span>
+    <input id="threshold" type="range" min="0.20" max="0.70" value="0.42" step="0.01">
+    <output id="thresholdValue">0.42</output>
+  </label>
+
+  <label>
+    <span>边缘柔和</span>
+    <input id="softness" type="range" min="0.05" max="0.32" value="0.18" step="0.01">
+    <output id="softnessValue">0.18</output>
+  </label>
+
+  <div id="stats">model: waiting</div>
+</div>
+
+<div id="help">
+<b>这一步先不接 AR。</b><br>
+建议拿你真正上课会用的玩偶测试：<br>
+• 玩偶靠近身体 / 离开身体<br>
+• 手快速移动<br>
+• 玩偶举到脸旁边<br>
+• 玩偶举到身体外侧<br><br>
+如果玩偶经常被虚化掉，我们就不会直接把这种人物分割接进正式课堂版。
+</div>
+
+<button id="start">开启背景测试</button>
+
+<script type="module">
+import "./js/background-effects.js";
+
+const video=document.getElementById("camera");
+const output=document.getElementById("output");
+const startBtn=document.getElementById("start");
+const status=document.getElementById("status");
+const stats=document.getElementById("stats");
+const threshold=document.getElementById("threshold");
+const softness=document.getElementById("softness");
+const thresholdValue=document.getElementById("thresholdValue");
+const softnessValue=document.getElementById("softnessValue");
+
+let controller=null;
+
+function setModeUI(mode){
+  document.querySelectorAll(".mode").forEach(btn=>{
+    btn.classList.toggle("active",btn.dataset.mode===mode);
+  });
+}
+
+startBtn.addEventListener("click",async()=>{
+  startBtn.disabled=true;
+  startBtn.textContent="启动中…";
+
+  try{
+    controller=await window.ClassroomBackgroundEffects.start({
+      video,
+      output,
+      mode:"soft",
+      threshold:Number(threshold.value),
+      softness:Number(softness.value),
+      segmentationFps:15,
+      onStatus:(text)=>status.textContent=text,
+      onStats:(data)=>{
+        stats.textContent=
+          "segment: "+data.inferenceMs.toFixed(1)+" ms\n"+
+          "mask: "+data.maskWidth+" × "+data.maskHeight;
+      }
+    });
+
+    startBtn.style.display="none";
+  }catch(err){
+    console.error(err);
+    status.textContent="启动失败，请看 Console";
+    startBtn.disabled=false;
+    startBtn.textContent="重新开启";
+  }
+});
+
+document.querySelectorAll(".mode").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    const mode=btn.dataset.mode;
+    controller?.setMode(mode);
+    setModeUI(mode);
+  });
+});
+
+threshold.addEventListener("input",()=>{
+  thresholdValue.textContent=Number(threshold.value).toFixed(2);
+  controller?.setThreshold(Number(threshold.value));
+});
+
+softness.addEventListener("input",()=>{
+  softnessValue.textContent=Number(softness.value).toFixed(2);
+  controller?.setSoftness(Number(softness.value));
+});
+</script>
+
+</body>
+</html>
