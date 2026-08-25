@@ -95,3 +95,17 @@ body::after{
   font:800 12px system-ui,sans-serif;
   cursor:pointer;
 }
+
+
+/* PORTFOLIO DEMO: hide MindAR scanning visuals only.
+   Recognition continues running in the background. */
+.mindar-ui-scanning,
+.mindar-ui-scanning .scanning,
+.mindar-ui-scanning .scanning-line,
+.mindar-ui-scanning .inner,
+.mindar-ui-scanning .scanline{
+  display:none !important;
+  opacity:0 !important;
+  visibility:hidden !important;
+  pointer-events:none !important;
+}
