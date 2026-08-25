@@ -23,7 +23,7 @@ body.story-mode a-scene,
 body.story-mode .a-canvas,
 body.story-mode canvas.a-canvas{
   z-index:35 !important;
-  opacity:.30 !important;
+  opacity:.45 !important;
   pointer-events:none !important;
   transition:opacity .30s ease;
 }

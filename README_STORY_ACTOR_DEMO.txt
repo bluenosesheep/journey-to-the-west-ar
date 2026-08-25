@@ -5,7 +5,7 @@ classroom_city_story_actor_demo.html
 
 STORY MODE:
 - camera/physical puppet stays 100% opaque and clear
-- AR is reduced to about 30% opacity as story atmosphere
+- AR is reduced to about 45% opacity as story atmosphere
 - hand cursor remains hidden by the Narrative Stable STORY logic
 
 INTERACT MODE:
