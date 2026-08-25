@@ -348,6 +348,7 @@ AFRAME.registerComponent("city-world-controller",{
     this.hitPark=document.getElementById("hitCityPark");
     this.hitMarket=document.getElementById("hitCityMarket");
     this.camera=null;
+    this.cityNarrativeMode="story";
 
     this.hitPark.addEventListener("click",()=>this.focusPark());
     this.hitMarket.addEventListener("click",()=>this.focusMarket());
@@ -434,16 +435,9 @@ AFRAME.registerComponent("city-world-controller",{
       this.el.object3D.updateMatrixWorld(true);
       this.lastMatrix.copy(this.el.object3D.matrixWorld);
 
-      const p=new THREE.Vector3();
-      const q=new THREE.Quaternion();
-      const s=new THREE.Vector3();
-      this.lastMatrix.decompose(p,q,s);
-
-      const obj=this.world.object3D;
-      obj.position.copy(p);
-      obj.quaternion.identity();
-      obj.scale.copy(s);
-      obj.updateMatrixWorld(true);
+      // Keep the CITY screen pose consistent with STORY / INTERACT even while
+      // the Building card is still in view.
+      this.applyCityWorldNarrativePose(false);
     }
 
     this.updateHitPositions();
@@ -488,40 +482,83 @@ AFRAME.registerComponent("city-world-controller",{
   },
 
   applyCityNarrativeLayout:function(mode,animate=true){
-    if(!this.building||!this.park||!this.market)return;
+    if(!this.world||!this.building||!this.park||!this.market)return;
 
     const isStory=mode==="story";
 
-    // STORY: compact "far-away city" in the upper-left.
-    // INTERACT: restore the larger centered city layout.
-    const layout=isStory ? {
-      building:{pos:"-0.68 0.54 0.02",scale:".40 .40 .40"},
-      park:{pos:"-0.94 0.02 0.03",scale:".31 .31 .31"},
-      market:{pos:"-0.43 0.02 0.03",scale:".31 .31 .31"}
-    } : {
-      building:{pos:"0 0.34 0.02",scale:"1 1 1"},
-      park:{pos:"-0.72 -0.42 0.03",scale:".78 .78 .78"},
-      market:{pos:"0.72 -0.42 0.03",scale:".78 .78 .78"}
-    };
+    // Keep the internal CITY composition stable.
+    // The narrative distance effect is now applied to the WHOLE city group,
+    // which is much more visually obvious and reliable.
+    this.setPanel(this.building,"0 0.34 0.02","1 1 1",1);
+    this.setPanel(this.park,"-0.72 -0.42 0.03",".78 .78 .78",1);
+    this.setPanel(this.market,"0.72 -0.42 0.03",".78 .78 .78",1);
 
-    const applyOne=(el,cfg)=>{
-      if(animate){
-        this.animatePanel(el,cfg.pos,cfg.scale,1);
-      }else{
-        this.setPanel(el,cfg.pos,cfg.scale,1);
-      }
-    };
-
-    applyOne(this.building,layout.building);
-    applyOne(this.park,layout.park);
-    applyOne(this.market,layout.market);
-
-    // PARK / MARKET should not be selectable while the child is still narrating
-    // "the city is far away". They become selectable only after INTERACT.
     if(this.hitPark)this.hitPark.style.display=isStory?"none":"block";
     if(this.hitMarket)this.hitMarket.style.display=isStory?"none":"block";
 
-    setTimeout(()=>this.updateHitPositions(),animate?680:0);
+    this.cityNarrativeMode=mode;
+    this.applyCityWorldNarrativePose(animate);
+    setTimeout(()=>this.updateHitPositions(),animate?760:0);
+  },
+
+  applyCityWorldNarrativePose:function(animate=true){
+    if(!this.world||!this.lastMatrix)return;
+
+    const p=new THREE.Vector3();
+    const q=new THREE.Quaternion();
+    const s=new THREE.Vector3();
+    this.lastMatrix.decompose(p,q,s);
+
+    const isStory=this.cityNarrativeMode==="story";
+    const obj=this.world.object3D;
+
+    // Base pose comes from the Building target, but orientation stays upright.
+    const targetPos=p.clone();
+    const targetScale=s.clone();
+
+    if(isStory){
+      // "Seen in the distance": move the complete city cluster to upper-left
+      // and make it much smaller.
+      targetPos.x-=0.72;
+      targetPos.y+=0.46;
+      targetScale.multiplyScalar(0.38);
+    }else{
+      // "Let's go take a look": bring the complete city back to center/full size.
+      targetScale.multiplyScalar(1.0);
+    }
+
+    if(!animate){
+      obj.position.copy(targetPos);
+      obj.quaternion.identity();
+      obj.scale.copy(targetScale);
+      obj.updateMatrixWorld(true);
+      return;
+    }
+
+    const fromPos=obj.position.clone();
+    const fromScale=obj.scale.clone();
+    const started=performance.now();
+    const duration=760;
+
+    const ease=(t)=>1-Math.pow(1-t,3);
+
+    const step=(now)=>{
+      const t=Math.min(1,(now-started)/duration);
+      const e=ease(t);
+
+      obj.position.lerpVectors(fromPos,targetPos,e);
+      obj.quaternion.identity();
+      obj.scale.lerpVectors(fromScale,targetScale,e);
+      obj.updateMatrixWorld(true);
+
+      if(t<1){
+        requestAnimationFrame(step);
+      }else{
+        this.updateHitPositions();
+      }
+    };
+
+    requestAnimationFrame(step);
   },
 
   showWorld:function(){
