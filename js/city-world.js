@@ -132,7 +132,9 @@ window.ClassroomActivityMode={
   if(this.scene==="city"){
     const target=document.querySelector('[city-world-controller]');
     const comp=target?.components?.["city-world-controller"];
-    comp?.applyCityNarrativeLayout(this.mode,true);
+
+    if(this.mode==="story")comp?.enterCityStoryView();
+    else comp?.enterCityInteractView();
   }
 
   requestAnimationFrame(()=>{if(typeof alignBackButtonWithHint==="function")alignBackButtonWithHint();});
@@ -369,9 +371,10 @@ AFRAME.registerComponent("city-world-controller",{
       window.cityAssetsReady.then(()=>{
         if(!this.world)return;
         this.showWorld();
-        this.world.object3D.visible=true;
+
+        // showWorld decides STORY vs INTERACT visibility.
         this.updateHitPositions();
-        this.hint.textContent="CITY WORLD · 点击 PARK 或 MARKET 进入场景";
+        this.hint.textContent="CITY · 🎭 STORY MODE · 猴儿看见了远处的城市";
       });
     });
 
@@ -431,13 +434,20 @@ AFRAME.registerComponent("city-world-controller",{
   },
 
   tick:function(){
-    if(this.tracking && this.world){
+    if(this.tracking && this.world && this.world.object3D.visible){
       this.el.object3D.updateMatrixWorld(true);
       this.lastMatrix.copy(this.el.object3D.matrixWorld);
 
-      // Keep the CITY screen pose consistent with STORY / INTERACT even while
-      // the Building card is still in view.
-      this.applyCityWorldNarrativePose(false);
+      const p=new THREE.Vector3();
+      const q=new THREE.Quaternion();
+      const s=new THREE.Vector3();
+      this.lastMatrix.decompose(p,q,s);
+
+      const obj=this.world.object3D;
+      obj.position.copy(p);
+      obj.quaternion.identity();
+      obj.scale.copy(s);
+      obj.updateMatrixWorld(true);
     }
 
     this.updateHitPositions();
@@ -561,18 +571,72 @@ AFRAME.registerComponent("city-world-controller",{
     requestAnimationFrame(step);
   },
 
+  showStoryCityMini:function(){
+    const mini=document.getElementById("storyCityMini");
+    if(!mini)return;
+    mini.classList.remove("to-center");
+    mini.style.display="block";
+    requestAnimationFrame(()=>mini.classList.add("show"));
+  },
+
+  hideStoryCityMini:function(animate=true){
+    const mini=document.getElementById("storyCityMini");
+    if(!mini)return;
+
+    if(!animate){
+      mini.classList.remove("show","to-center");
+      mini.style.display="none";
+      return;
+    }
+
+    mini.classList.add("to-center");
+    mini.classList.remove("show");
+    setTimeout(()=>{
+      mini.classList.remove("to-center");
+      mini.style.display="none";
+    },760);
+  },
+
+  enterCityStoryView:function(){
+    // STORY uses a fixed screen-space miniature, not the AR world pose.
+    if(this.world)this.world.object3D.visible=false;
+    this.showStoryCityMini();
+
+    if(this.hitPark)this.hitPark.style.display="none";
+    if(this.hitMarket)this.hitMarket.style.display="none";
+  },
+
+  enterCityInteractView:function(){
+    // Animate the miniature toward the center while the real AR CITY fades in.
+    this.hideStoryCityMini(true);
+
+    if(this.world){
+      this.world.object3D.visible=true;
+      this.world.setAttribute("animation__storyin",
+        "property: scale; from:.55 .55 .55; to:1 1 1; dur:760; easing:easeInOutCubic");
+    }
+
+    if(this.hitPark)this.hitPark.style.display="block";
+    if(this.hitMarket)this.hitMarket.style.display="block";
+    setTimeout(()=>this.updateHitPositions(),780);
+  },
+
   showWorld:function(){
     window.citySelectedScene=null;
     window.ClassroomActivityMode?.setScene("city");
 
-    // Keep hand tracking available in the background, but CITY begins in
-    // STORY mode so the cursor and gesture actions stay hidden until INTERACT.
     window.ClassroomHandMode?.startCity();
 
     if(this.backBtn)this.backBtn.style.display="none";
 
-    // Building recognition first reveals a small, distant CITY in STORY mode.
-    this.applyCityNarrativeLayout("story",false);
+    // Keep normal internal CITY panel transforms ready for INTERACT.
+    this.setPanel(this.building,"0 0.34 0.02","1 1 1",1);
+    this.setPanel(this.park,"-0.72 -0.42 0.03",".78 .78 .78",1);
+    this.setPanel(this.market,"0.72 -0.42 0.03",".78 .78 .78",1);
+
+    // STORY: hide the AR city and show a small fixed miniature in upper-left.
+    this.enterCityStoryView();
+
     if(this.parkInteraction)this.parkInteraction.object3D.visible=false;
     if(this.marketInteraction)this.marketInteraction.object3D.visible=false;
 
@@ -580,9 +644,9 @@ AFRAME.registerComponent("city-world-controller",{
     const marketBg=document.getElementById("marketDynamicBackground");
     if(parkBg)parkBg.object3D.visible=false;
     if(marketBg)marketBg.object3D.visible=false;
+
     document.getElementById("parkDragLayer").style.display="none";
     document.getElementById("marketHoldLayer").style.display="none";
-    this.updateHitPositions();
   },
   setPanel:function(el,pos,scale,opacity){
     el.object3D.visible=true;

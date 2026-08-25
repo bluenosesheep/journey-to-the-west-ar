@@ -109,3 +109,53 @@ body::after{
   visibility:hidden !important;
   pointer-events:none !important;
 }
+
+/* CITY STORY MINIATURE - fixed screen-space composition.
+   This deliberately does NOT depend on the Building target pose. */
+#storyCityMini{
+  position:fixed;
+  left:28px;
+  top:86px;
+  width:300px;
+  height:230px;
+  z-index:44;
+  display:none;
+  pointer-events:none;
+  transform-origin:50% 50%;
+  opacity:0;
+  transition:
+    opacity .38s ease,
+    transform .72s cubic-bezier(.2,.8,.2,1),
+    left .72s cubic-bezier(.2,.8,.2,1),
+    top .72s cubic-bezier(.2,.8,.2,1);
+}
+#storyCityMini.show{
+  display:block;
+  opacity:1;
+}
+#storyCityMini.to-center{
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%) scale(2.65);
+  opacity:0;
+}
+#storyCityMini img{
+  position:absolute;
+  object-fit:contain;
+  filter:drop-shadow(0 6px 10px rgba(0,0,0,.18));
+}
+#storyCityMini .mini-building{
+  width:48%;
+  left:26%;
+  top:0;
+}
+#storyCityMini .mini-park{
+  width:55%;
+  left:0;
+  bottom:0;
+}
+#storyCityMini .mini-market{
+  width:55%;
+  right:0;
+  bottom:0;
+}
