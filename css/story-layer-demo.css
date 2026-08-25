@@ -1,0 +1,9 @@
+/* STORY LAYER DEMO ONLY */
+body.story-mode video{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important;z-index:30!important;opacity:.78!important;pointer-events:none!important;transform:none!important;transition:opacity .3s ease}
+body.story-mode a-scene,body.story-mode .a-canvas,body.story-mode canvas.a-canvas{z-index:10!important}
+body.interact-mode video{z-index:0!important;opacity:1!important;transform:none!important;transition:opacity .3s ease}
+body.interact-mode a-scene,body.interact-mode .a-canvas,body.interact-mode canvas.a-canvas{z-index:10!important}
+#cityHitLayer,#parkDragLayer,#marketHoldLayer,#holdHitLayer{z-index:45!important}
+#sceneBackBtn{z-index:60!important}#hint{z-index:61!important}
+#classroomModeSwitch{z-index:82!important}#classroomHandCursor{z-index:84!important}#classroomHandStatus{z-index:83!important}
+body::after{content:"STORY LAYER DEMO";position:fixed;right:14px;bottom:14px;z-index:96;padding:6px 10px;border-radius:999px;background:rgba(0,0,0,.56);color:#fff;font:700 11px/1 system-ui;pointer-events:none}
