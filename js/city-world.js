@@ -662,12 +662,14 @@ AFRAME.registerComponent("city-world-controller",{
       this.lastMatrix.decompose(p,q,s);
 
       // Slightly smaller than the previous full-size CITY so nothing clips.
-      const endScale=s.clone().multiplyScalar(.86);
+      const endScale=s.clone().multiplyScalar(.82);
       const startScale=endScale.clone().multiplyScalar(.62);
 
       // Screen-space narrative center.
       // Keeping z from the tracked pose preserves projection depth.
-      const endPos=new THREE.Vector3(0,0.02,p.z);
+      // Place the city slightly lower than mathematical center so the
+      // tallest building stays comfortably inside the frame.
+      const endPos=new THREE.Vector3(0,-0.16,p.z);
 
       obj.position.copy(endPos);
       obj.quaternion.identity();
