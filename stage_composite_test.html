@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stage Composite Test</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+#video{position:fixed;width:1px;height:1px;opacity:0}#output{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;background:#111}
+#controls{position:fixed;left:18px;top:18px;z-index:30;width:330px;max-height:calc(100vh - 36px);overflow:auto;padding:15px;border-radius:16px;background:rgba(255,255,255,.95);box-shadow:0 8px 28px rgba(0,0,0,.25)}
+h2{font-size:17px;margin:0 0 8px}p{font-size:13px;line-height:1.45;color:#555}
+button{border:0;border-radius:999px;padding:10px 13px;margin:3px;background:#eee;font:700 13px system-ui;cursor:pointer}button.primary{background:#fff0a8}button.active{outline:3px solid rgba(220,175,45,.55)}
+label{display:grid;grid-template-columns:92px 1fr 45px;gap:7px;align-items:center;font-size:13px;margin:9px 0}input{width:100%}
+#tip{position:fixed;right:18px;bottom:18px;z-index:20;width:390px;max-width:calc(100vw - 36px);padding:15px 16px;border-radius:16px;background:rgba(20,20,20,.76);color:white;font:14px/1.55 system-ui}
+#status{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:25;padding:9px 14px;border-radius:999px;background:rgba(255,255,255,.94);font:700 14px system-ui}
+#start{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:50;padding:16px 25px;background:white;font-size:18px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+</style>
+</head>
+<body>
+<video id="video" autoplay muted playsinline></video>
+<canvas id="output"></canvas>
+<div id="status">Stage Composite Demo</div>
+
+<div id="controls">
+<h2>软件舞台合成 Demo</h2>
+<p>先拍一张“没有玩偶”的舞台背景。之后只保留舞台里发生变化的物体，把它们叠到数字背景上。</p>
+
+<button id="calibrate" class="primary">① 捕获空舞台背景</button>
+<button id="resetCal">清除校准</button>
+
+<div style="margin:10px 0 4px"><b>数字背景</b></div>
+<button data-style="park" class="active">Park</button>
+<button data-style="market">Market</button>
+<button data-style="city">City</button>
+
+<label><span>变化阈值</span><input id="threshold" type="range" min="8" max="90" value="34" step="1"><output>34</output></label>
+<label><span>边缘柔和</span><input id="softness" type="range" min="4" max="70" value="30" step="1"><output>30</output></label>
+
+<div style="margin:10px 0 4px"><b>舞台区域</b></div>
+<label><span>宽度</span><input id="width" type="range" min=".25" max=".80" value=".54" step=".01"><output>.54</output></label>
+<label><span>高度</span><input id="height" type="range" min=".25" max=".80" value=".54" step=".01"><output>.54</output></label>
+<label><span>左右</span><input id="cx" type="range" min=".15" max=".85" value=".50" step=".01"><output>.50</output></label>
+<label><span>上下</span><input id="cy" type="range" min=".18" max=".85" value=".56" step=".01"><output>.56</output></label>
+</div>
+
+<div id="tip">
+<b>测试方法</b><br>
+1. 让舞台框里先没有纸板人物，点“捕获空舞台背景”。<br>
+2. 再把你剪的纸板人物放进框里。<br>
+3. 理想情况：脸和办公室因为已经存在于“空背景”里，会被消掉；后来放进去的纸板人物会留下。<br><br>
+如果你本人或灯光移动很多，背景 subtraction 可能会把这些变化也当成前景——这正是这个 Demo 要测试的。
+</div>
+
+<button id="start">开启 Composite Demo</button>
+
+<script src="./js/stage-composite.js"></script>
+<script>
+const video=document.getElementById("video"),output=document.getElementById("output"),status=document.getElementById("status"),startBtn=document.getElementById("start");
+let comp=null;
+
+startBtn.addEventListener("click",async()=>{
+  startBtn.disabled=true;
+  try{
+    comp=StageComposite.create({video,output});
+    await comp.start();
+    startBtn.style.display="none";
+    status.textContent="请先捕获空舞台背景";
+  }catch(e){
+    console.error(e);
+    startBtn.disabled=false;
+    status.textContent="启动失败";
+  }
+});
+
+document.getElementById("calibrate").addEventListener("click",()=>{
+  if(!comp)return;
+  comp.captureBackground();
+  status.textContent="背景已捕获 · 现在放入纸板人物";
+});
+
+document.getElementById("resetCal").addEventListener("click",()=>{
+  comp?.resetCalibration();
+  status.textContent="校准已清除";
+});
+
+document.querySelectorAll("[data-style]").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    if(!comp)return;
+    comp.update({stageStyle:btn.dataset.style});
+    document.querySelectorAll("[data-style]").forEach(b=>b.classList.toggle("active",b===btn));
+  });
+});
+
+["threshold","softness","width","height","cx","cy"].forEach(id=>{
+  const input=document.getElementById(id),out=input.nextElementSibling;
+  input.addEventListener("input",()=>{
+    out.textContent=input.value;
+    comp?.update({[id]:Number(input.value)});
+  });
+});
+</script>
+</body>
+</html>
