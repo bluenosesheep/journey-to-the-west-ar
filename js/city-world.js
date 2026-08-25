@@ -1,4 +1,82 @@
 
+window.ClassroomCameraOrientation={
+  angle:0,
+
+  normalize(angle){
+    const allowed=[0,90,180,270];
+    const n=Number(angle);
+    return allowed.includes(n)?n:0;
+  },
+
+  set(angle){
+    this.angle=this.normalize(angle);
+    document.documentElement.style.setProperty(
+      "--camera-rotation",
+      this.angle+"deg"
+    );
+
+    try{
+      localStorage.setItem("classroomCameraOrientation",String(this.angle));
+    }catch(_){}
+
+    const select=document.getElementById("cameraOrientationSelect");
+    if(select)select.value=String(this.angle);
+  },
+
+  init(){
+    let saved=0;
+    try{
+      saved=this.normalize(
+        Number(localStorage.getItem("classroomCameraOrientation")||0)
+      );
+    }catch(_){}
+
+    const select=document.getElementById("cameraOrientationSelect");
+    if(select){
+      select.value=String(saved);
+      select.addEventListener("change",()=>{
+        this.set(Number(select.value));
+      });
+    }
+
+    this.set(saved);
+  },
+
+  // Convert raw hand screen coordinates into the same orientation
+  // as the rotated camera preview.
+  mapPoint(x,y,width,height){
+    const a=this.angle;
+
+    if(a===90){
+      return {
+        x:width-(y/height)*width,
+        y:(x/width)*height
+      };
+    }
+
+    if(a===180){
+      return {
+        x:width-x,
+        y:height-y
+      };
+    }
+
+    if(a===270){
+      return {
+        x:(y/height)*width,
+        y:height-(x/width)*height
+      };
+    }
+
+    return {x,y};
+  }
+};
+
+document.addEventListener("DOMContentLoaded",()=>{
+  window.ClassroomCameraOrientation?.init();
+});
+
+
 window.ClassroomActivityMode={
  mode:"interact",scene:"city",
  init(){

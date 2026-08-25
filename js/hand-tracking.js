@@ -210,13 +210,24 @@ async function start(options={}){
         const pinchRatio = dist(indexTip,thumbTip)/palmSize;
 
         const vp = viewport();
-        const raw = mapTipToScreen(
+        let raw = mapTipToScreen(
           indexTip,
           video,
           vp.width,
           vp.height,
           mirror
         );
+
+        // Keep hand cursor / pinch coordinates aligned with the selected
+        // camera orientation (0 / 90 / 180 / 270 degrees).
+        if(window.ClassroomCameraOrientation?.mapPoint){
+          raw=window.ClassroomCameraOrientation.mapPoint(
+            raw.x,
+            raw.y,
+            vp.width,
+            vp.height
+          );
+        }
 
         if(smoothX===null){
           smoothX=raw.x;
