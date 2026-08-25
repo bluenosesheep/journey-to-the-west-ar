@@ -74,29 +74,3 @@ video{
   transform:none !important;
   -webkit-transform:none !important;
 }
-
-/* PUPPET FRONT DEMO ONLY */
-video{
-  position:fixed !important;
-  inset:0 !important;
-  width:100% !important;
-  height:100% !important;
-  object-fit:cover !important;
-  z-index:30 !important;
-  opacity:.72 !important;
-  pointer-events:none !important;
-  transform:none !important;
-}
-a-scene,.a-canvas,canvas.a-canvas{z-index:10 !important}
-#cityHitLayer,#parkDragLayer,#marketHoldLayer,#holdHitLayer{z-index:45 !important}
-#sceneBackBtn{z-index:60 !important}
-#hint{z-index:61 !important}
-#classroomHandCursor{z-index:80 !important}
-#classroomHandStatus{z-index:78 !important}
-body::after{
-  content:"PUPPET FRONT DEMO";
-  position:fixed;right:14px;bottom:14px;z-index:95;
-  padding:6px 10px;border-radius:999px;
-  background:rgba(0,0,0,.58);color:#fff;
-  font:700 11px/1 system-ui;pointer-events:none;
-}
