@@ -65,3 +65,12 @@ body.hand-market #hint{
   background:rgba(235,245,255,.92);
   box-shadow:0 0 0 4px rgba(255,255,255,.55),0 6px 26px rgba(0,0,0,.20);
 }
+
+
+/* Classroom presentation mode: show the camera as a normal camera,
+   not a selfie mirror. This keeps the child's left/right movement
+   consistent for the audience on the large display. */
+video{
+  transform:none !important;
+  -webkit-transform:none !important;
+}

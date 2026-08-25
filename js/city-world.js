@@ -60,7 +60,7 @@ window.ClassroomHandMode = {
       await window.ClassroomHandTracking.start({
         video,
         cursor,
-        mirror:true,
+        mirror:false,
         maxFps:24,
         smoothing:.38,
         pinchDownRatio:.34,
