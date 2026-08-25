@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shadow Puppet Story Stage Demo</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+#video{position:fixed;width:1px;height:1px;opacity:0;pointer-events:none}
+#stageCanvas{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;background:#111}
+#stageGuide{
+  position:fixed;z-index:20;border:3px solid rgba(255,245,190,.9);
+  border-radius:20px;box-shadow:0 0 0 9999px rgba(0,0,0,.03),0 0 28px rgba(255,238,150,.28);
+  pointer-events:none;transition:opacity .25s;
+}
+#stageGuide::before{
+  content:"皮影故事舞台";
+  position:absolute;left:50%;top:-42px;transform:translateX(-50%);
+  padding:7px 12px;border-radius:999px;background:rgba(255,250,220,.94);
+  color:#554b2d;font:800 14px system-ui;white-space:nowrap;
+}
+#controls{
+  position:fixed;z-index:40;left:18px;top:18px;width:310px;
+  max-height:calc(100vh - 36px);overflow:auto;
+  padding:15px;border-radius:16px;background:rgba(255,255,255,.94);
+  color:#222;box-shadow:0 8px 28px rgba(0,0,0,.24);
+}
+#controls h2{font-size:17px;margin:0 0 8px}
+#controls p{font-size:13px;line-height:1.45;margin:6px 0 12px;color:#555}
+.modeRow{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+button{
+  border:0;border-radius:999px;padding:9px 12px;background:#eee;color:#222;
+  font:700 13px system-ui;cursor:pointer
+}
+button.active{outline:3px solid rgba(235,190,70,.65);background:#fff6cf}
+label{display:grid;grid-template-columns:92px 1fr 43px;gap:7px;align-items:center;font-size:13px;margin:9px 0}
+input[type=range]{width:100%}
+#start{
+  position:fixed;z-index:60;left:50%;top:50%;transform:translate(-50%,-50%);
+  padding:16px 25px;background:white;font-size:18px;box-shadow:0 10px 30px rgba(0,0,0,.3)
+}
+#tip{
+  position:fixed;right:18px;bottom:18px;z-index:30;width:360px;max-width:calc(100vw - 36px);
+  padding:14px 16px;border-radius:16px;background:rgba(20,20,20,.72);color:white;
+  font:14px/1.55 system-ui
+}
+@media(max-width:800px){#controls{width:280px}#tip{display:none}}
+</style>
+</head>
+<body>
+<video id="video" autoplay muted playsinline></video>
+<canvas id="stageCanvas"></canvas>
+<div id="stageGuide"></div>
+
+<div id="controls">
+  <h2>40 × 40 cm 皮影舞台 Demo</h2>
+  <p>现在先用屏幕中的正方形模拟未来的实体舞台盒子。框内保持清晰，框外弱化。</p>
+
+  <div class="modeRow">
+    <button data-mode="original">Original</button>
+    <button class="active" data-mode="soft">Soft Stage</button>
+    <button data-mode="dark">Dark Stage</button>
+  </div>
+
+  <label><span>舞台宽度</span><input id="width" type="range" min=".25" max=".80" value=".54" step=".01"><output>.54</output></label>
+  <label><span>舞台高度</span><input id="height" type="range" min=".25" max=".80" value=".54" step=".01"><output>.54</output></label>
+  <label><span>左右位置</span><input id="cx" type="range" min=".15" max=".85" value=".50" step=".01"><output>.50</output></label>
+  <label><span>上下位置</span><input id="cy" type="range" min=".18" max=".85" value=".56" step=".01"><output>.56</output></label>
+  <label><span>外围虚化</span><input id="blur" type="range" min="0" max="30" value="16" step="1"><output>16</output></label>
+  <label><span>外围压暗</span><input id="dim" type="range" min="0" max=".55" value=".20" step=".01"><output>.20</output></label>
+
+  <button id="toggleGuide">隐藏舞台框</button>
+</div>
+
+<div id="tip">
+<b>Demo 测试方法</b><br>
+现在可以拿一本书、纸盒或 A4 纸模拟 40×40cm 舞台。把它放在屏幕舞台框的位置。<br><br>
+重点看：如果 12cm 左右的“角色”完全离开人的身体轮廓，但仍在舞台框内，它应该始终保持清晰——这就是这个方案相对人物分割最大的优势。
+</div>
+
+<button id="start">开启舞台 Demo</button>
+
+<script src="./js/story-stage.js"></script>
+<script>
+const video=document.getElementById("video");
+const canvas=document.getElementById("stageCanvas");
+const guide=document.getElementById("stageGuide");
+const startBtn=document.getElementById("start");
+
+let stage=null;
+
+function updateGuide(){
+  if(!stage)return;
+  const r=stage.getStageScreenRect();
+  guide.style.left=r.left+"px";
+  guide.style.top=r.top+"px";
+  guide.style.width=r.width+"px";
+  guide.style.height=r.height+"px";
+}
+
+startBtn.addEventListener("click",async()=>{
+  startBtn.disabled=true;
+  try{
+    stage=StoryStage.create({video,canvas,onChange:updateGuide});
+    await stage.start();
+    startBtn.style.display="none";
+    updateGuide();
+    window.addEventListener("resize",updateGuide);
+  }catch(err){
+    console.error(err);
+    startBtn.disabled=false;
+    startBtn.textContent="重新开启";
+  }
+});
+
+document.querySelectorAll("[data-mode]").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    if(!stage)return;
+    stage.update({mode:btn.dataset.mode});
+    document.querySelectorAll("[data-mode]").forEach(b=>b.classList.toggle("active",b===btn));
+  });
+});
+
+["width","height","cx","cy","blur","dim"].forEach(id=>{
+  const input=document.getElementById(id);
+  const out=input.nextElementSibling;
+  input.addEventListener("input",()=>{
+    out.textContent=input.value;
+    if(!stage)return;
+    stage.update({[id]:Number(input.value)});
+    updateGuide();
+  });
+});
+
+document.getElementById("toggleGuide").addEventListener("click",(e)=>{
+  const hidden=guide.style.opacity==="0";
+  guide.style.opacity=hidden?"1":"0";
+  e.currentTarget.textContent=hidden?"隐藏舞台框":"显示舞台框";
+});
+</script>
+</body>
+</html>
