@@ -1,4 +1,14 @@
 
+document.addEventListener("DOMContentLoaded",()=>{
+  const mini=document.getElementById("storyCityMini");
+  if(mini){
+    mini.hidden=true;
+    mini.setAttribute("hidden","");
+    mini.style.display="none";
+    mini.style.opacity="0";
+  }
+});
+
 window.ClassroomCameraOrientation={
   angle:0,
 
@@ -574,8 +584,13 @@ AFRAME.registerComponent("city-world-controller",{
   showStoryCityMini:function(){
     const mini=document.getElementById("storyCityMini");
     if(!mini)return;
+
+    mini.hidden=false;
+    mini.removeAttribute("hidden");
     mini.classList.remove("to-center");
     mini.style.display="block";
+    mini.style.opacity="";
+
     requestAnimationFrame(()=>mini.classList.add("show"));
   },
 
@@ -586,6 +601,9 @@ AFRAME.registerComponent("city-world-controller",{
     if(!animate){
       mini.classList.remove("show","to-center");
       mini.style.display="none";
+      mini.style.opacity="0";
+      mini.hidden=true;
+      mini.setAttribute("hidden","");
       return;
     }
 
@@ -594,6 +612,9 @@ AFRAME.registerComponent("city-world-controller",{
     setTimeout(()=>{
       mini.classList.remove("to-center");
       mini.style.display="none";
+      mini.style.opacity="0";
+      mini.hidden=true;
+      mini.setAttribute("hidden","");
     },760);
   },
 
