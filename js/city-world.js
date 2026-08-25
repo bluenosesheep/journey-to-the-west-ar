@@ -11,19 +11,25 @@ window.ClassroomActivityMode={
  },
  setScene(scene){
   this.scene=scene;
-  if(scene==="city"){this.mode="interact";if(this.switchEl)this.switchEl.style.display="none";}
-  else{this.mode="story";if(this.switchEl)this.switchEl.style.display="flex";}
+
+  // CITY, PARK and MARKET all enter in STORY mode.
+  // Hand cursor appears only after the user explicitly chooses INTERACT.
+  this.mode="story";
+  if(this.switchEl)this.switchEl.style.display="flex";
+
   this.apply();
  },
- setStory(){if(this.scene==="city")return;this.mode="story";this.apply();},
+ setStory(){this.mode="story";this.apply();},
  setInteract(){
-  if(this.scene==="city")return;
-  this.mode="interact";this.apply();
+  this.mode="interact";
+  this.apply();
+
+  // Always require a fresh open-hand release before enabling gesture actions.
   window.ClassroomHandTracking?.requireReleaseToArm(300);
  },
- isInteract(){return this.scene==="city"||this.mode==="interact";},
+ isInteract(){return this.mode==="interact";},
  apply(){
-  const story=this.mode==="story"&&this.scene!=="city";
+  const story=this.mode==="story";
   document.body.classList.toggle("story-mode",story);
   document.body.classList.toggle("interact-mode",!story);
   this.storyBtn?.classList.toggle("active",this.mode==="story");
@@ -32,8 +38,15 @@ window.ClassroomActivityMode={
   const status=document.getElementById("classroomHandStatus");
   if(story){if(cursor)cursor.style.display="none";if(status)status.style.display="none";}
   const hint=document.getElementById("hint");
-  if(hint&&this.scene==="park")hint.textContent=story?"PARK · 🎭 STORY MODE · 用玩偶讲故事":"PARK · ✨ INTERACT MODE · 用手势布置公园";
-  if(hint&&this.scene==="market")hint.textContent=story?"MARKET · 🎭 STORY MODE · 用玩偶讲故事":"MARKET · ✨ INTERACT MODE · 用手势选择商品";
+  if(hint&&this.scene==="city")hint.textContent=story
+    ?"CITY · 🎭 STORY MODE · 用玩偶讲故事"
+    :"CITY · ✨ INTERACT MODE · 用手势选择 PARK 或 MARKET";
+  if(hint&&this.scene==="park")hint.textContent=story
+    ?"PARK · 🎭 STORY MODE · 用玩偶讲故事"
+    :"PARK · ✨ INTERACT MODE · 用手势布置公园";
+  if(hint&&this.scene==="market")hint.textContent=story
+    ?"MARKET · 🎭 STORY MODE · 用玩偶讲故事"
+    :"MARKET · ✨ INTERACT MODE · 用手势选择商品";
   requestAnimationFrame(()=>{if(typeof alignBackButtonWithHint==="function")alignBackButtonWithHint();});
  }
 };
@@ -218,6 +231,7 @@ AFRAME.registerComponent("city-world-controller",{
     window.CityInput.register("city-select",{
       down:(input)=>{
         if(input.source!=="hand")return;
+        if(!window.ClassroomActivityMode?.isInteract())return;
         if(window.citySelectedScene!==null)return;
 
         const inside=(el,pad=8)=>{
@@ -389,12 +403,9 @@ AFRAME.registerComponent("city-world-controller",{
     window.citySelectedScene=null;
     window.ClassroomActivityMode?.setScene("city");
 
-    // CITY also uses release-to-arm.
-    // This prevents the pinch used to hold the Building card (or RETURN CITY)
-    // from immediately selecting PARK / MARKET as soon as CITY appears.
-    Promise.resolve(window.ClassroomHandMode?.startCity()).then(()=>{
-      window.ClassroomHandTracking?.requireReleaseToArm(300);
-    });
+    // Keep hand tracking available in the background, but CITY begins in
+    // STORY mode so the cursor and gesture actions stay hidden until INTERACT.
+    window.ClassroomHandMode?.startCity();
 
     if(this.backBtn)this.backBtn.style.display="none";
     this.setPanel(this.building,"0 0.34 0.02","1 1 1",1);
