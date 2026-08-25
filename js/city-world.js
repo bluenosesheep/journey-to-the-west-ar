@@ -125,6 +125,16 @@ window.ClassroomActivityMode={
   if(hint&&this.scene==="market")hint.textContent=story
     ?"MARKET · 🎭 STORY MODE · 用玩偶讲故事"
     :"MARKET · ✨ INTERACT MODE · 用手势选择商品";
+
+  // CITY has a narrative layout:
+  // STORY = distant city in the upper-left.
+  // INTERACT = city comes forward to the center.
+  if(this.scene==="city"){
+    const target=document.querySelector('[city-world-controller]');
+    const comp=target?.components?.["city-world-controller"];
+    comp?.applyCityNarrativeLayout(this.mode,true);
+  }
+
   requestAnimationFrame(()=>{if(typeof alignBackButtonWithHint==="function")alignBackButtonWithHint();});
  }
 };
@@ -477,6 +487,43 @@ AFRAME.registerComponent("city-world-controller",{
     this.hint.textContent="CITY WORLD · 点击 PARK 或 MARKET 进入场景";
   },
 
+  applyCityNarrativeLayout:function(mode,animate=true){
+    if(!this.building||!this.park||!this.market)return;
+
+    const isStory=mode==="story";
+
+    // STORY: compact "far-away city" in the upper-left.
+    // INTERACT: restore the larger centered city layout.
+    const layout=isStory ? {
+      building:{pos:"-0.68 0.54 0.02",scale:".40 .40 .40"},
+      park:{pos:"-0.94 0.02 0.03",scale:".31 .31 .31"},
+      market:{pos:"-0.43 0.02 0.03",scale:".31 .31 .31"}
+    } : {
+      building:{pos:"0 0.34 0.02",scale:"1 1 1"},
+      park:{pos:"-0.72 -0.42 0.03",scale:".78 .78 .78"},
+      market:{pos:"0.72 -0.42 0.03",scale:".78 .78 .78"}
+    };
+
+    const applyOne=(el,cfg)=>{
+      if(animate){
+        this.animatePanel(el,cfg.pos,cfg.scale,1);
+      }else{
+        this.setPanel(el,cfg.pos,cfg.scale,1);
+      }
+    };
+
+    applyOne(this.building,layout.building);
+    applyOne(this.park,layout.park);
+    applyOne(this.market,layout.market);
+
+    // PARK / MARKET should not be selectable while the child is still narrating
+    // "the city is far away". They become selectable only after INTERACT.
+    if(this.hitPark)this.hitPark.style.display=isStory?"none":"block";
+    if(this.hitMarket)this.hitMarket.style.display=isStory?"none":"block";
+
+    setTimeout(()=>this.updateHitPositions(),animate?680:0);
+  },
+
   showWorld:function(){
     window.citySelectedScene=null;
     window.ClassroomActivityMode?.setScene("city");
@@ -486,11 +533,9 @@ AFRAME.registerComponent("city-world-controller",{
     window.ClassroomHandMode?.startCity();
 
     if(this.backBtn)this.backBtn.style.display="none";
-    this.setPanel(this.building,"0 0.34 0.02","1 1 1",1);
-    this.setPanel(this.park,"-0.72 -0.42 0.03",".78 .78 .78",1);
-    this.setPanel(this.market,"0.72 -0.42 0.03",".78 .78 .78",1);
-    this.hitPark.style.display="block";
-    this.hitMarket.style.display="block";
+
+    // Building recognition first reveals a small, distant CITY in STORY mode.
+    this.applyCityNarrativeLayout("story",false);
     if(this.parkInteraction)this.parkInteraction.object3D.visible=false;
     if(this.marketInteraction)this.marketInteraction.object3D.visible=false;
 
