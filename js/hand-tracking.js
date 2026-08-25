@@ -36,6 +36,16 @@ let pinching = false;
 let smoothX = null;
 let smoothY = null;
 
+// Gesture safety state.
+// When a recognition card is being held, the hand often looks like a pinch.
+// Interactions are therefore "disarmed" until we see an open/non-pinching
+// hand continuously for a short period.
+let inputArmed = true;
+let requireRelease = false;
+let releaseSince = null;
+let releaseHoldMs = 300;
+let onArmedChange = null;
+
 const HAND_POINTER_ID = "hand-1";
 
 function dist(a,b){
@@ -53,14 +63,19 @@ function mapTipToScreen(tip, video, viewportWidth, viewportHeight, mirror){
   };
 }
 
-function updateCursor(cursor,x,y,isPinching,visible){
+function updateCursor(cursor,x,y,isPinching,visible,armed=true){
   if(!cursor)return;
   cursor.style.display = visible ? "grid" : "none";
   if(!visible)return;
+
   cursor.style.left = x + "px";
   cursor.style.top = y + "px";
-  cursor.classList.toggle("pinching",isPinching);
-  cursor.textContent = isPinching ? "🤏" : "✨";
+
+  cursor.classList.toggle("pinching",armed && isPinching);
+  cursor.classList.toggle("gesture-locked",!armed);
+
+  if(!armed)cursor.textContent="✋";
+  else cursor.textContent = isPinching ? "🤏" : "✨";
 }
 
 async function createLandmarker(onStatus){
@@ -124,6 +139,7 @@ async function start(options={}){
 
   // Coordinate smoothing reduces hand jitter on a large classroom display.
   const smoothing = options.smoothing ?? 0.35;
+  onArmedChange = options.onArmedChange || null;
 
   if(options.reuseExistingVideo){
     stream = video.srcObject || null;
@@ -163,6 +179,9 @@ async function start(options={}){
   pinching = false;
   smoothX = null;
   smoothY = null;
+  inputArmed = true;
+  requireRelease = false;
+  releaseSince = null;
 
   onStatus("请把一只手伸到镜头前");
 
@@ -214,28 +233,50 @@ async function start(options={}){
           pinching=false;
         }
 
-        // Always emit move while a hand is visible.
+        // Always emit move while a hand is visible. Move alone cannot activate
+        // Park/Market actions; it only moves the cursor / active drag.
         window.CityInput?.move(smoothX,smoothY,{
           source:"hand",
           pointerId:HAND_POINTER_ID
         });
 
-        if(!wasPinching && pinching){
-          window.CityInput?.down(smoothX,smoothY,{
-            source:"hand",
-            pointerId:HAND_POINTER_ID
-          });
-        }else if(wasPinching && !pinching){
-          window.CityInput?.up(smoothX,smoothY,{
-            source:"hand",
-            pointerId:HAND_POINTER_ID
-          });
+        // Release-to-arm safety:
+        // after a recognition card transition, ignore all pinch-down actions
+        // until the hand has been clearly open for releaseHoldMs.
+        if(requireRelease){
+          if(!pinching){
+            if(releaseSince===null)releaseSince=now;
+
+            if(now-releaseSince>=releaseHoldMs){
+              requireRelease=false;
+              inputArmed=true;
+              releaseSince=null;
+              onArmedChange?.(true);
+            }
+          }else{
+            releaseSince=null;
+          }
         }
 
-        updateCursor(cursor,smoothX,smoothY,pinching,true);
+        if(inputArmed && !requireRelease){
+          if(!wasPinching && pinching){
+            window.CityInput?.down(smoothX,smoothY,{
+              source:"hand",
+              pointerId:HAND_POINTER_ID
+            });
+          }else if(wasPinching && !pinching){
+            window.CityInput?.up(smoothX,smoothY,{
+              source:"hand",
+              pointerId:HAND_POINTER_ID
+            });
+          }
+        }
+
+        updateCursor(cursor,smoothX,smoothY,pinching,true,inputArmed&&!requireRelease);
         onMetrics({
           handVisible:true,
           pinching,
+          armed:inputArmed&&!requireRelease,
           pinchRatio,
           x:smoothX,
           y:smoothY
@@ -250,10 +291,11 @@ async function start(options={}){
           );
         }
 
-        updateCursor(cursor,0,0,false,false);
+        updateCursor(cursor,0,0,false,false,inputArmed&&!requireRelease);
         onMetrics({
           handVisible:false,
           pinching:false,
+          armed:inputArmed&&!requireRelease,
           pinchRatio:null,
           x:null,
           y:null
@@ -265,6 +307,33 @@ async function start(options={}){
   };
 
   rafId=requestAnimationFrame(loop);
+}
+
+function arm(){
+  requireRelease=false;
+  inputArmed=true;
+  releaseSince=null;
+  onArmedChange?.(true);
+}
+
+function requireReleaseToArm(ms=300){
+  releaseHoldMs=Math.max(120,ms);
+  requireRelease=true;
+  inputArmed=false;
+  releaseSince=null;
+
+  // If an interaction was active, end it cleanly before locking.
+  window.CityInput?.up(
+    smoothX ?? window.innerWidth/2,
+    smoothY ?? window.innerHeight/2,
+    {source:"hand",pointerId:HAND_POINTER_ID}
+  );
+
+  onArmedChange?.(false);
+}
+
+function isArmed(){
+  return inputArmed && !requireRelease;
 }
 
 function stop(options={}){
@@ -297,4 +366,4 @@ function stop(options={}){
   }
 }
 
-window.ClassroomHandTracking = {start,stop};
+window.ClassroomHandTracking = {start,stop,arm,requireReleaseToArm,isArmed};

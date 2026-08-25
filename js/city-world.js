@@ -66,6 +66,13 @@ window.ClassroomHandMode = {
         pinchDownRatio:.34,
         pinchUpRatio:.44,
         reuseExistingVideo:true,
+        onArmedChange:(armed)=>{
+          if(!status)return;
+          if(!armed)status.textContent="放下识别卡，张开手 ✋";
+          else if(this.mode==="park")status.textContent="可以开始啦！PARK 🤏";
+          else if(this.mode==="market")status.textContent="可以开始啦！MARKET 🤏";
+          else if(this.mode==="city")status.textContent="手势：CITY";
+        },
         onStatus:(msg)=>{
           if(status && !this.running)status.textContent="手势："+msg;
         },
@@ -74,6 +81,11 @@ window.ClassroomHandMode = {
 
           if(!data.handVisible){
             status.textContent="手势：请伸出一只手";
+            return;
+          }
+
+          if(data.armed===false){
+            status.textContent="放下识别卡，张开手 ✋";
             return;
           }
 
@@ -334,6 +346,7 @@ AFRAME.registerComponent("city-world-controller",{
   showWorld:function(){
     window.citySelectedScene=null;
     window.ClassroomHandMode?.startCity();
+    window.ClassroomHandTracking?.arm();
     if(this.backBtn)this.backBtn.style.display="none";
     this.setPanel(this.building,"0 0.34 0.02","1 1 1",1);
     this.setPanel(this.park,"-0.72 -0.42 0.03",".78 .78 .78",1);
@@ -384,6 +397,7 @@ AFRAME.registerComponent("city-world-controller",{
   },
   focusPark:function(){
     window.ClassroomHandMode?.setMode("park");
+    window.ClassroomHandTracking?.requireReleaseToArm(300);
     window.citySelectedScene="park";
     if(this.backBtn){this.backBtn.style.display="block";alignBackButtonWithHint();}
     this.animatePanel(this.park,"0 0.08 0.03","1.95 1.95 1.95",1);
@@ -435,6 +449,7 @@ AFRAME.registerComponent("city-world-controller",{
       if(m)m.style.display="none";
 
       window.ClassroomHandMode?.startPark();
+      window.ClassroomHandTracking?.requireReleaseToArm(300);
     },540);
   },
 
@@ -480,10 +495,12 @@ AFRAME.registerComponent("city-world-controller",{
 
       // STEP 6: Market now uses the same hand cursor / pinch input.
       window.ClassroomHandMode?.startMarket();
+      window.ClassroomHandTracking?.requireReleaseToArm(300);
     },540);
   },
   focusMarket:function(){
     window.ClassroomHandMode?.setMode("market");
+    window.ClassroomHandTracking?.requireReleaseToArm(300);
     window.citySelectedScene="market";
     if(this.backBtn){this.backBtn.style.display="block";alignBackButtonWithHint();}
 

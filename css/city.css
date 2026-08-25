@@ -59,3 +59,9 @@ body.city-started .mindar-ui-scanning{
 body.hand-market #hint{
   bottom:max(92px,calc(env(safe-area-inset-bottom) + 72px));
 }
+
+#classroomHandCursor.gesture-locked{
+  opacity:.72;
+  background:rgba(235,245,255,.92);
+  box-shadow:0 0 0 4px rgba(255,255,255,.55),0 6px 26px rgba(0,0,0,.20);
+}
