@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chroma Stage Test</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+#video{position:fixed;width:1px;height:1px;opacity:0}#output{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;background:#111;cursor:crosshair}
+#controls{position:fixed;left:18px;top:18px;z-index:30;width:330px;max-height:calc(100vh - 36px);overflow:auto;padding:15px;border-radius:16px;background:rgba(255,255,255,.95);box-shadow:0 8px 28px rgba(0,0,0,.25)}
+h2{font-size:17px;margin:0 0 8px}p{font-size:13px;line-height:1.45;color:#555}
+button{border:0;border-radius:999px;padding:9px 12px;margin:3px;background:#eee;font:700 13px system-ui;cursor:pointer}button.active{outline:3px solid rgba(220,175,45,.55)}
+label{display:grid;grid-template-columns:92px 1fr 45px;gap:7px;align-items:center;font-size:13px;margin:9px 0}input{width:100%}
+#swatch{display:inline-block;width:28px;height:28px;border-radius:50%;vertical-align:middle;border:2px solid white;box-shadow:0 0 0 1px #777;margin-left:8px}
+#status{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:25;padding:9px 14px;border-radius:999px;background:rgba(255,255,255,.94);font:700 14px system-ui}
+#tip{position:fixed;right:18px;bottom:18px;z-index:20;width:390px;max-width:calc(100vw - 36px);padding:15px;border-radius:16px;background:rgba(20,20,20,.76);color:white;font:14px/1.55 system-ui}
+#start{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:50;padding:16px 25px;background:white;font-size:18px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+</style></head>
+<body>
+<video id="video" autoplay muted playsinline></video><canvas id="output"></canvas>
+<div id="status">Chroma Stage Demo</div>
+<div id="controls">
+<h2>纯色背景抠像 Demo</h2>
+<p>在舞台框后放一张尽量纯色的纸/布，然后点“吸取背景色”，再直接点击画面里的背景。</p>
+<button id="pick">吸取背景色</button><span id="swatch"></span>
+<div style="margin:10px 0 4px"><b>数字背景</b></div>
+<button data-style="park" class="active">Park</button><button data-style="market">Market</button><button data-style="city">City</button>
+<label><span>容差</span><input id="tolerance" type="range" min="10" max="120" value="58" step="1"><output>58</output></label>
+<label><span>边缘柔和</span><input id="softness" type="range" min="5" max="90" value="42" step="1"><output>42</output></label>
+<label><span>去色溢</span><input id="spill" type="range" min="0" max="1" value=".45" step=".05"><output>.45</output></label>
+<div style="margin:10px 0 4px"><b>舞台区域</b></div>
+<label><span>宽度</span><input id="width" type="range" min=".25" max=".80" value=".54" step=".01"><output>.54</output></label>
+<label><span>高度</span><input id="height" type="range" min=".25" max=".80" value=".54" step=".01"><output>.54</output></label>
+<label><span>左右</span><input id="cx" type="range" min=".15" max=".85" value=".50" step=".01"><output>.50</output></label>
+<label><span>上下</span><input id="cy" type="range" min=".18" max=".85" value=".56" step=".01"><output>.56</output></label>
+</div>
+<div id="tip"><b>测试：</b><br>找一张尽量纯色、且和纸板人物颜色差异大的纸放在人物后面。开启后点“吸取背景色”，再点那张纸。<br><br>理想结果：纯色纸消失，纸板人物完整保留并叠到数字 Park/Market/City 背景上。先不要追求最终背景颜色，我们现在只验证这种技术路线是否明显比前两个 Demo 稳。</div>
+<button id="start">开启 Chroma Demo</button>
+<script src="./js/chroma-stage.js"></script>
+<script>
+const video=document.getElementById("video"),output=document.getElementById("output"),status=document.getElementById("status"),startBtn=document.getElementById("start"),swatch=document.getElementById("swatch");
+let stage=null,picking=false;
+startBtn.addEventListener("click",async()=>{startBtn.disabled=true;try{stage=ChromaStage.create({video,output});await stage.start();startBtn.style.display="none";status.textContent="放好纯色背景后，点击“吸取背景色”";}catch(e){console.error(e);startBtn.disabled=false;status.textContent="启动失败";}});
+document.getElementById("pick").addEventListener("click",()=>{picking=true;status.textContent="现在点击舞台框里的纯色背景";});
+output.addEventListener("click",e=>{if(!picking||!stage)return;const c=stage.pickKeyFromScreen(e.clientX,e.clientY);swatch.style.background=`rgb(${c.r},${c.g},${c.b})`;status.textContent=`已吸取 RGB(${c.r}, ${c.g}, ${c.b})`;picking=false;});
+document.querySelectorAll("[data-style]").forEach(btn=>btn.addEventListener("click",()=>{stage?.update({stageStyle:btn.dataset.style});document.querySelectorAll("[data-style]").forEach(b=>b.classList.toggle("active",b===btn));}));
+["tolerance","softness","spill","width","height","cx","cy"].forEach(id=>{const input=document.getElementById(id),out=input.nextElementSibling;input.addEventListener("input",()=>{out.textContent=input.value;stage?.update({[id]:Number(input.value)});});});
+</script></body></html>
