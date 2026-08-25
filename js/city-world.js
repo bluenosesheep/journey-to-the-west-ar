@@ -360,6 +360,7 @@ AFRAME.registerComponent("city-world-controller",{
     this.hitPark=document.getElementById("hitCityPark");
     this.hitMarket=document.getElementById("hitCityMarket");
     this.camera=null;
+    this.cityInteractTransitioning=false;
     this.cityNarrativeMode="story";
 
     this.hitPark.addEventListener("click",()=>this.focusPark());
@@ -373,6 +374,12 @@ AFRAME.registerComponent("city-world-controller",{
     this.el.addEventListener("targetFound",()=>{
       this.tracking=true;
       document.body.classList.add("city-started");
+
+      // Cache the Building target pose immediately.
+      // STORY hides the real AR city, so we cannot rely on a later visible tick
+      // to remember where CITY should appear when INTERACT is pressed.
+      this.el.object3D.updateMatrixWorld(true);
+      this.lastMatrix.copy(this.el.object3D.matrixWorld);
 
       // First cold load: do not reveal white a-image planes before PNG textures are ready.
       this.world.object3D.visible=false;
@@ -444,20 +451,24 @@ AFRAME.registerComponent("city-world-controller",{
   },
 
   tick:function(){
-    if(this.tracking && this.world && this.world.object3D.visible){
+    if(this.tracking && this.world){
+      // Always keep the latest Building target pose, including during STORY
+      // when the real AR city is deliberately hidden.
       this.el.object3D.updateMatrixWorld(true);
       this.lastMatrix.copy(this.el.object3D.matrixWorld);
 
-      const p=new THREE.Vector3();
-      const q=new THREE.Quaternion();
-      const s=new THREE.Vector3();
-      this.lastMatrix.decompose(p,q,s);
+      if(this.world.object3D.visible && !this.cityInteractTransitioning){
+        const p=new THREE.Vector3();
+        const q=new THREE.Quaternion();
+        const s=new THREE.Vector3();
+        this.lastMatrix.decompose(p,q,s);
 
-      const obj=this.world.object3D;
-      obj.position.copy(p);
-      obj.quaternion.identity();
-      obj.scale.copy(s);
-      obj.updateMatrixWorld(true);
+        const obj=this.world.object3D;
+        obj.position.copy(p);
+        obj.quaternion.identity();
+        obj.scale.copy(s);
+        obj.updateMatrixWorld(true);
+      }
     }
 
     this.updateHitPositions();
@@ -628,18 +639,76 @@ AFRAME.registerComponent("city-world-controller",{
   },
 
   enterCityInteractView:function(){
-    // Animate the miniature toward the center while the real AR CITY fades in.
+    // Move the screen-space miniature toward center and hand off to the
+    // real A-Frame CITY at the last remembered Building pose.
     this.hideStoryCityMini(true);
 
     if(this.world){
-      this.world.object3D.visible=true;
-      this.world.setAttribute("animation__storyin",
-        "property: scale; from:.55 .55 .55; to:1 1 1; dur:760; easing:easeInOutCubic");
+      this.world.removeAttribute("animation__storyin");
+
+      const p=new THREE.Vector3();
+      const q=new THREE.Quaternion();
+      const s=new THREE.Vector3();
+      this.lastMatrix.decompose(p,q,s);
+
+      // If the target is still visible, refresh the remembered pose first.
+      if(this.tracking){
+        this.el.object3D.updateMatrixWorld(true);
+        this.lastMatrix.copy(this.el.object3D.matrixWorld);
+        this.lastMatrix.decompose(p,q,s);
+      }
+
+      const obj=this.world.object3D;
+      const startScale=s.clone().multiplyScalar(.52);
+      const endScale=s.clone();
+
+      obj.position.copy(p);
+      obj.quaternion.identity();
+      obj.scale.copy(startScale);
+      obj.visible=true;
+      obj.updateMatrixWorld(true);
+
+      const started=performance.now();
+      const duration=760;
+      const ease=t=>1-Math.pow(1-t,3);
+
+      const step=(now)=>{
+        const t=Math.min(1,(now-started)/duration);
+        const e=ease(t);
+
+        // While the Building target is still being shown, keep position tied
+        // to it, but do not let tick overwrite this scale transition.
+        if(this.tracking){
+          this.el.object3D.updateMatrixWorld(true);
+          this.lastMatrix.copy(this.el.object3D.matrixWorld);
+          const cp=new THREE.Vector3();
+          const cq=new THREE.Quaternion();
+          const cs=new THREE.Vector3();
+          this.lastMatrix.decompose(cp,cq,cs);
+          obj.position.copy(cp);
+          obj.scale.copy(cs).multiplyScalar(.52 + .48*e);
+        }else{
+          obj.position.copy(p);
+          obj.scale.lerpVectors(startScale,endScale,e);
+        }
+
+        obj.quaternion.identity();
+        obj.updateMatrixWorld(true);
+
+        if(t<1){
+          requestAnimationFrame(step);
+        }else{
+          this.cityInteractTransitioning=false;
+          this.updateHitPositions();
+        }
+      };
+
+      this.cityInteractTransitioning=true;
+      requestAnimationFrame(step);
     }
 
     if(this.hitPark)this.hitPark.style.display="block";
     if(this.hitMarket)this.hitMarket.style.display="block";
-    setTimeout(()=>this.updateHitPositions(),780);
   },
 
   showWorld:function(){
