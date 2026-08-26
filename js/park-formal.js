@@ -28,7 +28,7 @@ AFRAME.registerComponent("park-canvas",{
 
     // Formal Park artwork: tree PNG.
     this.treeImage=new Image();
-    this.treeImage.src="./assets/park/tree.png";
+    this.treeImage.src="./assets/park/tree.png?v=1";
 
     this.items={
       tree:{emoji:window.CityAssetConfig.park.tree.emoji,x:175,y:270,scale:1.55,rotation:-0.28},
