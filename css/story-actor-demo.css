@@ -181,11 +181,11 @@ body.story-mode.hand-park canvas.a-canvas{
    What is visible is exactly what receives click/touch/hand hit testing. */
 #parkDragReset.park-reset-visible{
   z-index:58 !important;
-  border:3px solid #6f8e42 !important;
+  border:2px solid #6f8e42 !important;
   border-radius:999px !important;
   background:rgba(255,248,220,.97) !important;
   color:#56713b !important;
-  font:700 15px/1 system-ui,sans-serif !important;
+  font:700 14px/1 system-ui,sans-serif !important;
   box-shadow:0 5px 16px rgba(0,0,0,.18) !important;
   cursor:pointer !important;
   pointer-events:auto !important;
