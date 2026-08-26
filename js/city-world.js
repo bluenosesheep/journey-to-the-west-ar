@@ -129,9 +129,15 @@ window.ClassroomActivityMode={
   if(hint&&this.scene==="city")hint.textContent=story
     ?"CITY · 🎭 STORY MODE · 用玩偶讲故事"
     :"CITY · ✨ INTERACT MODE · 用手势选择 PARK 或 MARKET";
-  if(hint&&this.scene==="park")hint.textContent=story
-    ?"PARK · 🎭 STORY MODE · 用玩偶讲故事"
-    :"PARK · ✨ INTERACT MODE · 用手势布置公园";
+  if(hint&&this.scene==="park"){
+    hint.textContent=story
+      ?"PARK · 🎭 糟糕，公园怎么乱成这样了？"
+      :"PARK · ✨ 用魔法把公园修好吧！";
+
+    const display=document.getElementById("parkInteractiveDisplay");
+    const canvasComp=display?.components?.["park-canvas"];
+    canvasComp?.setNarrativeMode(this.mode);
+  }
   if(hint&&this.scene==="market")hint.textContent=story
     ?"MARKET · 🎭 STORY MODE · 用玩偶讲故事"
     :"MARKET · ✨ INTERACT MODE · 用手势选择商品";
@@ -813,7 +819,11 @@ AFRAME.registerComponent("city-world-controller",{
       const parkBg=document.getElementById("parkDynamicBackground");
       if(parkBg)parkBg.object3D.visible=true;
 
-      // Then reveal the interaction.
+      // Then reveal the interaction in its messy STORY state.
+      const parkDisplay=document.getElementById("parkInteractiveDisplay");
+      const parkCanvasComp=parkDisplay?.components?.["park-canvas"];
+      if(parkCanvasComp)parkCanvasComp.setNarrativeMode("story");
+
       this.parkInteraction.object3D.visible=true;
       this.parkInteraction.setAttribute("position","0.22 -0.24 0.24");
       this.parkInteraction.setAttribute("scale",".74 .74 .74");

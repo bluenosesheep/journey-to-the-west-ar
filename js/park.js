@@ -12,12 +12,35 @@ AFRAME.registerComponent("park-canvas",{
       fountain:{x:530,y:120}
     };
 
-    this.items={
-      tree:{emoji:window.CityAssetConfig.park.tree.emoji,x:245,y:120,scale:1.55},
-      flower:{emoji:window.CityAssetConfig.park.flower.emoji,x:335,y:120,scale:.58},
-      bench:{emoji:window.CityAssetConfig.park.bench.emoji,x:435,y:120,scale:.72},
-      fountain:{emoji:window.CityAssetConfig.park.fountain.emoji,x:530,y:120,scale:1.08}
+    this.messy={
+      tree:{x:175,y:270,rotation:-0.28},
+      flower:{x:585,y:355,rotation:1.15},
+      bench:{x:305,y:330,rotation:0.58},
+      fountain:{x:500,y:265,rotation:-0.24}
     };
+
+    this.narrativeMode="story";
+
+    this.items={
+      tree:{emoji:window.CityAssetConfig.park.tree.emoji,x:175,y:270,scale:1.55,rotation:-0.28},
+      flower:{emoji:window.CityAssetConfig.park.flower.emoji,x:585,y:355,scale:.58,rotation:1.15},
+      bench:{emoji:window.CityAssetConfig.park.bench.emoji,x:305,y:330,scale:.72,rotation:.58},
+      fountain:{emoji:window.CityAssetConfig.park.fountain.emoji,x:500,y:265,scale:1.08,rotation:-.24}
+    };
+  },
+
+  setNarrativeMode:function(mode){
+    this.narrativeMode=mode;
+    if(mode==="story")this.resetMessy();
+  },
+
+  resetMessy:function(){
+    Object.entries(this.messy).forEach(([k,p])=>{
+      if(!this.items[k])return;
+      this.items[k].x=p.x;
+      this.items[k].y=p.y;
+      this.items[k].rotation=p.rotation||0;
+    });
   },
 
   setPosition:function(kind,x,y){
@@ -27,14 +50,12 @@ AFRAME.registerComponent("park-canvas",{
     // Keep objects inside the usable park area.
     item.x=Math.max(90,Math.min(678,x));
     item.y=Math.max(85,Math.min(430,y));
+    if(this.narrativeMode==="interact")item.rotation=0;
   },
 
   reset:function(){
-    Object.entries(this.initial).forEach(([k,p])=>{
-      this.items[k].x=p.x;
-      this.items[k].y=p.y;
-    });
-    document.getElementById("hint").textContent="PARK · 拖动这些东西来布置公园吧！🌳";
+    this.resetMessy();
+    document.getElementById("hint").textContent="PARK · 公园又乱了，重新施法修好它吧！✨";
   },
 
   tick:function(){
@@ -76,6 +97,24 @@ AFRAME.registerComponent("park-canvas",{
     ctx.fillText(window.CityAssetConfig.park.sprout.emoji,305,430);
     ctx.restore();
 
+    if(this.narrativeMode==="story"){
+      ctx.save();
+      ctx.globalAlpha=.82;
+      ctx.font='34px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+      ctx.fillText("🍂",150,315);
+      ctx.fillText("🍂",610,390);
+
+      ctx.font='700 34px system-ui,sans-serif';
+      ctx.fillStyle="rgba(180,60,55,.82)";
+      ctx.fillText("×",535,220);
+
+      ctx.fillStyle="rgba(95,145,190,.18)";
+      ctx.beginPath();
+      ctx.ellipse(500,320,62,16,0,0,Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+
     // 4) butterfly flies clearly back and forth across the park.
     const bt=performance.now()/1000;
     const travel=(Math.sin(bt*.72)+1)/2; // 0 -> 1 -> 0
@@ -95,6 +134,7 @@ AFRAME.registerComponent("park-canvas",{
     Object.values(this.items).forEach(item=>{
       ctx.save();
       ctx.translate(item.x,item.y);
+      ctx.rotate(item.rotation||0);
       ctx.scale(item.scale||1,item.scale||1);
       ctx.font='92px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
       ctx.fillText(item.emoji,0,0);
@@ -112,7 +152,7 @@ AFRAME.registerComponent("park-canvas",{
     ctx.stroke();
     ctx.fillStyle="#56713b";
     ctx.font='700 20px system-ui,sans-serif';
-    ctx.fillText("RESET",w/2,by+bh/2+1);
+    ctx.fillText("再试一次",w/2,by+bh/2+1);
     ctx.restore();
 
     const mesh=this.el.getObject3D("mesh");
@@ -355,7 +395,7 @@ AFRAME.registerComponent("park-drag-controller",{
       pxPerUnitY:scale.pxPerUnitY
     };
 
-    document.getElementById("hint").textContent="拖到你喜欢的位置！";
+    document.getElementById("hint").textContent="✨ 把它扶正，放回合适的位置！";
   },
 
   handleInputMove:function(input){
@@ -391,7 +431,7 @@ AFRAME.registerComponent("park-drag-controller",{
     if(this.dragState.pointerId!==input.pointerId)return;
 
     this.dragState=null;
-    document.getElementById("hint").textContent="PARK · 继续拖动来布置公园吧！🌳";
+    document.getElementById("hint").textContent="PARK · 继续修复公园吧！✨";
   },
 
   showHits:function(){
