@@ -143,26 +143,10 @@ AFRAME.registerComponent("park-canvas",{
       ctx.restore();
     });
 
-    // "再试一次" belongs to INTERACT only.
-    // Visual-only check: do NOT alter the proven drag hit zones/controller.
-    const parkIsInteract =
-      window.ClassroomActivityMode?.scene==="park" &&
-      window.ClassroomActivityMode?.mode==="interact";
+    // RESET is rendered as the real DOM button (#parkDragReset), not painted
+    // into the canvas. This guarantees the visible button and clickable area
+    // are the same element.
 
-    if(parkIsInteract){
-      const bx=w/2-86,by=458,bw=172,bh=40,br=20;
-      ctx.save();
-      roundRect(ctx,bx,by,bw,bh,br);
-      ctx.fillStyle="rgba(255,248,220,.96)";
-      ctx.fill();
-      ctx.lineWidth=3;
-      ctx.strokeStyle="#6f8e42";
-      ctx.stroke();
-      ctx.fillStyle="#56713b";
-      ctx.font='700 20px system-ui,sans-serif';
-      ctx.fillText("再试一次",w/2,by+bh/2+1);
-      ctx.restore();
-    }
 
     const mesh=this.el.getObject3D("mesh");
     if(mesh&&mesh.material&&mesh.material.map){
@@ -205,6 +189,21 @@ AFRAME.registerComponent("park-drag-controller",{
     };
 
     this.dragState=null;
+
+    // Use the existing reset hit element as the actual visible button.
+    // Direct DOM click makes mouse/touch reliable; CityInput still supports hand pinch.
+    this.hits.reset.textContent="再试一次";
+    this.hits.reset.classList.add("park-reset-visible");
+    this.hits.reset.addEventListener("click",(e)=>{
+      if(!window.ClassroomActivityMode?.isInteract())return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      if(this.dragState)return;
+      const comp=this.getCanvasComp();
+      if(comp)comp.reset();
+      document.getElementById("hint").textContent="PARK · 公园又乱了，重新施法修好它吧！✨";
+    });
 
     // STEP 3: Park receives normalized input from CityInput.
     // Mouse and future hand tracking share these same callbacks.
@@ -499,12 +498,13 @@ AFRAME.registerComponent("park-drag-controller",{
     if(rs){
       // Keep RESET easy to hit, but not so large that nearby dragged
       // Park objects accidentally enter its gesture zone.
-      const bw=Math.max(102,.80*scale.pxPerUnitX);
-      const bh=Math.max(48,.32*scale.pxPerUnitY);
+      const bw=Math.max(128,.86*scale.pxPerUnitX);
+      const bh=Math.max(52,.34*scale.pxPerUnitY);
       this.hits.reset.style.left=(rs.x-bw/2)+"px";
       this.hits.reset.style.top=(rs.y-bh/2)+"px";
       this.hits.reset.style.width=bw+"px";
       this.hits.reset.style.height=bh+"px";
+      this.hits.reset.style.display=resetInteract?"block":"none";
     }
   },
 

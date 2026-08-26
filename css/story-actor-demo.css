@@ -176,3 +176,21 @@ body.story-mode.hand-park canvas.a-canvas{
   opacity:1 !important;
   transition:opacity .30s ease;
 }
+
+/* V19: the Park reset control is now a real visible DOM button.
+   What is visible is exactly what receives click/touch/hand hit testing. */
+#parkDragReset.park-reset-visible{
+  z-index:58 !important;
+  border:3px solid #6f8e42 !important;
+  border-radius:999px !important;
+  background:rgba(255,248,220,.97) !important;
+  color:#56713b !important;
+  font:700 20px/1 system-ui,sans-serif !important;
+  box-shadow:0 5px 16px rgba(0,0,0,.18) !important;
+  cursor:pointer !important;
+  pointer-events:auto !important;
+  padding:0 18px !important;
+}
+body.story-mode.hand-park #parkDragReset.park-reset-visible{
+  display:none !important;
+}
