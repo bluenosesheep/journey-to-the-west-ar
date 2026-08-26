@@ -138,17 +138,6 @@ window.ClassroomActivityMode={
     const canvasComp=display?.components?.["park-canvas"];
     canvasComp?.setNarrativeMode(this.mode);
 
-    const parkTarget=document.querySelector('[mindar-image-target="targetIndex:1"]');
-    const parkDrag=parkTarget?.components?.["park-drag-controller"];
-
-    if(story){
-      parkDrag?.hideHits();
-    }else{
-      // Restore ALL drag hit zones (tree / flower / bench / fountain / reset).
-      // V15 only restored reset, which made INTERACT appear active but prevented dragging.
-      parkDrag?.showHits();
-      parkDrag?.updateHitPositions();
-    }
   }
   if(hint&&this.scene==="market")hint.textContent=story
     ?"MARKET · 🎭 STORY MODE · 用玩偶讲故事"
