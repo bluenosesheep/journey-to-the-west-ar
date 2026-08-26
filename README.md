@@ -73,3 +73,6 @@ journey-to-the-west-webar/
 AR = Magic / Motion / Atmosphere
 
 这样 AR 是儿童故事的“动态层”，而不是固定剧情播放器。
+
+## 资源文件
+交互场景图片 ：256*256
