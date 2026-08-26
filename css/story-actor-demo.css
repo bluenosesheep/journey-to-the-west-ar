@@ -176,3 +176,9 @@ body.story-mode.hand-park canvas.a-canvas{
   opacity:1 !important;
   transition:opacity .30s ease;
 }
+
+/* PARK STORY is narration-only: no invisible drag/reset controls. */
+body.story-mode.hand-park #parkDragLayer .park-drag-hit{
+  display:none !important;
+  pointer-events:none !important;
+}

@@ -144,7 +144,12 @@ AFRAME.registerComponent("park-canvas",{
     });
 
     // "再试一次" belongs to INTERACT only.
-    if(this.showReset){
+    // Read the live activity mode every frame instead of relying on cached state.
+    const parkIsInteract =
+      window.ClassroomActivityMode?.scene==="park" &&
+      window.ClassroomActivityMode?.mode==="interact";
+
+    if(parkIsInteract){
       const bx=w/2-86,by=458,bw=172,bh=40,br=20;
       ctx.save();
       roundRect(ctx,bx,by,bw,bh,br);
@@ -358,7 +363,10 @@ AFRAME.registerComponent("park-drag-controller",{
 
   handleInputDown:function(input){
     if(window.citySelectedScene!=="park")return;
-    if(input.source==="hand" && !window.ClassroomActivityMode?.isInteract())return;
+
+    // STORY is observation / narration only. No Park control should fire
+    // until INTERACT is explicitly selected.
+    if(!window.ClassroomActivityMode?.isInteract())return;
 
     const kind=this.hitKindAt(input.x,input.y,input.source);
     if(!kind)return;
@@ -403,7 +411,7 @@ AFRAME.registerComponent("park-drag-controller",{
   },
 
   handleInputMove:function(input){
-    if(input.source==="hand" && !window.ClassroomActivityMode?.isInteract())return;
+    if(!window.ClassroomActivityMode?.isInteract())return;
     if(!this.dragState)return;
     if(this.dragState.pointerId!==input.pointerId)return;
 
@@ -439,12 +447,14 @@ AFRAME.registerComponent("park-drag-controller",{
   },
 
   showHits:function(){
+    const interact=window.ClassroomActivityMode?.isInteract()===true;
+
     Object.entries(this.hits).forEach(([kind,b])=>{
-      if(kind==="reset" && !window.ClassroomActivityMode?.isInteract()){
+      if(!interact){
         b.style.display="none";
-      }else{
-        b.style.display="block";
+        return;
       }
+      b.style.display="block";
     });
   },
 
@@ -454,6 +464,12 @@ AFRAME.registerComponent("park-drag-controller",{
 
   updateHitPositions:function(){
     if(!this.world)return;
+
+    // Keep invisible interaction zones synchronized with STORY / INTERACT.
+    const interact=window.ClassroomActivityMode?.isInteract()===true;
+    if(!interact){
+      Object.values(this.hits).forEach(b=>b.style.display="none");
+    }
 
     const comp=this.getCanvasComp();
     if(!comp)return;
