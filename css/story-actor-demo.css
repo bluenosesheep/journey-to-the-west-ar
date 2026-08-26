@@ -164,3 +164,15 @@ body::after{
   display:none !important;
   opacity:0 !important;
 }
+
+
+/* PARK STORY visibility boost.
+   Global STORY keeps the softer AR treatment, but the messy PARK scene is
+   a narrative clue, so it needs to read clearly before interaction begins.
+   This affects presentation only; Park drag logic is untouched. */
+body.story-mode.hand-park a-scene,
+body.story-mode.hand-park .a-canvas,
+body.story-mode.hand-park canvas.a-canvas{
+  opacity:.82 !important;
+  transition:opacity .30s ease;
+}
