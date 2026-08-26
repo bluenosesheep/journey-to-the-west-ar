@@ -486,6 +486,12 @@ AFRAME.registerComponent("park-drag-controller",{
       b.style.height=sizePx+"px";
     });
 
+    // RESET is hidden in STORY and active in INTERACT.
+    const resetInteract =
+      window.ClassroomActivityMode?.scene==="park" &&
+      window.ClassroomActivityMode?.mode==="interact";
+    this.hits.reset.style.display=resetInteract?"block":"none";
+
     const resetLocal=this.canvasToLocal(this.canvasW/2,478);
     const resetWorld=resetLocal.applyMatrix4(obj.matrixWorld);
     const rs=this.projectWorld(resetWorld);

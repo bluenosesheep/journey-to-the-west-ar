@@ -138,6 +138,18 @@ window.ClassroomActivityMode={
     const canvasComp=display?.components?.["park-canvas"];
     canvasComp?.setNarrativeMode(this.mode);
 
+    // Only RESET needs mode-dependent hit visibility.
+    // Tree / flower / bench / fountain hit zones are deliberately untouched.
+    const resetHit=document.getElementById("parkDragReset");
+    if(resetHit){
+      resetHit.style.display=story?"none":"block";
+    }
+
+    if(!story){
+      const parkTarget=document.querySelector('[mindar-image-target="targetIndex:1"]');
+      const parkDrag=parkTarget?.components?.["park-drag-controller"];
+      parkDrag?.updateHitPositions();
+    }
   }
   if(hint&&this.scene==="market")hint.textContent=story
     ?"MARKET · 🎭 STORY MODE · 用玩偶讲故事"
