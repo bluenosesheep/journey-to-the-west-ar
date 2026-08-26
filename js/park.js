@@ -22,6 +22,10 @@ AFRAME.registerComponent("park-canvas",{
     this.narrativeMode="story";
     this.showReset=false;
 
+    // Formal Park artwork: bench PNG replaces the bench emoji only.
+    this.benchImage=new Image();
+    this.benchImage.src="./assets/park/bench.png";
+
     this.items={
       tree:{emoji:window.CityAssetConfig.park.tree.emoji,x:175,y:270,scale:1.55,rotation:-0.28},
       flower:{emoji:window.CityAssetConfig.park.flower.emoji,x:585,y:355,scale:.58,rotation:1.15},
@@ -138,8 +142,17 @@ AFRAME.registerComponent("park-canvas",{
       ctx.translate(item.x,item.y);
       ctx.rotate(item.rotation||0);
       ctx.scale(item.scale||1,item.scale||1);
-      ctx.font='92px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-      ctx.fillText(item.emoji,0,0);
+
+      if(kind==="bench" && this.benchImage?.complete && this.benchImage.naturalWidth){
+        // Keep the existing Park coordinates, rotation and drag scale.
+        // Draw the formal 256x256 bench centered on the exact old emoji anchor.
+        const bw=118;
+        const bh=118;
+        ctx.drawImage(this.benchImage,-bw/2,-bh/2,bw,bh);
+      }else{
+        ctx.font='92px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+        ctx.fillText(item.emoji,0,0);
+      }
       ctx.restore();
     });
 
