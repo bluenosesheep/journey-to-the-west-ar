@@ -54,7 +54,17 @@
     M.raf=0; if(!M.active)return;
     if(now>=M.until){clear('timeout');return}
     const c=M.canvas,ctx=M.ctx,w=c.width,h=c.height,t=(now-M.start)/1000;ctx.clearRect(0,0,w,h);const I=M.images[M.active]||{};
+
+    // Portfolio desktop demo: keep every magic effect at 60% of its original
+    // visual size while preserving its internal animation and screen center.
+    ctx.save();
+    ctx.translate(w*.5,h*.5);
+    ctx.scale(.60,.60);
+    ctx.translate(-w*.5,-h*.5);
+
     if(M.active==='cloud')drawCloud(I,w,h,t); else if(M.active==='fire')drawFire(I,w,h,t); else if(M.active==='rain')drawRain(I,w,h,t); else drawGrow(I,w,h,t);
+
+    ctx.restore();
     M.raf=requestAnimationFrame(render);
   }
   function sceneKey(){return `${window.citySelectedScene??'city'}|${window.ClassroomActivityMode?.scene??'city'}`}
