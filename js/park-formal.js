@@ -33,6 +33,8 @@ AFRAME.registerComponent("park-canvas",{
     // Formal Park artwork: fountain PNG.
     this.fountainImage=new Image();
     this.fountainImage.src="./assets/park/fountain.png?v=1";
+    this.flowerImage=new Image();
+    this.flowerImage.src="./assets/park/flower.png?v=1";
 
     this.items={
       tree:{emoji:window.CityAssetConfig.park.tree.emoji,x:175,y:270,scale:1.55,rotation:-0.28},
@@ -180,6 +182,15 @@ AFRAME.registerComponent("park-canvas",{
         const fw=108;
         const fh=108;
         ctx.drawImage(this.fountainImage,-fw/2,-fh/2,fw,fh);
+      }else if(
+        kind==="flower" &&
+        this.flowerImage &&
+        this.flowerImage.complete &&
+        this.flowerImage.naturalWidth>0
+      ){
+        const flw=110;
+        const flh=110;
+        ctx.drawImage(this.flowerImage,-flw/2,-flh/2,flw,flh);
       }else{
         ctx.font='92px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
         ctx.fillText(item.emoji,0,0);
