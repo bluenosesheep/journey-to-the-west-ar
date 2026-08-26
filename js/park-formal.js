@@ -26,6 +26,10 @@ AFRAME.registerComponent("park-canvas",{
     this.benchImage=new Image();
     this.benchImage.src="./assets/park/bench.png";
 
+    // Formal Park artwork: tree PNG.
+    this.treeImage=new Image();
+    this.treeImage.src="./assets/park/tree.png";
+
     this.items={
       tree:{emoji:window.CityAssetConfig.park.tree.emoji,x:175,y:270,scale:1.55,rotation:-0.28},
       flower:{emoji:window.CityAssetConfig.park.flower.emoji,x:585,y:355,scale:.58,rotation:1.15},
@@ -144,6 +148,16 @@ AFRAME.registerComponent("park-canvas",{
       ctx.scale(item.scale||1,item.scale||1);
 
       if(
+        kind==="tree" &&
+        this.treeImage &&
+        this.treeImage.complete &&
+        this.treeImage.naturalWidth>0
+      ){
+        // Keep the existing tree anchor, STORY tilt and drag scale.
+        const tw=112;
+        const th=112;
+        ctx.drawImage(this.treeImage,-tw/2,-th/2,tw,th);
+      }else if(
         kind==="bench" &&
         this.benchImage &&
         this.benchImage.complete &&
