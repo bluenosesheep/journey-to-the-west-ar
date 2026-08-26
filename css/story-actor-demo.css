@@ -173,6 +173,6 @@ body::after{
 body.story-mode.hand-park a-scene,
 body.story-mode.hand-park .a-canvas,
 body.story-mode.hand-park canvas.a-canvas{
-  opacity:.82 !important;
+  opacity:1 !important;
   transition:opacity .30s ease;
 }

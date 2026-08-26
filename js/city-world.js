@@ -137,6 +137,9 @@ window.ClassroomActivityMode={
     const display=document.getElementById("parkInteractiveDisplay");
     const canvasComp=display?.components?.["park-canvas"];
     canvasComp?.setNarrativeMode(this.mode);
+
+    const resetHit=document.getElementById("parkDragReset");
+    if(resetHit)resetHit.style.display=story?"none":"block";
   }
   if(hint&&this.scene==="market")hint.textContent=story
     ?"MARKET · 🎭 STORY MODE · 用玩偶讲故事"

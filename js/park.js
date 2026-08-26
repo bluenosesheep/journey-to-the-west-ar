@@ -20,6 +20,7 @@ AFRAME.registerComponent("park-canvas",{
     };
 
     this.narrativeMode="story";
+    this.showReset=false;
 
     this.items={
       tree:{emoji:window.CityAssetConfig.park.tree.emoji,x:175,y:270,scale:1.55,rotation:-0.28},
@@ -31,6 +32,7 @@ AFRAME.registerComponent("park-canvas",{
 
   setNarrativeMode:function(mode){
     this.narrativeMode=mode;
+    this.showReset=(mode==="interact");
     if(mode==="story")this.resetMessy();
   },
 
@@ -141,19 +143,21 @@ AFRAME.registerComponent("park-canvas",{
       ctx.restore();
     });
 
-    // RESET button.
-    const bx=w/2-86,by=458,bw=172,bh=40,br=20;
-    ctx.save();
-    roundRect(ctx,bx,by,bw,bh,br);
-    ctx.fillStyle="rgba(255,248,220,.96)";
-    ctx.fill();
-    ctx.lineWidth=3;
-    ctx.strokeStyle="#6f8e42";
-    ctx.stroke();
-    ctx.fillStyle="#56713b";
-    ctx.font='700 20px system-ui,sans-serif';
-    ctx.fillText("再试一次",w/2,by+bh/2+1);
-    ctx.restore();
+    // "再试一次" belongs to INTERACT only.
+    if(this.showReset){
+      const bx=w/2-86,by=458,bw=172,bh=40,br=20;
+      ctx.save();
+      roundRect(ctx,bx,by,bw,bh,br);
+      ctx.fillStyle="rgba(255,248,220,.96)";
+      ctx.fill();
+      ctx.lineWidth=3;
+      ctx.strokeStyle="#6f8e42";
+      ctx.stroke();
+      ctx.fillStyle="#56713b";
+      ctx.font='700 20px system-ui,sans-serif';
+      ctx.fillText("再试一次",w/2,by+bh/2+1);
+      ctx.restore();
+    }
 
     const mesh=this.el.getObject3D("mesh");
     if(mesh&&mesh.material&&mesh.material.map){
@@ -435,7 +439,13 @@ AFRAME.registerComponent("park-drag-controller",{
   },
 
   showHits:function(){
-    Object.values(this.hits).forEach(b=>b.style.display="block");
+    Object.entries(this.hits).forEach(([kind,b])=>{
+      if(kind==="reset" && !window.ClassroomActivityMode?.isInteract()){
+        b.style.display="none";
+      }else{
+        b.style.display="block";
+      }
+    });
   },
 
   hideHits:function(){
