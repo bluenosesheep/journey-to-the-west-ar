@@ -2,20 +2,28 @@
 
 这是一个 MindAR + A-Frame 的轻量 WebAR 模板，当前先跑通「筋斗云」故事卡。
 
-## 1. 先生成 targets.mind
-MindAR 需要把识别卡编译成 `.mind` 文件。
-
-打开官方 Target Compiler：
-https://hiukim.github.io/mind-ar-js-doc/tools/compile
-
-上传：
-`target-images/jingdouyun-card.png`
-
-下载编译结果后，把文件命名为：
-`targets.mind`
-
-然后放到项目根目录，与 `index.html` 同一级。
-
+## 1. 逻辑定义
+```text
+任何场景
+CITY / PARK / MARKET
+        │
+孩子继续讲故事
+        │
+需要魔法
+        ↓
+扫描魔法卡
+☁️ CLOUD / 🔥 FIRE / 🌧️ RAIN / 🌱 GROW
+        ↓
+魔法立即出现
+        ↓
+持续约 12–15 秒
+        │
+        ├─ 故事讲完 → 自动消失
+        │
+        └─ 还需要 → 再扫一次同一张卡
+                    ↓
+                 重新计时
+```
 ## 2. 项目结构
 ```text
 journey-to-the-west-webar/
