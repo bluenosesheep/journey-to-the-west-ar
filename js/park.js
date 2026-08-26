@@ -498,8 +498,8 @@ AFRAME.registerComponent("park-drag-controller",{
     if(rs){
       // Keep RESET easy to hit, but not so large that nearby dragged
       // Park objects accidentally enter its gesture zone.
-      const bw=Math.max(128,.86*scale.pxPerUnitX);
-      const bh=Math.max(52,.34*scale.pxPerUnitY);
+      const bw=Math.max(104,.54*scale.pxPerUnitX);
+      const bh=Math.max(42,.22*scale.pxPerUnitY);
       this.hits.reset.style.left=(rs.x-bw/2)+"px";
       this.hits.reset.style.top=(rs.y-bh/2)+"px";
       this.hits.reset.style.width=bw+"px";
