@@ -67,8 +67,25 @@
     ctx.restore();
     M.raf=requestAnimationFrame(render);
   }
-  function sceneKey(){return `${window.citySelectedScene??'city'}|${window.ClassroomActivityMode?.scene??'city'}`}
-  function watchScene(){const k=sceneKey();if(M.lastScene===null)M.lastScene=k;else if(k!==M.lastScene){M.lastScene=k;clear('scene-change')}setTimeout(watchScene,150)}
+  // Magic belongs to one narrative beat. Clear it whenever either the scene
+  // OR the STORY / INTERACT activity mode changes.
+  function sceneKey(){
+    return [
+      window.citySelectedScene??'city',
+      window.ClassroomActivityMode?.scene??'city',
+      window.ClassroomActivityMode?.mode??'story'
+    ].join('|');
+  }
+  function watchScene(){
+    const k=sceneKey();
+    if(M.lastScene===null){
+      M.lastScene=k;
+    }else if(k!==M.lastScene){
+      M.lastScene=k;
+      clear('scene-or-mode-change');
+    }
+    setTimeout(watchScene,150);
+  }
 
   window.ClassroomMagic={trigger,clear,get active(){return M.active},duration:DURATION};
   AFRAME.registerComponent('magic-target',{schema:{kind:{type:'string'}},init:function(){let latched=false;this.el.addEventListener('targetFound',()=>{if(latched)return;latched=true;trigger(this.data.kind)});this.el.addEventListener('targetLost',()=>{latched=false})}});
