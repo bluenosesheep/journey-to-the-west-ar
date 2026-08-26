@@ -137,13 +137,13 @@ AFRAME.registerComponent("park-canvas",{
     ctx.restore();
 
     // Draw movable items.
-    Object.values(this.items).forEach(item=>{
+    Object.entries(this.items).forEach(([kind,item])=>{
       ctx.save();
       ctx.translate(item.x,item.y);
       ctx.rotate(item.rotation||0);
       ctx.scale(item.scale||1,item.scale||1);
 
-      if(kind==="bench" && this.benchImage?.complete && this.benchImage.naturalWidth){
+      if(kind==="bench" && this.benchImage && this.benchImage.complete && this.benchImage.naturalWidth){
         // Keep the existing Park coordinates, rotation and drag scale.
         // Draw the formal 256x256 bench centered on the exact old emoji anchor.
         const bw=118;
