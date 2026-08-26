@@ -75,6 +75,17 @@ AFRAME.registerComponent("park-canvas",{
   },
 
   tick:function(){
+    // PERFORMANCE: Park canvas does no work unless Park is the active scene.
+    if(window.citySelectedScene!=="park")return;
+
+    // STORY is mostly visual narration; 20 FPS is enough.
+    // INTERACT gets 30 FPS so dragging remains responsive.
+    const now=performance.now();
+    const interact=window.ClassroomActivityMode?.isInteract()===true;
+    const frameMs=interact?33:50;
+    if(this._lastDrawTime && now-this._lastDrawTime<frameMs)return;
+    this._lastDrawTime=now;
+
     const ctx=this.ctx,c=this.c,w=c.width,h=c.height;
     ctx.clearRect(0,0,w,h);
     ctx.textAlign="center";

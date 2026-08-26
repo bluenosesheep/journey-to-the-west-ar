@@ -41,7 +41,7 @@
     if(!ASSETS[kind])return;
     ensureCanvas();
     await load(kind);
-    M.active=kind; M.start=performance.now(); M.until=M.start+DURATION;
+    M.active=kind; M.start=performance.now(); M.until=M.start+DURATION; M.lastDraw=0;
     M.canvas.style.display='block';
     hint(`MAGIC · ${LABEL[kind]} · 魔法出现了！`);
     if(!M.raf)M.raf=requestAnimationFrame(render);
@@ -51,8 +51,18 @@
   function drawRain(I,w,h,t){let cp=(t%2.4)/2.4,rp=(t%.9)/.9;let impact=Math.max(0,1-Math.abs(rp-.84)/.14);dc(M.ctx,I.drops,w*.5+Math.sin(rp*Math.PI*2)*1.2,h*.515+rp*58,w*.88,h*.50,0,.76);dc(M.ctx,I.cloud,w*.5+Math.sin(cp*Math.PI*2)*2,h*.25+Math.sin(cp*Math.PI*2)*6,w*.70,h*.45,0,1);dc(M.ctx,I.splash,w*.5,h*.81,w*.86*(.95+.10*impact),h*.27*(.95+.10*impact),0,.38+.58*impact)}
   function drawGrow(I,w,h,t){let phase=(t%6)/6,vp=ease(phase/.48),lp=smooth((phase-.28)/.34),fp=smooth((phase-.55)/.28),b=1+.018*Math.sin(t*2.2);if(I.vine&&vp>.01){let vw=w*.58,vh=h*.78,sy=I.vine.height*(1-vp),sh=I.vine.height*vp;M.ctx.save();M.ctx.globalAlpha=.98;M.ctx.drawImage(I.vine,0,sy,I.vine.width,sh,w*.21,h*.86-vh*vp,vw,vh*vp);M.ctx.restore()}if(lp>.01){M.ctx.save();M.ctx.translate(w*.5,h*.49);M.ctx.scale(1,b);M.ctx.globalAlpha=.78*lp;M.ctx.drawImage(I.leaves,-w*.56*(.9+.1*lp)/2,-h*.66*(.9+.1*lp)/2,w*.56*(.9+.1*lp),h*.66*(.9+.1*lp));M.ctx.restore()}if(fp>.01){let bs=.70+.30*fp;dc(M.ctx,I.flower,w*.5,h*.44,w*.50*bs,h*.60*bs,0,fp*(.92+.08*Math.sin(t*3)))}}
   function render(now){
-    M.raf=0; if(!M.active)return;
+    M.raf=0;
+    if(!M.active)return;
     if(now>=M.until){clear('timeout');return}
+
+    // PERFORMANCE: magic effects are narrative visuals, not gameplay.
+    // Render them at 30 FPS instead of the display's usual ~60 FPS.
+    if(M.lastDraw && now-M.lastDraw<33){
+      M.raf=requestAnimationFrame(render);
+      return;
+    }
+    M.lastDraw=now;
+
     const c=M.canvas,ctx=M.ctx,w=c.width,h=c.height,t=(now-M.start)/1000;ctx.clearRect(0,0,w,h);const I=M.images[M.active]||{};
 
     // Portfolio desktop demo: keep every magic effect at 60% of its original

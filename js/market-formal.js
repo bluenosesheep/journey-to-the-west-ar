@@ -32,6 +32,14 @@ AFRAME.registerComponent("market-canvas",{
     document.getElementById("hint").textContent="MARKET · 点一个食物放进篮筐吧！🧺";
   },
   tick:function(){
+    // PERFORMANCE: Market canvas does no work unless Market is active.
+    if(window.citySelectedScene!=="market")return;
+
+    // 30 FPS keeps the basket animation smooth without redrawing at 60 FPS.
+    const now=performance.now();
+    if(this._lastDrawTime && now-this._lastDrawTime<33)return;
+    this._lastDrawTime=now;
+
     const ctx=this.ctx,c=this.c,w=c.width,h=c.height;
     ctx.clearRect(0,0,w,h); // fully transparent canvas
 
