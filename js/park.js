@@ -469,6 +469,8 @@ AFRAME.registerComponent("park-drag-controller",{
     const interact=window.ClassroomActivityMode?.isInteract()===true;
     if(!interact){
       Object.values(this.hits).forEach(b=>b.style.display="none");
+    }else{
+      Object.values(this.hits).forEach(b=>b.style.display="block");
     }
 
     const comp=this.getCanvasComp();
