@@ -5,6 +5,8 @@ AFRAME.registerComponent("market-canvas",{
     // Formal Market artwork: peach PNG replaces peach emoji only.
     this.peachImage=new Image();
     this.peachImage.src="./assets/market/peach.png?v=1";
+    this.cabbageImage=new Image();
+    this.cabbageImage.src="./assets/market/cabbage.png?v=1";
 
     this.c=document.getElementById("marketInteractiveCanvas");
     this.ctx=this.c.getContext("2d");
@@ -59,6 +61,15 @@ AFRAME.registerComponent("market-canvas",{
         const pw=96;
         const ph=96;
         ctx.drawImage(this.peachImage,-pw/2,-ph/2,pw,ph);
+      }else if(
+        kind==="cabbage" &&
+        this.cabbageImage &&
+        this.cabbageImage.complete &&
+        this.cabbageImage.naturalWidth>0
+      ){
+        const cw=96;
+        const ch=96;
+        ctx.drawImage(this.cabbageImage,-cw/2,-ch/2,cw,ch);
       }else{
         ctx.font='96px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
         ctx.fillText(item.emoji,0,0);
