@@ -118,16 +118,18 @@ window.ClassroomActivityMode={
   this.apply();
  },
  setInteract(){
+  const alreadyInteract=this.mode==="interact";
   this.mode="interact";
-  this.apply();
 
-  // PERFORMANCE: start hand inference only when interaction is explicitly requested.
+  // Re-clicking INTERACT is the explicit wake gesture after auto-sleep.
+  // Do not replay scene transitions when merely waking the hand engine.
+  if(!alreadyInteract)this.apply();
+
   const scene=this.scene||"city";
   if(scene==="park")window.ClassroomHandMode?.startPark();
   else if(scene==="market")window.ClassroomHandMode?.startMarket();
   else window.ClassroomHandMode?.startCity();
 
-  // Require a fresh open hand before a pinch can activate anything.
   window.ClassroomHandTracking?.requireReleaseToArm(300);
  },
  isInteract(){return this.mode==="interact";},
@@ -190,6 +192,44 @@ document.addEventListener("DOMContentLoaded",()=>window.ClassroomActivityMode?.i
 window.ClassroomHandMode = {
   running:false,
   mode:"off",
+  sleepTimer:null,
+  sleepMs:5000,
+  sleeping:false,
+
+  clearSleepTimer(){
+    if(this.sleepTimer){
+      clearTimeout(this.sleepTimer);
+      this.sleepTimer=null;
+    }
+  },
+
+  noteInteraction(){
+    // Only a real HAND action extends the expensive inference window.
+    if(!this.running || !window.ClassroomActivityMode?.isInteract())return;
+    this.clearSleepTimer();
+    this.sleepTimer=setTimeout(()=>this.sleep(),this.sleepMs);
+  },
+
+  sleep(){
+    if(!this.running || !window.ClassroomActivityMode?.isInteract())return;
+
+    this.clearSleepTimer();
+    this.sleeping=true;
+
+    // Stop MediaPipe inference, keep camera + loaded model for fast wake.
+    if(window.ClassroomHandTracking){
+      window.ClassroomHandTracking.stop({keepVideo:true,keepModel:true});
+    }
+    this.running=false;
+
+    const cursor=document.getElementById("classroomHandCursor");
+    const status=document.getElementById("classroomHandStatus");
+    if(cursor)cursor.style.display="none";
+    if(status){
+      status.style.display="block";
+      status.textContent="手势：已休眠 · 再点 INTERACT 唤醒";
+    }
+  },
 
   setMode(mode){
     this.mode=mode;
@@ -290,7 +330,9 @@ window.ClassroomHandMode = {
       });
 
       this.running=true;
+      this.sleeping=false;
       this.setMode(mode);
+      this.noteInteraction();
     }catch(err){
       console.error("Classroom hand tracking failed",err);
       if(status)status.textContent="手势启动失败";
@@ -310,6 +352,8 @@ window.ClassroomHandMode = {
   },
 
   stop(){
+    this.clearSleepTimer();
+    this.sleeping=false;
     this.mode="off";
     document.body.classList.remove("hand-city","hand-park","hand-market");
 
@@ -326,6 +370,18 @@ window.ClassroomHandMode = {
     if(status)status.style.display="none";
   }
 };
+
+// PERFORMANCE v5: observe normalized HAND actions only.
+// A real pinch/down/up keeps MediaPipe awake for another 5 seconds.
+// Mouse remains completely independent.
+window.CityInput?.register("hand-auto-sleep",{
+  down:(input)=>{
+    if(input.source==="hand")window.ClassroomHandMode?.noteInteraction();
+  },
+  up:(input)=>{
+    if(input.source==="hand")window.ClassroomHandMode?.noteInteraction();
+  }
+});
 
 // City World state, focus transitions, target gating, and scene navigation.
 
