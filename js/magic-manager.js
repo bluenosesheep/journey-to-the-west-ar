@@ -55,9 +55,15 @@
     if(!M.active)return;
     if(now>=M.until){clear('timeout');return}
 
-    // PERFORMANCE: magic effects are narrative visuals, not gameplay.
-    // Render them at 30 FPS instead of the display's usual ~60 FPS.
-    if(M.lastDraw && now-M.lastDraw<42){
+    // PERFORMANCE v8: adaptive Magic FPS.
+    // Keep storytelling smooth normally; prioritize gesture response when
+    // INTERACT and MediaPipe hand inference are running together.
+    const handBusy =
+      window.ClassroomActivityMode?.isInteract()===true &&
+      window.ClassroomHandMode?.running===true;
+    const magicFrameMs=handBusy?67:42; // ~15 FPS busy, ~24 FPS otherwise
+
+    if(M.lastDraw && now-M.lastDraw<magicFrameMs){
       M.raf=requestAnimationFrame(render);
       return;
     }
