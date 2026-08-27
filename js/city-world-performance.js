@@ -249,7 +249,7 @@ window.ClassroomHandMode = {
         video,
         cursor,
         mirror:false,
-        maxFps:24,
+        maxFps:18,
         smoothing:.38,
         pinchDownRatio:.34,
         pinchUpRatio:.44,
