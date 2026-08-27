@@ -58,6 +58,9 @@ journey-to-the-west-webar/
 │   ├── city-world.js              ← 原 Stable
 │   ├── city-world-performance.js  ← Performance Demo 使用
 │
+│   ├── magic-manager.js            ← Performance Demo + 提供AR场景使用 
+│   ├── magic-only-manager.js       ← Performance Demo + 不提供AR场景使用
+│
 │   ├── hand-tracking.js           ← 原 Stable
 │   └── hand-tracking-performance.js ← Performance Demo 使用
 |
@@ -65,7 +68,7 @@ journey-to-the-west-webar/
 │   ├── citywithmagic.mind          ← Magic Demo 识别target + Performance 优化版
 │   └── city_world.mind             ← 原 Stable 使用 without magic
 |
-├── index.html
+├── index.html                      ← 统一入口 使用citywithmagic.mind 
 ├── classroom_city_story_actor_magic_demo.html   ← Magic Demo 正式图片 + Performance 优化版使用
 ├── play_city_world_stable_nogesture.html        ← 原 Stable without gesture
 ├── classroom_city.html            ← 原 Stable with gesture
