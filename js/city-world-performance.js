@@ -873,8 +873,11 @@ AFRAME.registerComponent("city-world-controller",{
   },
   focusPark:function(){
     if(window.ClassroomActivityMode?.switchEl)window.ClassroomActivityMode.switchEl.style.display="none";
-    window.ClassroomHandMode?.setMode("park");
-    window.ClassroomHandTracking?.requireReleaseToArm(300);
+
+    // PERFORMANCE: no gesture inference is needed while PARK is enlarged
+    // and the child is scanning the PARK recognition card.
+    window.ClassroomHandMode?.stop();
+
     window.citySelectedScene="park";
     if(this.backBtn){this.backBtn.style.display="block";alignBackButtonWithHint();}
     this.animatePanel(this.park,"0 0.08 0.03","1.95 1.95 1.95",1);
@@ -979,8 +982,11 @@ AFRAME.registerComponent("city-world-controller",{
   },
   focusMarket:function(){
     if(window.ClassroomActivityMode?.switchEl)window.ClassroomActivityMode.switchEl.style.display="none";
-    window.ClassroomHandMode?.setMode("market");
-    window.ClassroomHandTracking?.requireReleaseToArm(300);
+
+    // PERFORMANCE: no gesture inference is needed while MARKET is enlarged
+    // and the child is scanning the MARKET recognition card.
+    window.ClassroomHandMode?.stop();
+
     window.citySelectedScene="market";
     if(this.backBtn){this.backBtn.style.display="block";alignBackButtonWithHint();}
 
