@@ -58,25 +58,25 @@ journey-to-the-west-webar/
 │   ├── city-world.js              ← 原 Stable
 │   ├── city-world-performance.js  ← Performance Demo 使用
 │
-│   ├── magic-manager.js            ← Performance Demo + 提供AR场景使用 
-│   ├── magic-only-manager.js       ← Performance Demo + 不提供AR场景使用
+│   ├── magic-manager.js           ← Performance Demo + 提供AR场景使用 
+│   ├── magic-only-manager.js      ← Performance Demo + 不提供AR场景使用
 │
-│   ├── hand-tracking.js           ← 原 Stable
-│   └── hand-tracking-performance.js ← Performance Demo 使用
+│   ├── hand-tracking.js                        ← 原 Stable
+│   └── hand-tracking-performance.js            ← Performance Demo 使用
 |
 ├──targets/
-│   ├── citywithmagic.mind          ← Magic Demo 识别target + Performance 优化版
-│   └── city_world.mind             ← 原 Stable 使用 without magic
+│   ├── citywithmagic.mind                       ← Magic Demo 识别target + Performance 优化版
+│   └── city_world.mind                          ← 原 Stable 使用 without magic
 |
-├── index.html                      ← 统一入口 使用citywithmagic.mind
+├── index.html                                   ← 统一入口 使用citywithmagic.mind
 ├── classroom_city_story_scene_demo.html         ← 由统一入口进入到city场景 使用citywithmagic.mind
 ├── classroom_magic_only.html                    ← 由统一入口进入到只是用magic 使用citywithmagic.mind
 |
 ├── classroom_city_story_actor_magic_demo.html   ← Performance优化后city场景stable版本，使用citywithmagic.mind + with gesture, 可用于city场景单独demo
 ├── play_city_world_stable_nogesture.html        ← 原 Stable without gesture
-├── classroom_city.html            ← 原 Stable with gesture，但是没有区分story/interact mode
-├── classroom_city_story_actor_demo.html            ← 原 Stable with gesture and actor on the front in story mode
-├──preview/                        ← preview AR animate， don't need AR scan
+├── classroom_city.html                          ← 原 Stable with gesture，但是没有区分story/interact mode
+├── classroom_city_story_actor_demo.html         ← 原 Stable with gesture and actor on the front in story mode
+├──preview/                                      ← preview AR animate， don't need AR scan
 ├── assets/
 └── target-images/
 
