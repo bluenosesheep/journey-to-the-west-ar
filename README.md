@@ -1,10 +1,28 @@
-# Journey to the West WebAR template
-
-这是一个 MindAR + A-Frame 的轻量 WebAR 模板，当前先跑通「筋斗云」故事卡。
-
-## 1. 逻辑定义
+# Journey to the West WebAR
+## System Structure
+#### 1. 逻辑定义
 ```text
-任何场景
+UNIFORM ENTRY
+
+index.html
+│
+├── 🏞️ AR STORY WORLD
+│      ↓
+│   classroom_city_story_actor_magic_demo.html
+│   （currently only City scene）
+│
+└── ✨ MY OWN STORY
+       ↓
+    classroom_magic_only.html
+       │
+       ├── ☁️ Cloud
+       ├── 🔥 Fire
+       ├── 🌧️ Rain
+       └── 🌱 Grow
+```
+```text
+CITY SCENE WORKFLOW
+
 CITY / PARK / MARKET
         │
 孩子继续讲故事
@@ -24,32 +42,42 @@ CITY / PARK / MARKET
                     ↓
                  重新计时
 ```
-## 2. 项目结构
+#### 2. 项目结构
 ```text
 journey-to-the-west-webar/
+├── css/
+│   ├── story-actor-demo.css       ← currently available for any demo entry
+|
+├──js/
+│   ├── park.js                    ← V21 Stable，冻结，不动
+│   ├── market.js                  ← V21 Stable，冻结，不动
+│
+│   ├── park-formal.js             ← Magic Demo 正式图片 + Performance 优化版
+│   ├── market-formal.js           ← Magic Demo 正式图片 + Performance 优化版
+│
+│   ├── city-world.js              ← 原 Stable
+│   ├── city-world-performance.js  ← Performance Demo 使用
+│
+│   ├── hand-tracking.js           ← 原 Stable
+│   └── hand-tracking-performance.js ← Performance Demo 使用
+|
+├──targets/
+│   ├── citywithmagic.mind          ← Magic Demo 识别target + Performance 优化版
+│   └── city_world.mind             ← 原 Stable 使用 without magic
+|
 ├── index.html
-├── preview.html
-├── targets.mind          ← 你编译后放这里
+├── classroom_city_story_actor_magic_demo.html   ← Magic Demo 正式图片 + Performance 优化版使用
+├── play_city_world_stable_nogesture.html        ← 原 Stable without gesture
+├── classroom_city.html            ← 原 Stable with gesture
+├── classroom_city_story_actor_demo.html            ← 原 Stable with gesture and actor on the front in story mode
+├──preview/                        ← preview AR animate， don't need AR scan
 ├── assets/
-│   ├── cloud.png
-│   ├── wind_01.png
-│   ├── wind_02.png
-│   └── sparkles.png
 └── target-images/
-    └── jingdouyun-card.png
+
 ```
 
-## 3. GitHub Pages
-1. GitHub 新建 repository，比如 `journey-to-the-west-ar`
-2. 上传本文件夹全部内容
-3. Settings → Pages
-4. Deploy from a branch
-5. 选择 `main` 和 `/ (root)`
-6. 保存
-7. 手机打开 GitHub Pages 的 HTTPS 地址并允许摄像头
-
-## 4. 当前 AR 效果
-识别筋斗云卡后：
+#### 3. 当前 AR 效果
+例如识别筋斗云卡后：
 - cloud 上下漂浮
 - wind_01 左右掠过
 - wind_02 旋转和呼吸
@@ -57,22 +85,16 @@ journey-to-the-west-webar/
 
 这些动画直接由 A-Frame 循环控制，不需要 GIF，也不需要 AE。
 
-## 5. 后续扩展成 4 张故事卡
-将 4 张识别卡一起放入 Target Compiler，一次生成同一个 `targets.mind`：
-- targetIndex 0：筋斗云
-- targetIndex 1：三昧真火
-- targetIndex 2：水浪
-- targetIndex 3：七十二变
+#### 4. 4 张魔法卡
+- cloud
+- fire
+- rain
+- grow
 
-然后在 `index.html` 复制 `<a-entity mindar-image-target="targetIndex:0">...</a-entity>`，
-把 targetIndex 改成 1 / 2 / 3，并换成对应 AR 素材即可。
+## Story Resource
+- 实体木质角色 = Character
+- 儿童搭建场景 = World
+- AR = Magic / Motion / Atmosphere
 
-## 设计建议
-实体木质角色 = Character
-儿童搭建场景 = World
-AR = Magic / Motion / Atmosphere
-
-这样 AR 是儿童故事的“动态层”，而不是固定剧情播放器。
-
-## 资源文件
+## 资源文件规格说明
 交互场景图片 ：256*256
