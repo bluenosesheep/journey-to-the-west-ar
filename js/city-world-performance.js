@@ -558,19 +558,6 @@ AFRAME.registerComponent("city-world-controller",{
   },
 
   tick:function(){
-    // PERFORMANCE v10: CITY hit projection is only useful in INTERACT.
-    // STORY has no interactive PARK/MARKET hit targets.
-    if(window.ClassroomActivityMode?.mode!=="interact")return;
-
-    const now=performance.now();
-    const handRunning=window.ClassroomHandMode?.running===true;
-
-    // Hand cursor needs responsive hit zones; mouse-only / hand-off mode does not.
-    // ~30 FPS with hand, ~10 FPS without hand.
-    const frameMs=handRunning?33:100;
-    if(this._lastCityControllerTick && now-this._lastCityControllerTick<frameMs)return;
-    this._lastCityControllerTick=now;
-
     if(this.tracking && this.world){
       // Always keep the latest Building target pose for future returns / STORY.
       this.el.object3D.updateMatrixWorld(true);
@@ -596,7 +583,18 @@ AFRAME.registerComponent("city-world-controller",{
       }
     }
 
-    this.updateHitPositions();
+    // PERFORMANCE SAFE FIX:
+    // Keep CITY tracking/pose updates at normal A-Frame cadence so INTERACT
+    // transitions remain stable. Throttle only the expensive screen hit projection.
+    if(window.ClassroomActivityMode?.mode==="interact"){
+      const now=performance.now();
+      const handRunning=window.ClassroomHandMode?.running===true;
+      const frameMs=handRunning?33:100; // ~30 FPS with hand, ~10 FPS without
+      if(!this._lastCityHitTick || now-this._lastCityHitTick>=frameMs){
+        this._lastCityHitTick=now;
+        this.updateHitPositions();
+      }
+    }
   },
   exitToCity:function(){
     // Stop Park interaction/hold completely.
