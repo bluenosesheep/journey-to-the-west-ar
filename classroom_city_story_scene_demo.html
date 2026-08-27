@@ -1,0 +1,176 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Journey to the West AR - Magic Demo</title>
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+<link rel="stylesheet" href="./css/city.css">
+<link rel="stylesheet" href="./css/story-actor-demo.css">
+<script src="./js/asset-config.js"></script>
+<script src="./js/city-core.js"></script>
+<script src="./js/input-router.js"></script>
+<script src="./js/park-formal.js?v=6"></script>
+<script src="./js/market-formal.js?v=4"></script>
+<script src="./js/city-world-performance.js?v=4"></script>
+<script src="./js/magic-manager.js?v=4"></script>
+<style id="sceneHomeNavStyle">
+#sceneHomeBtn{
+  position:fixed;
+  left:18px;
+  top:18px;
+  z-index:120;
+  border:0;
+  border-radius:999px;
+  padding:10px 15px;
+  background:rgba(255,255,255,.94);
+  color:#26332a;
+  font:800 14px/1 system-ui,sans-serif;
+  box-shadow:0 5px 18px rgba(0,0,0,.16);
+  cursor:pointer;
+}
+</style>
+</head><body>
+<button id="sceneHomeBtn" type="button">← HOME</button>
+
+<div id="storyCityMini" aria-hidden="true" hidden style="display:none;opacity:0">
+  <img class="mini-building" src="./assets/city/building_scene.png" alt="">
+  <img class="mini-park" src="./assets/city/park_scene.png" alt="">
+  <img class="mini-market" src="./assets/city/market_scene.png" alt="">
+</div>
+<div id="cameraOrientationControl">
+  <span>📷 CAMERA</span>
+  <select id="cameraOrientationSelect" aria-label="Camera orientation">
+    <option value="0">0°</option>
+    <option value="90">90°</option>
+    <option value="180">180°</option>
+    <option value="270">270°</option>
+  </select>
+</div>
+<div id="classroomModeSwitch">
+<button id="storyModeBtn" type="button">🎭 STORY</button>
+<button id="interactModeBtn" type="button">✨ INTERACT</button>
+</div>
+<div id="classroomHandCursor">✨</div>
+<div id="classroomHandStatus">手势：等待 PARK</div>
+<div id="hint">请先扫描 Building 识别图打开 City World</div>
+<button id="sceneBackBtn" type="button">返回 CITY</button>
+<div id="cityHitLayer">
+  <button id="hitCityPark" class="city-hit" aria-label="Park"></button>
+  <button id="hitCityMarket" class="city-hit" aria-label="Market"></button>
+</div>
+
+<div id="parkDragLayer">
+<button id="parkDragTree" class="park-drag-hit"></button>
+<button id="parkDragFlower" class="park-drag-hit"></button>
+<button id="parkDragBench" class="park-drag-hit"></button>
+<button id="parkDragFountain" class="park-drag-hit"></button>
+<button id="parkDragReset" class="park-drag-hit"></button>
+</div>
+
+<div id="marketHoldLayer">
+<button id="marketHoldPeach" class="market-hold-hit"></button>
+<button id="marketHoldCabbage" class="market-hold-hit"></button>
+<button id="marketHoldEgg" class="market-hold-hit"></button>
+<button id="marketHoldReset" class="market-hold-hit"></button>
+</div>
+
+<canvas id="parkInteractiveCanvas" class="off" width="768" height="512"></canvas>
+<canvas id="marketInteractiveCanvas" class="off" width="768" height="512"></canvas>
+
+<a-scene
+  mindar-image="imageTargetSrc: ./targets/citywithmagic.mind; autoStart: true; maxTrack: 7;"
+  color-space="sRGB"
+  renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true"
+  vr-mode-ui="enabled:false"
+  device-orientation-permission-ui="enabled:false">
+
+  <a-camera position="0 0 0" look-controls="enabled:false"
+    cursor="fuse:false; rayOrigin:mouse"
+    raycaster="objects:.clickable; far:10000"></a-camera>
+
+  <a-entity mindar-image-target="targetIndex:0" city-world-controller></a-entity>
+  <a-entity mindar-image-target="targetIndex:1" park-target-events scene-background-follow="world:#parkDynamicBackground" park-drag-controller="seconds:15; world:#parkInteractionWorld"></a-entity>
+  <a-entity mindar-image-target="targetIndex:2" market-target-events scene-background-follow="world:#marketDynamicBackground" market-persist="seconds:15; world:#marketInteractionWorld"></a-entity>
+
+  <!-- MAGIC targets: 3 Cloud, 4 Fire, 5 Rain, 6 Grow.
+       Recognition only; visuals persist in the global screen-space Magic layer. -->
+  <a-entity mindar-image-target="targetIndex:3" magic-target="kind:cloud"></a-entity>
+  <a-entity mindar-image-target="targetIndex:4" magic-target="kind:fire"></a-entity>
+  <a-entity mindar-image-target="targetIndex:5" magic-target="kind:rain"></a-entity>
+  <a-entity mindar-image-target="targetIndex:6" magic-target="kind:grow"></a-entity>
+
+  <a-entity id="cityWorld" visible="false">
+
+    <a-image id="cityBuilding"
+      src="./assets/city/building_scene.png"
+      width="1.25" height="1.88"
+      position="0 0.34 0.02"
+      material="transparent:true;opacity:1;depthWrite:false"></a-image>
+
+    <a-image id="cityPark"
+      src="./assets/city/park_scene.png"
+      width="1.55" height="1.04"
+      position="-0.72 -0.42 0.03"
+      scale=".78 .78 .78"
+      material="transparent:true;opacity:1;depthWrite:false"></a-image>
+
+    <a-image id="cityMarket"
+      src="./assets/city/market_scene.png"
+      width="1.55" height="1.04"
+      position="0.72 -0.42 0.03"
+      scale=".78 .78 .78"
+      material="transparent:true;opacity:1;depthWrite:false"></a-image>
+
+  </a-entity>
+
+  
+  <!-- Dynamic Park background:
+       outer entity follows Park target pose,
+       child image keeps a fixed relative offset from the interaction -->
+  <a-entity id="parkDynamicBackground" visible="false">
+    <a-image
+      src="./assets/city/park_scene.png"
+      width="1.55"
+      height="1.04"
+      position="-1.28 1.18 -1.20"
+      scale=".50 .50 .50"
+      material="transparent:true;opacity:1;depthWrite:false">
+    </a-image>
+  </a-entity>
+
+  <!-- Dynamic Market background:
+       outer entity follows Market target pose,
+       child image keeps a fixed relative offset from the interaction -->
+  <a-entity id="marketDynamicBackground" visible="false">
+    <a-image
+      src="./assets/city/market_scene.png"
+      width="1.55"
+      height="1.04"
+      position="-1.12 1.00 -0.95"
+      scale=".60 .60 .60"
+      material="transparent:true;opacity:1;depthWrite:false">
+    </a-image>
+  </a-entity>
+
+<!-- Park interaction layer, revealed only after Park target is scanned -->
+  <a-entity id="parkInteractionWorld" visible="false">
+    <a-plane id="parkInteractiveDisplay"
+      width="2.15" height="1.43"
+      material="shader:flat;src:#parkInteractiveCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
+      park-canvas></a-plane>
+  </a-entity>
+
+  <!-- Market interaction layer, revealed only after Market target is scanned -->
+  <a-entity id="marketInteractionWorld" visible="false">
+    <a-plane id="marketInteractiveDisplay"
+      width="2.15" height="1.43"
+      material="shader:flat;src:#marketInteractiveCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
+      market-canvas></a-plane>
+  </a-entity>
+
+</a-scene>
+<script type="module" src="./js/hand-tracking-performance.js?v=1"></script>
+
+<script>
+document.getElementById("sceneHomeBtn").addEventListener("click",()=>{
+  location.href="./index.html";
+});
+</script>
+</body></html>
