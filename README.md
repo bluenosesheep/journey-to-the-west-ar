@@ -72,11 +72,9 @@ journey-to-the-west-webar/
 - grow
 
 ## Story Resource
-实体木质角色 = Character
-儿童搭建场景 = World
-AR = Magic / Motion / Atmosphere
+- 实体木质角色 = Character
+- 儿童搭建场景 = World
+- AR = Magic / Motion / Atmosphere
 
-这样 AR 是儿童故事的“动态层”，而不是固定剧情播放器。
-
-## 资源文件
+## 资源文件规格说明
 交互场景图片 ：256*256
