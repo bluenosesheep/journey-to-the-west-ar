@@ -121,9 +121,25 @@ window.ClassroomActivityMode={
   const alreadyInteract=this.mode==="interact";
   this.mode="interact";
 
-  // Re-clicking INTERACT is the explicit wake gesture after auto-sleep.
-  // Do not replay scene transitions when merely waking the hand engine.
-  if(!alreadyInteract)this.apply();
+  // First click enters INTERACT and starts hand tracking.
+  if(!alreadyInteract){
+    this.apply();
+
+    const scene=this.scene||"city";
+    if(scene==="park")window.ClassroomHandMode?.startPark();
+    else if(scene==="market")window.ClassroomHandMode?.startMarket();
+    else window.ClassroomHandMode?.startCity();
+
+    window.ClassroomHandTracking?.requireReleaseToArm(300);
+    return;
+  }
+
+  // While already in INTERACT, the same button becomes a manual hand toggle:
+  // running -> sleep immediately; sleeping/off -> wake immediately.
+  if(window.ClassroomHandMode?.running){
+    window.ClassroomHandMode.sleep();
+    return;
+  }
 
   const scene=this.scene||"city";
   if(scene==="park")window.ClassroomHandMode?.startPark();
@@ -227,7 +243,7 @@ window.ClassroomHandMode = {
     if(cursor)cursor.style.display="none";
     if(status){
       status.style.display="block";
-      status.textContent="手势：已休眠 · 再点 INTERACT 唤醒";
+      status.textContent="手势：已关闭 · 再点 INTERACT 唤醒";
     }
   },
 
