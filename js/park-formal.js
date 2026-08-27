@@ -82,7 +82,7 @@ AFRAME.registerComponent("park-canvas",{
     // INTERACT gets 30 FPS so dragging remains responsive.
     const now=performance.now();
     const interact=window.ClassroomActivityMode?.isInteract()===true;
-    const frameMs=interact?33:50;
+    const frameMs=interact?33:67;
     if(this._lastDrawTime && now-this._lastDrawTime<frameMs)return;
     this._lastDrawTime=now;
 

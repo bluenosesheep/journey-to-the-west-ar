@@ -57,7 +57,7 @@
 
     // PERFORMANCE: magic effects are narrative visuals, not gameplay.
     // Render them at 30 FPS instead of the display's usual ~60 FPS.
-    if(M.lastDraw && now-M.lastDraw<33){
+    if(M.lastDraw && now-M.lastDraw<42){
       M.raf=requestAnimationFrame(render);
       return;
     }
@@ -79,6 +79,16 @@
   }
   // Magic belongs to one narrative beat. Clear it whenever either the scene
   // OR the STORY / INTERACT activity mode changes.
+  // PERFORMANCE: pause magic animation when the page is hidden.
+  document.addEventListener("visibilitychange",()=>{
+    if(document.hidden){
+      if(M.raf){cancelAnimationFrame(M.raf);M.raf=0;}
+    }else if(M.active && performance.now()<M.until && !M.raf){
+      M.lastDraw=0;
+      M.raf=requestAnimationFrame(render);
+    }
+  });
+
   function sceneKey(){
     return [
       window.citySelectedScene??'city',

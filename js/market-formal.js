@@ -35,9 +35,13 @@ AFRAME.registerComponent("market-canvas",{
     // PERFORMANCE: Market canvas does no work unless Market is active.
     if(window.citySelectedScene!=="market")return;
 
-    // 30 FPS keeps the basket animation smooth without redrawing at 60 FPS.
+    // Idle Market ~15 FPS; product flight temporarily uses 30 FPS.
     const now=performance.now();
-    if(this._lastDrawTime && now-this._lastDrawTime<33)return;
+    const animating=Object.values(this.items).some(item=>
+      item.selected && now-item.start<700
+    );
+    const frameMs=animating?33:67;
+    if(this._lastDrawTime && now-this._lastDrawTime<frameMs)return;
     this._lastDrawTime=now;
 
     const ctx=this.ctx,c=this.c,w=c.width,h=c.height;
