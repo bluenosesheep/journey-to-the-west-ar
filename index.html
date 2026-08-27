@@ -2,105 +2,46 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AR Story World</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Journey to the West AR</title>
 <style>
-:root{--paper:#f4ecd9;--paper2:#fff8e8;--red:#8f2f2a;--gold:#c79a3b;--ink:#49382d}
 *{box-sizing:border-box}
-html,body{margin:0;min-height:100%;background:linear-gradient(180deg,var(--paper2),var(--paper));color:var(--ink);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
-body{display:flex;justify-content:center;padding:24px 16px 36px}
-.card{width:min(860px,100%);min-height:calc(100vh - 60px);border:2px solid var(--red);border-radius:26px;padding:30px 24px;background:rgba(255,250,237,.9);box-shadow:0 16px 50px rgba(92,60,35,.12)}
-.topline{display:flex;justify-content:space-between;gap:12px;align-items:center;font-size:12px;letter-spacing:.14em;color:#7d6b5b;margin-bottom:24px}
-.badges{display:flex;gap:8px}.badge{border:1px solid rgba(143,47,42,.35);border-radius:999px;padding:6px 10px;background:rgba(255,255,255,.45)}
-.hero{text-align:center;padding:8px 0 24px}.kicker{font-size:13px;letter-spacing:.22em;color:var(--red);margin-bottom:10px}
-h1{margin:0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(40px,8vw,76px);line-height:.98;color:var(--red)}
-.subtitle{margin:16px auto 0;max-width:620px;font-size:clamp(18px,3vw,26px);line-height:1.45;font-weight:650}
-.en{margin:10px auto 0;max-width:620px;color:#7e6d5d;line-height:1.6;font-size:14px}
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:12px 0 26px}
-.step{border:1px solid rgba(143,47,42,.23);border-radius:18px;padding:18px 16px;background:rgba(255,255,255,.42)}
-.num{width:30px;height:30px;display:grid;place-items:center;border-radius:50%;background:var(--red);color:white;font-weight:700;margin-bottom:12px}
-.step h2{margin:0 0 6px;font-size:17px}.step p{margin:0;color:#725f50;font-size:14px;line-height:1.55}
-.magic-row{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:6px 0 28px}
-.magic{display:flex;align-items:center;gap:9px;border:1px solid rgba(199,154,59,.42);background:rgba(255,249,232,.86);padding:10px 14px;border-radius:999px;font-size:14px}.magic strong{color:var(--red)}
-.start{display:flex;justify-content:center}.start a{display:inline-flex;align-items:center;justify-content:center;min-width:min(360px,88vw);min-height:58px;padding:14px 26px;border-radius:999px;background:var(--red);color:#fffaf0;text-decoration:none;font-size:18px;font-weight:750;box-shadow:0 10px 24px rgba(143,47,42,.22)}
-.note{text-align:center;margin-top:12px;color:#8d7b6c;font-size:12px}
-@media(max-width:680px){body{padding:12px}.card{min-height:calc(100vh - 24px);padding:22px 16px}.steps{grid-template-columns:1fr;gap:10px}.step{display:grid;grid-template-columns:38px 1fr;column-gap:10px}.step .num{grid-row:1/span 2}.topline{align-items:flex-start;flex-direction:column}}
-
-.worlds{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:14px;
-  max-width:700px;
-  margin:6px auto 0;
-}
-.world-card{
-  display:flex;
-  align-items:center;
-  gap:14px;
-  min-height:118px;
-  padding:18px;
-  border:1px solid rgba(143,47,42,.24);
-  border-radius:20px;
-  background:rgba(255,249,232,.9);
-  color:var(--ink);
-  text-decoration:none;
-  box-shadow:0 8px 22px rgba(92,60,35,.09);
-  transition:.18s ease;
-}
-.world-card:active{transform:scale(.985)}
-.world-icon{font-size:38px;line-height:1}
-.world-name{font-weight:800;font-size:18px;color:var(--red);letter-spacing:.04em}
-.world-sub{font-size:13px;color:#7e6d5d;margin-top:5px}
-.world-go{font-size:13px;font-weight:700;margin-top:10px}
-@media(max-width:680px){
-  .worlds{grid-template-columns:1fr}
-  .world-card{min-height:104px}
-}
-
+html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{min-height:100vh;display:grid;place-items:center;padding:32px;background:linear-gradient(145deg,#fff8e9,#eef8ef);color:#26332a}
+main{width:min(920px,100%);text-align:center}
+h1{margin:0 0 8px;font-size:clamp(30px,5vw,54px)}
+.lead{margin:0 0 30px;color:#5a665d;font-size:clamp(15px,2vw,19px)}
+.choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+.card{min-height:270px;border-radius:28px;padding:30px 26px;background:rgba(255,255,255,.94);box-shadow:0 16px 42px rgba(45,65,50,.13);color:inherit;text-decoration:none;display:flex;flex-direction:column;justify-content:center;align-items:center;transition:transform .18s,box-shadow .18s}
+.card:hover,.card:focus-visible{transform:translateY(-4px);box-shadow:0 20px 48px rgba(45,65,50,.18)}
+.icon{font-size:62px;margin-bottom:14px}
+.en{font-weight:800;letter-spacing:.05em;color:#708076;font-size:13px}
+.card h2{font-size:27px;margin:7px 0 8px}
+.desc{margin:12px auto 0;max-width:330px;line-height:1.6;color:#59645d}
+.go{margin-top:20px;font-weight:800}
+@media(max-width:680px){.choices{grid-template-columns:1fr}.card{min-height:220px}}
 </style>
-
 </head>
 <body>
-<main class="card">
-<div class="topline">
-<span>AR STORY CARDS</span>
-<div class="badges"><span class="badge">MAGIC 01</span><span class="badge">MAGIC 02</span></div>
+<main>
+<h1>Journey to the West AR</h1>
+<p class="lead">选择你今天想讲故事的方式</p>
+<div class="choices">
+  <a class="card" href="./classroom_city_story_actor_magic_demo.html">
+    <div class="icon">🏞️</div>
+    <div class="en">AR STORY WORLD</div>
+    <h2>进入故事世界</h2>
+    <p class="desc">使用我们提供的 AR 场景、玩偶和魔法卡来讲故事。</p>
+    <div class="go">开始 →</div>
+  </a>
+  <a class="card" href="./classroom_magic_only.html">
+    <div class="icon">✨</div>
+    <div class="en">MY OWN STORY</div>
+    <h2>创造我的故事</h2>
+    <p class="desc">自己搭建纸板、积木或手绘舞台，需要魔法时随时扫描魔法卡。</p>
+    <div class="go">自由创作 →</div>
+  </a>
 </div>
-
-<section class="hero">
-<div class="kicker">AR STORY WORLD</div>
-<h1>让你的故事<br>动起来</h1>
-<div class="subtitle">搭建你的故事，选择一个世界，再用场景元素和 MAGIC 让故事发生变化。</div>
-<div class="en">Build your story, choose a world, and bring it to life with scenes and MAGIC in AR.</div>
-</section>
-
-<section class="steps">
-<article class="step"><div class="num">1</div><h2>搭建 · BUILD</h2><p>用木质角色、卡纸和手边材料搭出你的故事世界。</p></article>
-<article class="step"><div class="num">2</div><h2>创造 · CREATE</h2><p>自由改变人物、地点和事件，讲一个属于你的新故事。</p></article>
-<article class="step"><div class="num">3</div><h2>选择世界 · CHOOSE</h2><p>进入森林或城市，把场景元素和 MAGIC 卡组合进你的故事。</p></article>
-</section>
-
-
-<section class="worlds">
-  <a class="world-card" href="./play_forest.html">
-    <div class="world-icon">🌳</div>
-    <div>
-      <div class="world-name">FOREST WORLD</div>
-      <div class="world-sub">Forest · River · Bridge</div>
-      <div class="world-go">进入森林世界 →</div>
-    </div>
-  </a>
-
-  <a class="world-card" href="./play_city.html">
-    <div class="world-icon">🏙️</div>
-    <div>
-      <div class="world-name">CITY WORLD</div>
-      <div class="world-sub">Building · Park · Market</div>
-      <div class="world-go">进入城市世界 →</div>
-    </div>
-  </a>
-</section>
-<div class="note">选择世界后，浏览器会请求摄像头权限。</div>
 </main>
 </body>
 </html>
