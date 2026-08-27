@@ -415,7 +415,15 @@ AFRAME.registerComponent("market-persist",{
   },
 
   tick:function(){
-    if(!this.world)return;
+    if(!this.world || window.citySelectedScene!=="market")return;
+
+    // PERFORMANCE v7:
+    // Market's DOM hit projection is relatively expensive, so cap controller
+    // updates at ~30 FPS while tracking and ~15 FPS during the idle hold.
+    const now=performance.now();
+    const frameMs=this.tracking?33:67;
+    if(this._lastControllerTick && now-this._lastControllerTick<frameMs)return;
+    this._lastControllerTick=now;
 
     const obj=this.world.object3D;
 
@@ -463,8 +471,11 @@ AFRAME.registerComponent("market-persist",{
       obj.scale.copy(this.baseScale);
       obj.updateMatrixWorld(true);
 
-      // Keep the HTML tap zones exactly on top of the gently moving AR UI.
-      this.updateHoldHits();
+      // Keep hit zones synced only while hand tracking is actually running.
+      // When hand inference sleeps, avoid repeated DOM projection/layout work.
+      if(window.ClassroomHandMode?.running){
+        this.updateHoldHits();
+      }
     }
   }
 });

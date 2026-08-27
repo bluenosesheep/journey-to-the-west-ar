@@ -576,7 +576,16 @@ AFRAME.registerComponent("park-drag-controller",{
   },
 
   tick:function(){
-    if(!this.world)return;
+    if(!this.world || window.citySelectedScene!=="park")return;
+
+    // PERFORMANCE v7:
+    // controller math does not need A-Frame's full render rate.
+    // Tracking / active drag: ~30 FPS. Frozen/idle hold: ~15 FPS.
+    const now=performance.now();
+    const active=this.tracking || !!this.dragState;
+    const frameMs=active?33:67;
+    if(this._lastControllerTick && now-this._lastControllerTick<frameMs)return;
+    this._lastControllerTick=now;
 
     const obj=this.world.object3D;
 
@@ -627,7 +636,9 @@ AFRAME.registerComponent("park-drag-controller",{
       obj.scale.copy(this.baseScale);
       obj.updateMatrixWorld(true);
 
-      this.updateHitPositions();
+      if(window.ClassroomHandMode?.running || this.dragState){
+        this.updateHitPositions();
+      }
     }
   }
 });
