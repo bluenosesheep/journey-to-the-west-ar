@@ -1,6 +1,6 @@
-# Journey to the West WebAR Structure
-
-## 1. 逻辑定义
+# Journey to the West WebAR
+## System Structure
+#### 1. 逻辑定义
 ```text
 任何场景
 CITY / PARK / MARKET
@@ -22,7 +22,7 @@ CITY / PARK / MARKET
                     ↓
                  重新计时
 ```
-## 2. 项目结构
+#### 2. 项目结构
 ```text
 journey-to-the-west-webar/
 ├── css/
@@ -56,7 +56,7 @@ journey-to-the-west-webar/
 
 ```
 
-## 3. 当前 AR 效果
+#### 3. 当前 AR 效果
 例如识别筋斗云卡后：
 - cloud 上下漂浮
 - wind_01 左右掠过
@@ -65,7 +65,7 @@ journey-to-the-west-webar/
 
 这些动画直接由 A-Frame 循环控制，不需要 GIF，也不需要 AE。
 
-## 4. 4 张魔法卡
+#### 4. 4 张魔法卡
 - cloud
 - fire
 - rain
