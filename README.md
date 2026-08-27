@@ -58,8 +58,8 @@ journey-to-the-west-webar/
 │   ├── city-world.js              ← 原 Stable
 │   ├── city-world-performance.js  ← Performance Demo 使用
 │
-│   ├──magic-manager.js            ← Performance Demo + 提供AR场景使用 
-│   ├──magic-only-manager.js       ← Performance Demo + 不提供AR场景使用
+│   ├── magic-manager.js            ← Performance Demo + 提供AR场景使用 
+│   ├── magic-only-manager.js       ← Performance Demo + 不提供AR场景使用
 │
 │   ├── hand-tracking.js           ← 原 Stable
 │   └── hand-tracking-performance.js ← Performance Demo 使用
