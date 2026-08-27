@@ -68,10 +68,13 @@ journey-to-the-west-webar/
 │   ├── citywithmagic.mind          ← Magic Demo 识别target + Performance 优化版
 │   └── city_world.mind             ← 原 Stable 使用 without magic
 |
-├── index.html                      ← 统一入口 使用citywithmagic.mind 
-├── classroom_city_story_actor_magic_demo.html   ← Magic Demo 正式图片 + Performance 优化版使用
+├── index.html                      ← 统一入口 使用citywithmagic.mind
+├── classroom_city_story_scene_demo.html         ← 由统一入口进入到city场景 使用citywithmagic.mind
+├── classroom_magic_only.html                    ← 由统一入口进入到只是用magic 使用citywithmagic.mind
+|
+├── classroom_city_story_actor_magic_demo.html   ← Performance优化后city场景stable版本，使用citywithmagic.mind + with gesture, 可用于city场景单独demo
 ├── play_city_world_stable_nogesture.html        ← 原 Stable without gesture
-├── classroom_city.html            ← 原 Stable with gesture
+├── classroom_city.html            ← 原 Stable with gesture，但是没有区分story/interact mode
 ├── classroom_city_story_actor_demo.html            ← 原 Stable with gesture and actor on the front in story mode
 ├──preview/                        ← preview AR animate， don't need AR scan
 ├── assets/
