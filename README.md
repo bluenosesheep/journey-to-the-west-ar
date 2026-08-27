@@ -2,7 +2,27 @@
 ## System Structure
 #### 1. 逻辑定义
 ```text
-任何场景
+UNIFORM ENTRY
+
+index.html
+│
+├── 🏞️ AR STORY WORLD
+│      ↓
+│   classroom_city_story_actor_magic_demo.html
+│   （currently only City scene）
+│
+└── ✨ MY OWN STORY
+       ↓
+    classroom_magic_only.html
+       │
+       ├── ☁️ Cloud
+       ├── 🔥 Fire
+       ├── 🌧️ Rain
+       └── 🌱 Grow
+```
+```text
+CITY SCENE WORKFLOW
+
 CITY / PARK / MARKET
         │
 孩子继续讲故事
