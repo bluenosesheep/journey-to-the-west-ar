@@ -53,8 +53,7 @@ AFRAME.registerComponent("standalone-city",{
   enterFar(){
     this.mode="far";
     this.world.object3D.visible=false;
-    this.hideHits();
-    const mini=document.getElementById("storyCityMini");
+const mini=document.getElementById("storyCityMini");
     mini.hidden=false;mini.style.display="block";mini.classList.remove("to-center");mini.style.opacity="";
     requestAnimationFrame(()=>mini.classList.add("show"));
     document.getElementById("hint").textContent="CITY · 🌆 远处的城市 · 用玩偶讲故事";
