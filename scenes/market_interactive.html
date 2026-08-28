@@ -316,7 +316,7 @@ AFRAME.registerComponent("market-canvas",{
 
     ctx.textAlign="center";ctx.textBaseline="middle";
 
-    Object.values(this.items).forEach(item=>{
+    Object.entries(this.items).forEach(([kind,item])=>{
       let x=item.x,y=item.y,s=1;
       if(item.selected){
         const p=Math.min(1,(performance.now()-item.start)/650);
