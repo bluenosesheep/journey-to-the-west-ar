@@ -491,7 +491,6 @@ AFRAME.registerComponent("park-drag-controller",{
       if(window.StandaloneParkMode?.mode==="story"){
         this.holding=false;this.hideHits();
         if(this.world)this.world.object3D.visible=false;
-        document.getElementById("hint").textContent="PARK · 来到了公园 🌿";
       }else{
         this.showHits();this.updateHitPositions();
         document.getElementById("hint").textContent="PARK · 可以继续拖动，或用玩偶讲故事 🌿";
@@ -734,7 +733,6 @@ AFRAME.registerComponent("market-persist",{
       if(window.StandaloneMarketMode?.mode==="story"){
         this.holding=false;this.hideHoldHits();
         if(this.world)this.world.object3D.visible=false;
-        document.getElementById("hint").textContent="MARKET · 去市场看看吧 🧺";
       }else{
         this.updateHoldHits();this.showHoldHits();
       }
