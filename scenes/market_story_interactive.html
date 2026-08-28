@@ -336,7 +336,9 @@ AFRAME.registerComponent("market-persist",{
       obj.position.y+=bob;
 
       const qRoll=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),roll);
-      obj.quaternion.copy(this.baseQuat).multiply(qRoll);
+      // Integrated SHOP is a screen-facing activity. Do not inherit the physical
+      // Market card's rotation after it is removed.
+      obj.quaternion.identity().multiply(qRoll);
       obj.scale.copy(this.baseScale);
       obj.updateMatrixWorld(true);
 
