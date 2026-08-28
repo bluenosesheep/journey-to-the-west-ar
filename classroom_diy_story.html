@@ -297,7 +297,7 @@ window.StandaloneParkMode={
     if(c){c.tracking=false;c.holding=false;c.dragState=null;c.hideHits()}
     const w=document.getElementById("parkWorld");if(w)w.object3D.visible=false;
     this.showStory();
-    document.getElementById("hint").textContent="PARK · 公园整理好啦，继续讲故事吧 🌿";
+    document.getElementById("hint").textContent="PARK · 公园整理好啦，太棒了 🌿";
   }
 };
 
@@ -491,7 +491,7 @@ AFRAME.registerComponent("park-drag-controller",{
       if(window.StandaloneParkMode?.mode==="story"){
         this.holding=false;this.hideHits();
         if(this.world)this.world.object3D.visible=false;
-        document.getElementById("hint").textContent="PARK · 继续用玩偶讲故事吧 🌿";
+        document.getElementById("hint").textContent="PARK · 来到了公园 🌿";
       }else{
         this.showHits();this.updateHitPositions();
         document.getElementById("hint").textContent="PARK · 可以继续拖动，或用玩偶讲故事 🌿";
@@ -734,7 +734,7 @@ AFRAME.registerComponent("market-persist",{
       if(window.StandaloneMarketMode?.mode==="story"){
         this.holding=false;this.hideHoldHits();
         if(this.world)this.world.object3D.visible=false;
-        document.getElementById("hint").textContent="MARKET · 继续用玩偶讲故事吧 🧺";
+        document.getElementById("hint").textContent="MARKET · 去市场看看吧 🧺";
       }else{
         this.updateHoldHits();this.showHoldHits();
       }
@@ -1478,7 +1478,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 
 <body class="diy-waiting">
 <button id="homeBtn" type="button">← HOME</button>
-<div id="modeLabel">✨ DIY STORY</div>
+<div id="modeLabel">✨ </div>
 <button id="leaveSceneBtn" type="button">← 离开场景</button>
 <div id="buildingViewSwitch">
   <button id="buildingFarBtn" type="button" class="active">🌆 远景</button>
