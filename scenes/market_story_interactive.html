@@ -93,7 +93,8 @@ AFRAME.registerComponent("market-persist",{
       peach:document.getElementById("holdPeach"),
       cabbage:document.getElementById("holdCabbage"),
       egg:document.getElementById("holdEgg"),
-      reset:document.getElementById("holdReset")
+      reset:document.getElementById("holdReset"),
+      checkout:document.getElementById("checkoutBtn")
     };
 
     this.localPoints={
@@ -197,6 +198,21 @@ AFRAME.registerComponent("market-persist",{
   },
 
   hitKindAt:function(x,y,source){
+    const checkoutEl=this.hits.checkout;
+    if(
+      checkoutEl &&
+      checkoutEl.style.display!=="none"
+    ){
+      const r=checkoutEl.getBoundingClientRect();
+      const pad=source==="hand"?12:4;
+      if(
+        x>=r.left-pad && x<=r.right+pad &&
+        y>=r.top-pad && y<=r.bottom+pad
+      ){
+        return "checkout";
+      }
+    }
+
     const resetEl=this.hits.reset;
     if(resetEl && resetEl.style.display!=="none"){
       const r=resetEl.getBoundingClientRect();
@@ -207,7 +223,7 @@ AFRAME.registerComponent("market-persist",{
     }
 
     for(const [kind,el] of Object.entries(this.hits)){
-      if(kind==="reset"||!el||el.style.display==="none")continue;
+      if(kind==="reset"||kind==="checkout"||!el||el.style.display==="none")continue;
       const r=el.getBoundingClientRect();
       const pad=source==="hand"?8:0;
       if(x>=r.left-pad&&x<=r.right+pad&&y>=r.top-pad&&y<=r.bottom+pad){
@@ -226,6 +242,11 @@ AFRAME.registerComponent("market-persist",{
     const comp=document.getElementById("marketDisplay")
       ?.components?.["market-canvas"];
     if(!comp)return;
+
+    if(kind==="checkout"){
+      window.StandaloneMarketMode?.checkout();
+      return;
+    }
 
     if(kind==="reset"){
       comp.reset();
@@ -302,11 +323,17 @@ AFRAME.registerComponent("market-persist",{
   },
 
   showHoldHits:function(){
-    Object.values(this.hits).forEach(b=>b.style.display="block");
+    ["peach","cabbage","egg","reset"].forEach(k=>{
+      const b=this.hits[k];
+      if(b)b.style.display="block";
+    });
   },
 
   hideHoldHits:function(){
-    Object.values(this.hits).forEach(b=>b.style.display="none");
+    ["peach","cabbage","egg","reset"].forEach(k=>{
+      const b=this.hits[k];
+      if(b)b.style.display="none";
+    });
   },
 
   tick:function(){
