@@ -7,6 +7,7 @@
 
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+<script src="../js/input-router.js"></script>
 
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}
@@ -16,6 +17,46 @@ canvas.a-canvas{background:transparent!important}.off{display:none}
 #hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px/1.4 system-ui;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.16)}
 #dragLayer{position:fixed;inset:0;z-index:40;pointer-events:none}
 .drag-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}
+
+#cameraOrientationControl{
+  position:fixed;left:18px;top:18px;z-index:90;display:flex;align-items:center;gap:7px;
+  padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.90);color:#444;
+  box-shadow:0 5px 18px rgba(0,0,0,.16);font:800 11px/1 system-ui
+}
+#cameraOrientationControl select{
+  border:0;outline:0;border-radius:999px;padding:5px 8px;background:rgba(255,240,180,.92);
+  color:#333;font:800 12px system-ui
+}
+#handBtn{
+  position:fixed;right:18px;top:18px;z-index:90;border:0;border-radius:999px;padding:10px 14px;
+  background:rgba(255,248,220,.96);color:#56713b;font:800 13px/1 system-ui;
+  box-shadow:0 5px 18px rgba(0,0,0,.16);cursor:pointer
+}
+#handCursor{
+  position:fixed;z-index:100;width:68px;height:68px;margin:-34px 0 0 -34px;border-radius:50%;
+  display:none;place-items:center;pointer-events:none;font-size:34px;background:rgba(255,255,255,.90);
+  box-shadow:0 6px 26px rgba(0,0,0,.26)
+}
+#handCursor.pinching{width:80px;height:80px;margin:-40px 0 0 -40px;background:rgba(255,238,165,.96)}
+#handCursor.gesture-locked{opacity:.72;background:rgba(235,245,255,.92)}
+#handStatus{
+  position:fixed;right:18px;top:62px;z-index:90;display:none;padding:8px 12px;border-radius:999px;
+  background:rgba(255,255,255,.90);color:#333;font:700 12px/1.2 system-ui;
+  box-shadow:0 4px 16px rgba(0,0,0,.16)
+}
+#dragReset{
+  z-index:58!important;border:2px solid #6f8e42!important;border-radius:999px!important;
+  background:rgba(255,248,220,.97)!important;color:#56713b!important;
+  font:700 14px/1 system-ui!important;box-shadow:0 5px 16px rgba(0,0,0,.18)!important;
+  cursor:pointer!important;pointer-events:auto!important;padding:0 12px!important
+}
+.mindar-ui-scanning,
+.mindar-ui-scanning .scanning,
+.mindar-ui-scanning .scanning-line,
+.mindar-ui-scanning .inner,
+.mindar-ui-scanning .scanline{
+  display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important
+}
 </style>
 
 <script>
@@ -77,6 +118,12 @@ AFRAME.registerComponent("building-canvas",{
   },
 
   tick:function(){
+    const now=performance.now();
+    const active=!!window.BuildingDragController?.dragState;
+    const frameMs=active?33:67;
+    if(this._lastDraw&&now-this._lastDraw<frameMs)return;
+    this._lastDraw=now;
+
     const ctx=this.ctx,c=this.c,w=c.width,h=c.height;
     ctx.clearRect(0,0,w,h);
     ctx.textAlign="center";ctx.textBaseline="middle";
@@ -262,13 +309,7 @@ AFRAME.registerComponent("building-canvas",{
     ctx.fillText("🚗",carX,414);
     ctx.restore();
 
-    // RESET
-    const bx=w/2-86,by=458,bw=172,bh=40,br=20;
-    ctx.save();roundRect(ctx,bx,by,bw,bh,br);
-    ctx.fillStyle="rgba(255,248,220,.96)";ctx.fill();
-    ctx.lineWidth=3;ctx.strokeStyle="#6f8e42";ctx.stroke();
-    ctx.fillStyle="#5c5c5c";ctx.font='700 20px system-ui,sans-serif';
-    ctx.fillText("RESET",w/2,by+bh/2+1);ctx.restore();
+    // RESET UI is provided by the DOM button #dragReset.
 
     const mesh=this.el.getObject3D("mesh");
     if(mesh&&mesh.material&&mesh.material.map)mesh.material.map.needsUpdate=true;
@@ -279,6 +320,7 @@ AFRAME.registerComponent("building-drag-controller",{
   schema:{seconds:{type:"number",default:15},world:{type:"selector"}},
 
   init:function(){
+    window.BuildingDragController=this;
     this.world=this.data.world;this.tracking=false;this.holding=false;this.timer=null;this.holdStart=0;
     this.lastMatrix=new THREE.Matrix4();this.basePos=new THREE.Vector3();this.baseQuat=new THREE.Quaternion();this.baseScale=new THREE.Vector3(1,1,1);
     this.poseHistory=[];this.maxPoseHistory=24;
@@ -295,20 +337,14 @@ AFRAME.registerComponent("building-drag-controller",{
 
     this.dragState=null;
 
-    Object.entries(this.hits).forEach(([kind,el])=>{
-      if(kind==="reset"){
-        el.addEventListener("pointerdown",(e)=>{
-          e.preventDefault();
-          const comp=this.getCanvasComp();if(comp)comp.reset();
-        });
-      }else{
-        el.addEventListener("pointerdown",(e)=>this.startDrag(e,kind));
-      }
-    });
+    this.hits.reset.textContent="再试一次";
 
-    window.addEventListener("pointermove",(e)=>this.moveDrag(e),{passive:false});
-    window.addEventListener("pointerup",(e)=>this.endDrag(e));
-    window.addEventListener("pointercancel",(e)=>this.endDrag(e));
+    window.CityInput.register("building-standalone",{
+      down:(input)=>this.handleDown(input),
+      move:(input)=>this.handleMove(input),
+      up:(input)=>this.handleUp(input),
+      cancel:(input)=>this.handleUp(input)
+    });
 
     if(this.world)this.world.object3D.visible=false;
 
@@ -338,11 +374,8 @@ AFRAME.registerComponent("building-drag-controller",{
 
       this.showHits();this.updateHitPositions();
 
-      if(this.timer)clearTimeout(this.timer);
-      this.timer=setTimeout(()=>{
-        if(this.world)this.world.object3D.visible=false;
-        this.holding=false;this.hideHits();this.timer=null;
-      },this.data.seconds*1000);
+      if(this.timer){clearTimeout(this.timer);this.timer=null;}
+      // Standalone mode: keep Building interaction visible until page close/reload.
     });
   },
 
@@ -384,32 +417,57 @@ AFRAME.registerComponent("building-drag-controller",{
     };
   },
 
-  startDrag:function(e,kind){
-    const comp=this.getCanvasComp(),scale=this.getScreenScale();
-    if(!comp||!scale)return;
+  hitKindAt:function(x,y,source){
+    for(const kind of ["reset","house","tower","school","shop"]){
+      const b=this.hits[kind];
+      if(!b||b.style.display==="none")continue;
+      const r=b.getBoundingClientRect();
+      const pad=source==="hand"?8:0;
+      if(x>=r.left-pad&&x<=r.right+pad&&y>=r.top-pad&&y<=r.bottom+pad)return kind;
+    }
+    return null;
+  },
 
-    e.preventDefault();
+  handleDown:function(input){
+    const kind=this.hitKindAt(input.x,input.y,input.source);
+    if(!kind)return;
+
+    if(input.nativeEvent)input.nativeEvent.preventDefault();
+
+    if(kind==="reset"){
+      this.getCanvasComp()?.reset();
+      return;
+    }
+
+    const comp=this.getCanvasComp();
+    const scale=this.getScreenScale();
+    if(!comp||!scale)return;
 
     const item=comp.items[kind];
     this.dragState={
-      pointerId:e.pointerId,kind,
-      startScreenX:e.clientX,startScreenY:e.clientY,
-      startCanvasX:item.x,startCanvasY:item.y,
-      pxPerUnitX:scale.pxPerUnitX,pxPerUnitY:scale.pxPerUnitY,
+      pointerId:input.pointerId,
+      kind,
+      startScreenX:input.x,
+      startScreenY:input.y,
+      startCanvasX:item.x,
+      startCanvasY:item.y,
+      pxPerUnitX:scale.pxPerUnitX,
+      pxPerUnitY:scale.pxPerUnitY,
       moved:false
     };
 
     document.getElementById("hint").textContent="拖到街道旁边吧！";
   },
 
-  moveDrag:function(e){
-    if(!this.dragState||e.pointerId!==this.dragState.pointerId)return;
-    e.preventDefault();
+  handleMove:function(input){
+    if(!this.dragState||input.pointerId!==this.dragState.pointerId)return;
+    if(input.nativeEvent)input.nativeEvent.preventDefault();
 
-    const comp=this.getCanvasComp();if(!comp)return;
+    const comp=this.getCanvasComp();
+    if(!comp)return;
 
-    const dx=e.clientX-this.dragState.startScreenX;
-    const dy=e.clientY-this.dragState.startScreenY;
+    const dx=input.x-this.dragState.startScreenX;
+    const dy=input.y-this.dragState.startScreenY;
     if(Math.hypot(dx,dy)>8)this.dragState.moved=true;
 
     const screenPxPerCanvasX=(this.dragState.pxPerUnitX*this.planeWidth)/this.canvasW;
@@ -424,15 +482,14 @@ AFRAME.registerComponent("building-drag-controller",{
     this.updateHitPositions();
   },
 
-  endDrag:function(e){
-    if(!this.dragState||e.pointerId!==this.dragState.pointerId)return;
+  handleUp:function(input){
+    if(!this.dragState||input.pointerId!==this.dragState.pointerId)return;
 
     const state=this.dragState;
     this.dragState=null;
 
     if(!state.moved){
-      const comp=this.getCanvasComp();
-      if(comp)comp.toggleLight(state.kind);
+      this.getCanvasComp()?.toggleLight(state.kind);
     }else{
       document.getElementById("hint").textContent="CITY · 拖动建筑，轻点建筑可以点亮它 ✨";
     }
@@ -470,8 +527,8 @@ AFRAME.registerComponent("building-drag-controller",{
     const rs=this.projectWorld(resetWorld);
 
     if(rs){
-      const bw=Math.max(90,.74*scale.pxPerUnitX);
-      const bh=Math.max(44,.30*scale.pxPerUnitY);
+      const bw=Math.max(96,.46*scale.pxPerUnitX);
+      const bh=Math.max(26,.095*scale.pxPerUnitY);
       this.hits.reset.style.left=(rs.x-bw/2)+"px";
       this.hits.reset.style.top=(rs.y-bh/2)+"px";
       this.hits.reset.style.width=bw+"px";
@@ -481,6 +538,13 @@ AFRAME.registerComponent("building-drag-controller",{
 
   tick:function(){
     if(!this.world)return;
+
+    const now=performance.now();
+    const active=this.tracking||!!this.dragState;
+    const frameMs=active?33:67;
+    if(this._lastControllerTick&&now-this._lastControllerTick<frameMs)return;
+    this._lastControllerTick=now;
+
     const obj=this.world.object3D;
 
     if(this.tracking){
@@ -518,9 +582,155 @@ AFRAME.registerComponent("building-drag-controller",{
   }
 });
 </script>
+<script>
+window.ClassroomCameraOrientation={
+  angle:0,
+  init(){
+    const select=document.getElementById("cameraOrientationSelect");
+    this.angle=Number(localStorage.getItem("buildingCameraAngle")||0);
+    if(select){
+      select.value=String(this.angle);
+      select.addEventListener("change",()=>{
+        this.angle=Number(select.value)||0;
+        localStorage.setItem("buildingCameraAngle",String(this.angle));
+        this.apply();
+      });
+    }
+    this.apply();
+  },
+  apply(){
+    const video=document.querySelector("video");
+    if(!video){setTimeout(()=>this.apply(),120);return}
+    const a=this.angle;
+    video.style.transformOrigin="50% 50%";
+    video.style.transform=`rotate(${a}deg)`;
+    if(a===90||a===270){
+      const scale=Math.max(innerWidth/innerHeight,innerHeight/innerWidth);
+      video.style.transform=`rotate(${a}deg) scale(${scale})`;
+    }
+  },
+  mapPoint(x,y,width,height){
+    const a=this.angle;
+    if(a===90)return{x:width-(y/height)*width,y:(x/width)*height};
+    if(a===180)return{x:width-x,y:height-y};
+    if(a===270)return{x:(y/height)*width,y:height-(x/width)*height};
+    return{x,y};
+  }
+};
+
+window.StandaloneBuildingHandMode={
+  running:false,
+  sleeping:false,
+  timer:null,
+  sleepMs:5000,
+
+  clearTimer(){
+    if(this.timer){clearTimeout(this.timer);this.timer=null}
+  },
+
+  noteInteraction(){
+    if(!this.running)return;
+    this.clearTimer();
+    this.timer=setTimeout(()=>this.sleep(),this.sleepMs);
+  },
+
+  async start(){
+    if(this.running)return;
+
+    const status=document.getElementById("handStatus");
+    const cursor=document.getElementById("handCursor");
+    const video=document.querySelector("video");
+
+    if(!video||!window.ClassroomHandTracking)return;
+
+    if(status){
+      status.style.display="block";
+      status.textContent="手势：启动中…";
+    }
+
+    await window.ClassroomHandTracking.start({
+      video,
+      cursor,
+      mirror:false,
+      maxFps:18,
+      smoothing:.38,
+      pinchDownRatio:.34,
+      pinchUpRatio:.44,
+      reuseExistingVideo:true,
+      viewport:()=>({width:innerWidth,height:innerHeight}),
+      onStatus:(msg)=>{if(status)status.textContent="手势："+msg},
+      onArmedChange:(armed)=>{if(status)status.textContent=armed?"手势：BUILDING":"放下识别卡，张开手 ✋"},
+      onMetrics:(data)=>{
+        if(!status)return;
+        if(!data.handVisible)status.textContent="手势：请伸出一只手";
+        else if(data.armed===false)status.textContent="放下识别卡，张开手 ✋";
+        else if(data.pinching)status.textContent="手势：抓住";
+        else status.textContent="手势：BUILDING";
+      }
+    });
+
+    this.running=true;
+    this.sleeping=false;
+    this.noteInteraction();
+    window.ClassroomHandTracking.requireReleaseToArm(300);
+
+    const btn=document.getElementById("handBtn");
+    if(btn)btn.textContent="✨ INTERACT · ON";
+  },
+
+  sleep(){
+    if(!this.running)return;
+    this.clearTimer();
+    window.ClassroomHandTracking?.stop({keepVideo:true,keepModel:true});
+    this.running=false;
+    this.sleeping=true;
+
+    const cursor=document.getElementById("handCursor");
+    const status=document.getElementById("handStatus");
+    const btn=document.getElementById("handBtn");
+
+    if(cursor)cursor.style.display="none";
+    if(status){
+      status.style.display="block";
+      status.textContent="手势：已关闭 · 再点 INTERACT 唤醒";
+    }
+    if(btn)btn.textContent="✨ INTERACT · OFF";
+  },
+
+  toggle(){
+    this.running?this.sleep():this.start();
+  }
+};
+
+document.addEventListener("DOMContentLoaded",()=>{
+  window.ClassroomCameraOrientation.init();
+
+  document.getElementById("handBtn")
+    ?.addEventListener("click",()=>window.StandaloneBuildingHandMode.toggle());
+
+  window.CityInput.register("building-hand-auto-sleep",{
+    down:(input)=>{if(input.source==="hand")window.StandaloneBuildingHandMode.noteInteraction()},
+    up:(input)=>{if(input.source==="hand")window.StandaloneBuildingHandMode.noteInteraction()}
+  });
+});
+</script>
+
+<script type="module" src="../js/hand-tracking-performance.js"></script>
 </head>
 
 <body>
+<div id="cameraOrientationControl">
+  <span>📷 CAMERA</span>
+  <select id="cameraOrientationSelect" aria-label="Camera orientation">
+    <option value="0">0°</option>
+    <option value="90">90°</option>
+    <option value="180">180°</option>
+    <option value="270">270°</option>
+  </select>
+</div>
+<button id="handBtn" type="button">✨ INTERACT · OFF</button>
+<div id="handStatus">手势：已关闭</div>
+<div id="handCursor">✨</div>
 <div id="hint">请把镜头对准 Building 识别图</div>
 
 <div id="dragLayer">
@@ -528,13 +738,13 @@ AFRAME.registerComponent("building-drag-controller",{
   <button id="dragTower" class="drag-hit" aria-label="Tower"></button>
   <button id="dragSchool" class="drag-hit" aria-label="School"></button>
   <button id="dragShop" class="drag-hit" aria-label="Shop"></button>
-  <button id="dragReset" class="drag-hit" aria-label="Reset"></button>
+  <button id="dragReset" class="drag-hit" aria-label="Reset">再试一次</button>
 </div>
 
 <canvas id="buildingCanvas" class="off" width="768" height="512"></canvas>
 
 <a-scene
-  mindar-image="imageTargetSrc: ../targets/building.mind; autoStart: true;"
+  mindar-image="imageTargetSrc: ../targets/building.mind; autoStart: true; maxTrack: 1;"
   color-space="sRGB"
   renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true"
   vr-mode-ui="enabled:false"
