@@ -46,16 +46,18 @@ AFRAME.registerComponent("building-city-controller",{
 
     this.el.addEventListener("targetLost",()=>{
       this.tracking=false;
-      // Keep the City at its last tracked position after the Building card is removed.
+
+      // Freeze the last pose captured while tracking. Do not sample the
+      // targetLost frame itself because it can be skewed while the card exits.
       if(this.world){
-        this.el.object3D.updateMatrixWorld(true);
-        this.lastMatrix.copy(this.el.object3D.matrixWorld);
-        const p=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();
-        this.lastMatrix.decompose(p,q,s);
-        this.basePos.copy(p);this.baseScale.copy(s);
         const o=this.world.object3D;
-        o.position.copy(p);o.quaternion.identity();o.scale.copy(s);o.visible=true;o.updateMatrixWorld(true);
+        o.position.copy(this.basePos);
+        o.quaternion.identity();
+        o.scale.copy(this.baseScale);
+        o.visible=true;
+        o.updateMatrixWorld(true);
       }
+
       this.refreshHits();
     });
   },
@@ -165,25 +167,37 @@ AFRAME.registerComponent("building-city-controller",{
   tick(){
     if(!this.world)return;
 
-    // Track Building target pose only while the card is visible.
+    // While the Building card is visible, continuously copy the tracked target
+    // pose to cityWorld. This is what makes the City visible DURING recognition.
     if(this.tracking){
       this.el.object3D.updateMatrixWorld(true);
       this.lastMatrix.copy(this.el.object3D.matrixWorld);
-      const p=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();
-      this.lastMatrix.decompose(p,q,s);
-      this.basePos.copy(p);this.baseScale.copy(s);
 
-      // The story/interact view intentionally uses screen-oriented City art.
-      if(this.mode==="story"){
-        // Story uses its designed distant offset relative to target.
-      }
+      const p=new THREE.Vector3();
+      const q=new THREE.Quaternion();
+      const s=new THREE.Vector3();
+      this.lastMatrix.decompose(p,q,s);
+
+      this.basePos.copy(p);
+      this.baseScale.copy(s);
+
+      const obj=this.world.object3D;
+
+      // Keep the City artwork screen-upright, as in the later stable City demo,
+      // while still following the recognition card's position and scale.
+      obj.position.copy(p);
+      obj.quaternion.identity();
+      obj.scale.copy(s);
+      obj.visible=true;
+      obj.updateMatrixWorld(true);
     }
 
     // Only hit projection is throttled; no MediaPipe exists in this page.
     if(this.mode==="interact"){
       const now=performance.now();
       if(!this._lastHit||now-this._lastHit>=100){
-        this._lastHit=now;this.refreshHits();
+        this._lastHit=now;
+        this.refreshHits();
       }
     }
   }
