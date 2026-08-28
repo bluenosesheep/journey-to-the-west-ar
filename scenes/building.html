@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Building · City Scene AR</title>
+<title>Building · City World</title>
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <style>
@@ -17,658 +17,208 @@ canvas.a-canvas{background:transparent!important}
 #modeSwitch button.active{background:rgba(255,240,180,.96);color:#4e6537}
 #cameraOrientationControl{position:fixed;left:18px;top:18px;z-index:90;display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.90);color:#444;box-shadow:0 5px 18px rgba(0,0,0,.16);font:800 11px/1 system-ui}
 #cameraOrientationControl select{border:0;outline:0;border-radius:999px;padding:5px 8px;background:rgba(255,240,180,.92);color:#333;font:800 12px system-ui}
+.city-hit{position:fixed;display:none;z-index:60;border:0;background:transparent;pointer-events:auto;cursor:pointer}
 .mindar-ui-scanning,.mindar-ui-scanning .scanning,.mindar-ui-scanning .scanning-line,.mindar-ui-scanning .inner,.mindar-ui-scanning .scanline{display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}
 </style>
 <script>
-window.citySelectedScene="city";
-window.ClassroomHandMode={running:false,stop(){},setMode(){}};
-window.ClassroomHandTracking={requireReleaseToArm(){}};
-window.ClassroomActivityMode={
-  mode:"story",scene:"city",
-  isInteract(){return this.mode==="interact"},
-  setStory(){
-    this.mode="story";
-    document.getElementById("storyModeBtn")?.classList.add("active");
-    document.getElementById("interactModeBtn")?.classList.remove("active");
-    document.querySelector('[city-world-controller]')?.components?.["city-world-controller"]?.enterCityStoryView();
-    document.getElementById("hint").textContent="CITY · 🎭 STORY MODE · 用玩偶讲故事";
-  },
-  setInteract(){
-    this.mode="interact";
-    document.getElementById("storyModeBtn")?.classList.remove("active");
-    document.getElementById("interactModeBtn")?.classList.add("active");
-    document.querySelector('[city-world-controller]')?.components?.["city-world-controller"]?.enterCityInteractView();
-    document.getElementById("hint").textContent="CITY · ✨ INTERACT MODE · 看看 PARK 和 MARKET";
-  }
-};
-function alignBackButtonWithHint(){}
-
-AFRAME.registerComponent("city-world-controller",{
-  init:function(){
+AFRAME.registerComponent("building-city-controller",{
+  init(){
     this.world=document.getElementById("cityWorld");
     this.building=document.getElementById("cityBuilding");
     this.park=document.getElementById("cityPark");
     this.market=document.getElementById("cityMarket");
-    this.hint=document.getElementById("hint");
-    this.backBtn=document.getElementById("sceneBackBtn");
-    this.backBtn.addEventListener("click",()=>this.exitToCity());
-
-    // STEP 5: RETURN CITY also accepts a fresh hand pinch through CityInput.
-    // We intentionally handle hand input only here so the existing mouse
-    // click behavior remains untouched and cannot fire twice.
-    window.CityInput.register("city-return",{
-      down:(input)=>{
-        if(input.source!=="hand")return;
-        if(!window.ClassroomActivityMode?.isInteract())return;
-        if(!this.backBtn || this.backBtn.style.display==="none")return;
-
-        const r=this.backBtn.getBoundingClientRect();
-        const pad=10;
-
-        if(
-          input.x>=r.left-pad && input.x<=r.right+pad &&
-          input.y>=r.top-pad && input.y<=r.bottom+pad
-        ){
-          this.exitToCity();
-        }
-      }
-    });
-
-    // CITY scene gesture selection.
-    // A fresh pinch over PARK or MARKET is equivalent to the existing click.
-    window.CityInput.register("city-select",{
-      down:(input)=>{
-        if(input.source!=="hand")return;
-        if(!window.ClassroomActivityMode?.isInteract())return;
-        if(window.citySelectedScene!==null)return;
-
-        const inside=(el,pad=8)=>{
-          if(!el || el.style.display==="none")return false;
-          const r=el.getBoundingClientRect();
-          return (
-            input.x>=r.left-pad && input.x<=r.right+pad &&
-            input.y>=r.top-pad && input.y<=r.bottom+pad
-          );
-        };
-
-        if(inside(this.hitPark)){
-          this.focusPark();
-          return;
-        }
-
-        if(inside(this.hitMarket)){
-          this.focusMarket();
-        }
-      }
-    });
-
-    window.citySelectedScene=null;
-    this.parkInteraction=document.getElementById("parkInteractionWorld");
-    this.marketInteraction=document.getElementById("marketInteractionWorld");
-    this.hitPark=document.getElementById("hitCityPark");
-    this.hitMarket=document.getElementById("hitCityMarket");
-    this.camera=null;
-    this.cityInteractTransitioning=false;
-    this.cityInteractCentered=false;
-    this.cityNarrativeMode="story";
-
-    this.hitPark.addEventListener("click",()=>this.focusPark());
-    this.hitMarket.addEventListener("click",()=>this.focusMarket());
-
+    this.hitPark=document.getElementById("hitPark");
+    this.hitMarket=document.getElementById("hitMarket");
     this.tracking=false;
+    this.mode="story";
     this.lastMatrix=new THREE.Matrix4();
+    this.basePos=new THREE.Vector3();
+    this.baseScale=new THREE.Vector3(1,1,1);
 
-    this.world.object3D.visible=false;
+    if(this.world)this.world.object3D.visible=false;
 
     this.el.addEventListener("targetFound",()=>{
       this.tracking=true;
-      document.body.classList.add("city-started");
-
-      // Cache the Building target pose immediately.
-      // STORY hides the real AR city, so we cannot rely on a later visible tick
-      // to remember where CITY should appear when INTERACT is pressed.
-      this.el.object3D.updateMatrixWorld(true);
-      this.lastMatrix.copy(this.el.object3D.matrixWorld);
-
-      // First cold load: do not reveal white a-image planes before PNG textures are ready.
-      this.world.object3D.visible=false;
-      this.hint.textContent="CITY WORLD · 正在加载场景…";
-
-      window.cityAssetsReady.then(()=>{
-        if(!this.world)return;
-        this.showWorld();
-
-        // showWorld decides STORY vs INTERACT visibility.
-        this.updateHitPositions();
-        this.hint.textContent="CITY · 🎭 STORY MODE · 猴儿看见了远处的城市";
-      });
+      if(this.world)this.world.object3D.visible=true;
+      document.getElementById("modeSwitch").style.display="flex";
+      this.enterStory();
     });
 
     this.el.addEventListener("targetLost",()=>{
-      // City World stays at the last tracked pose once it has actually been loaded.
       this.tracking=false;
+      // Keep the City at its last tracked position after the Building card is removed.
+      if(this.world){
+        this.el.object3D.updateMatrixWorld(true);
+        this.lastMatrix.copy(this.el.object3D.matrixWorld);
+        const p=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();
+        this.lastMatrix.decompose(p,q,s);
+        this.basePos.copy(p);this.baseScale.copy(s);
+        const o=this.world.object3D;
+        o.position.copy(p);o.quaternion.identity();o.scale.copy(s);o.visible=true;o.updateMatrixWorld(true);
+      }
+      this.refreshHits();
     });
   },
 
-  getCamera:function(){
-    if(!this.camera){
-      const camEl=document.querySelector("a-camera");
-      this.camera=camEl&&camEl.getObject3D("camera");
-    }
-    return this.camera;
+  clearAnimations(el){
+    ["animation__pos","animation__scale","animation__opacity"].forEach(a=>el?.removeAttribute(a));
   },
 
-  projectWorld:function(v){
-    const cam=this.getCamera();
-    if(!cam)return null;
-    const p=v.clone().project(cam);
-    return{
-      x:(p.x*.5+.5)*window.innerWidth,
-      y:(-p.y*.5+.5)*window.innerHeight
-    };
-  },
-
-  updateHitPositions:function(){
-    if(!this.world || this.hitPark.style.display==="none")return;
-
-    const obj=this.world.object3D;
-    obj.updateMatrixWorld(true);
-
-    const placeHit=(el,local,wUnit,hUnit)=>{
-      const p=local.clone().applyMatrix4(obj.matrixWorld);
-      const s=this.projectWorld(p);
-      if(!s)return;
-
-      const c=this.projectWorld(new THREE.Vector3(0,0,0).applyMatrix4(obj.matrixWorld));
-      const r=this.projectWorld(new THREE.Vector3(.5,0,0).applyMatrix4(obj.matrixWorld));
-      const u=this.projectWorld(new THREE.Vector3(0,.5,0).applyMatrix4(obj.matrixWorld));
-      if(!c||!r||!u)return;
-
-      const px=Math.max(1,Math.abs(r.x-c.x)*2);
-      const py=Math.max(1,Math.abs(u.y-c.y)*2);
-      const bw=Math.max(90,wUnit*px);
-      const bh=Math.max(70,hUnit*py);
-
-      el.style.left=(s.x-bw/2)+"px";
-      el.style.top=(s.y-bh/2)+"px";
-      el.style.width=bw+"px";
-      el.style.height=bh+"px";
-    };
-
-    placeHit(this.hitPark,new THREE.Vector3(-.72,-.42,.03),1.20,.82);
-    placeHit(this.hitMarket,new THREE.Vector3(.72,-.42,.03),1.20,.82);
-  },
-
-  tick:function(){
-    if(this.tracking && this.world){
-      // Always keep the latest Building target pose for future returns / STORY.
-      this.el.object3D.updateMatrixWorld(true);
-      this.lastMatrix.copy(this.el.object3D.matrixWorld);
-
-      // Before INTERACT centering, preserve normal target-follow behavior.
-      // Once CITY has moved to the narrative center, keep it fixed there.
-      if(
-        this.world.object3D.visible &&
-        !this.cityInteractTransitioning &&
-        !this.cityInteractCentered
-      ){
-        const p=new THREE.Vector3();
-        const q=new THREE.Quaternion();
-        const s=new THREE.Vector3();
-        this.lastMatrix.decompose(p,q,s);
-
-        const obj=this.world.object3D;
-        obj.position.copy(p);
-        obj.quaternion.identity();
-        obj.scale.copy(s);
-        obj.updateMatrixWorld(true);
-      }
-    }
-
-    // PERFORMANCE SAFE FIX:
-    // Keep CITY tracking/pose updates at normal A-Frame cadence so INTERACT
-    // transitions remain stable. Throttle only the expensive screen hit projection.
-    if(window.ClassroomActivityMode?.mode==="interact"){
-      const now=performance.now();
-      const handRunning=window.ClassroomHandMode?.running===true;
-      const frameMs=handRunning?33:100; // ~30 FPS with hand, ~10 FPS without
-      if(!this._lastCityHitTick || now-this._lastCityHitTick>=frameMs){
-        this._lastCityHitTick=now;
-        this.updateHitPositions();
-      }
-    }
-  },
-  exitToCity:function(){
-    // Stop Park interaction/hold completely.
-    const parkTarget=document.querySelector('[mindar-image-target="targetIndex:1"]');
-    const parkComp=parkTarget&&parkTarget.components&&parkTarget.components["park-drag-controller"];
-    if(parkComp){
-      parkComp.tracking=false;
-      parkComp.holding=false;
-      if(parkComp.timer){clearTimeout(parkComp.timer);parkComp.timer=null;}
-      if(parkComp.dragState)parkComp.dragState=null;
-      if(parkComp.hideHits)parkComp.hideHits();
-    }
-
-    // Stop Market interaction/hold completely.
-    const marketTarget=document.querySelector('[mindar-image-target="targetIndex:2"]');
-    const marketComp=marketTarget&&marketTarget.components&&marketTarget.components["market-persist"];
-    if(marketComp){
-      marketComp.tracking=false;
-      marketComp.holding=false;
-      if(marketComp.timer){clearTimeout(marketComp.timer);marketComp.timer=null;}
-      if(marketComp.hideHoldHits)marketComp.hideHoldHits();
-    }
-
-    if(this.parkInteraction)this.parkInteraction.object3D.visible=false;
-    if(this.marketInteraction)this.marketInteraction.object3D.visible=false;
-
-    const parkBg=document.getElementById("parkDynamicBackground");
-    const marketBg=document.getElementById("marketDynamicBackground");
-    if(parkBg)parkBg.object3D.visible=false;
-    if(marketBg)marketBg.object3D.visible=false;
-
-    const parkLayer=document.getElementById("parkDragLayer");
-    const marketLayer=document.getElementById("marketHoldLayer");
-    if(parkLayer)parkLayer.style.display="none";
-    if(marketLayer)marketLayer.style.display="none";
-
-    this.showWorld();
-    this.hint.textContent="CITY WORLD · 点击 PARK 或 MARKET 进入场景";
-  },
-
-  applyCityNarrativeLayout:function(mode,animate=true){
-    if(!this.world||!this.building||!this.park||!this.market)return;
-
-    const isStory=mode==="story";
-
-    // Keep the internal CITY composition stable.
-    // The narrative distance effect is now applied to the WHOLE city group,
-    // which is much more visually obvious and reliable.
-    this.setPanel(this.building,"0 0.34 0.02","1 1 1",1);
-    this.setPanel(this.park,"-0.72 -0.42 0.03",".78 .78 .78",1);
-    this.setPanel(this.market,"0.72 -0.42 0.03",".78 .78 .78",1);
-
-    if(this.hitPark)this.hitPark.style.display=isStory?"none":"block";
-    if(this.hitMarket)this.hitMarket.style.display=isStory?"none":"block";
-
-    this.cityNarrativeMode=mode;
-    this.applyCityWorldNarrativePose(animate);
-    setTimeout(()=>this.updateHitPositions(),animate?760:0);
-  },
-
-  applyCityWorldNarrativePose:function(animate=true){
-    if(!this.world||!this.lastMatrix)return;
-
-    const p=new THREE.Vector3();
-    const q=new THREE.Quaternion();
-    const s=new THREE.Vector3();
-    this.lastMatrix.decompose(p,q,s);
-
-    const isStory=this.cityNarrativeMode==="story";
-    const obj=this.world.object3D;
-
-    // Base pose comes from the Building target, but orientation stays upright.
-    const targetPos=p.clone();
-    const targetScale=s.clone();
-
-    if(isStory){
-      // "Seen in the distance": move the complete city cluster to upper-left
-      // and make it much smaller.
-      targetPos.x-=0.72;
-      targetPos.y+=0.46;
-      targetScale.multiplyScalar(0.38);
-    }else{
-      // "Let's go take a look": bring the complete city back to center/full size.
-      targetScale.multiplyScalar(1.0);
-    }
-
-    if(!animate){
-      obj.position.copy(targetPos);
-      obj.quaternion.identity();
-      obj.scale.copy(targetScale);
-      obj.updateMatrixWorld(true);
-      return;
-    }
-
-    const fromPos=obj.position.clone();
-    const fromScale=obj.scale.clone();
-    const started=performance.now();
-    const duration=760;
-
-    const ease=(t)=>1-Math.pow(1-t,3);
-
-    const step=(now)=>{
-      const t=Math.min(1,(now-started)/duration);
-      const e=ease(t);
-
-      obj.position.lerpVectors(fromPos,targetPos,e);
-      obj.quaternion.identity();
-      obj.scale.lerpVectors(fromScale,targetScale,e);
-      obj.updateMatrixWorld(true);
-
-      if(t<1){
-        requestAnimationFrame(step);
-      }else{
-        this.updateHitPositions();
-      }
-    };
-
-    requestAnimationFrame(step);
-  },
-
-  showStoryCityMini:function(){
-    const mini=document.getElementById("storyCityMini");
-    if(!mini)return;
-
-    mini.hidden=false;
-    mini.removeAttribute("hidden");
-    mini.classList.remove("to-center");
-    mini.style.display="block";
-    mini.style.opacity="";
-
-    requestAnimationFrame(()=>mini.classList.add("show"));
-  },
-
-  hideStoryCityMini:function(animate=true){
-    const mini=document.getElementById("storyCityMini");
-    if(!mini)return;
-
-    if(!animate){
-      mini.classList.remove("show","to-center");
-      mini.style.display="none";
-      mini.style.opacity="0";
-      mini.hidden=true;
-      mini.setAttribute("hidden","");
-      return;
-    }
-
-    mini.classList.add("to-center");
-    mini.classList.remove("show");
-    setTimeout(()=>{
-      mini.classList.remove("to-center");
-      mini.style.display="none";
-      mini.style.opacity="0";
-      mini.hidden=true;
-      mini.setAttribute("hidden","");
-    },760);
-  },
-
-  enterCityStoryView:function(){
-    // STORY uses a fixed screen-space miniature, not the AR world pose.
-    if(this.world)this.world.object3D.visible=false;
-    this.showStoryCityMini();
-
-    if(this.hitPark)this.hitPark.style.display="none";
-    if(this.hitMarket)this.hitMarket.style.display="none";
-  },
-
-  enterCityInteractView:function(){
-    // Move the STORY miniature toward center, then reveal the real CITY
-    // at a stable centered screen pose rather than at the original target pose.
-    this.hideStoryCityMini(true);
-
-    if(this.world){
-      this.world.removeAttribute("animation__storyin");
-
-      const obj=this.world.object3D;
-
-      // Use the last known target scale only as a reference for overall size.
-      // Position is deliberately centered for narrative clarity.
-      const p=new THREE.Vector3();
-      const q=new THREE.Quaternion();
-      const s=new THREE.Vector3();
-      this.lastMatrix.decompose(p,q,s);
-
-      // Slightly smaller than the previous full-size CITY so nothing clips.
-      const endScale=s.clone().multiplyScalar(.82);
-      const startScale=endScale.clone().multiplyScalar(.62);
-
-      // Screen-space narrative center.
-      // Keeping z from the tracked pose preserves projection depth.
-      // Place the city slightly lower than mathematical center so the
-      // tallest building stays comfortably inside the frame.
-      const endPos=new THREE.Vector3(0,-0.16,p.z);
-
-      obj.position.copy(endPos);
-      obj.quaternion.identity();
-      obj.scale.copy(startScale);
-      obj.visible=true;
-      obj.updateMatrixWorld(true);
-
-      const started=performance.now();
-      const duration=760;
-      const ease=t=>1-Math.pow(1-t,3);
-
-      this.cityInteractTransitioning=true;
-
-      const step=(now)=>{
-        const t=Math.min(1,(now-started)/duration);
-        const e=ease(t);
-
-        obj.position.copy(endPos);
-        obj.quaternion.identity();
-        obj.scale.lerpVectors(startScale,endScale,e);
-        obj.updateMatrixWorld(true);
-
-        if(t<1){
-          requestAnimationFrame(step);
-        }else{
-          this.cityInteractTransitioning=false;
-          this.cityInteractCentered=true;
-          this.updateHitPositions();
-        }
-      };
-
-      requestAnimationFrame(step);
-    }
-
-    if(this.hitPark)this.hitPark.style.display="block";
-    if(this.hitMarket)this.hitMarket.style.display="block";
-  },
-
-  showWorld:function(){
-    window.citySelectedScene=null;
-    this.cityInteractCentered=false;
-    window.ClassroomActivityMode?.setScene("city");
-
-    if(this.backBtn)this.backBtn.style.display="none";
-
-    // Keep normal internal CITY panel transforms ready for INTERACT.
-    this.setPanel(this.building,"0 0.34 0.02","1 1 1",1);
-    this.setPanel(this.park,"-0.72 -0.42 0.03",".78 .78 .78",1);
-    this.setPanel(this.market,"0.72 -0.42 0.03",".78 .78 .78",1);
-
-    // STORY: hide the AR city and show a small fixed miniature in upper-left.
-    this.enterCityStoryView();
-
-    if(this.parkInteraction)this.parkInteraction.object3D.visible=false;
-    if(this.marketInteraction)this.marketInteraction.object3D.visible=false;
-
-    const parkBg=document.getElementById("parkDynamicBackground");
-    const marketBg=document.getElementById("marketDynamicBackground");
-    if(parkBg)parkBg.object3D.visible=false;
-    if(marketBg)marketBg.object3D.visible=false;
-
-    document.getElementById("parkDragLayer").style.display="none";
-    document.getElementById("marketHoldLayer").style.display="none";
-  },
-  setPanel:function(el,pos,scale,opacity){
-    el.object3D.visible=true;
-
-    // Clear old animation components first.
-    // Otherwise after returning to Building, the previous Park/Market zoom
-    // animation can keep controlling transform/material and the second click
-    // appears to do nothing.
-    el.removeAttribute("animation__pos");
-    el.removeAttribute("animation__scale");
-    el.removeAttribute("animation__opacity");
-
+  setPanel(el,pos,scale,opacity=1){
+    if(!el)return;
+    this.clearAnimations(el);
+    el.object3D.visible=opacity>0;
     el.setAttribute("position",pos);
     el.setAttribute("scale",scale);
     el.setAttribute("material","opacity",opacity);
   },
-  animatePanel:function(el,pos,scale,opacity){
+
+  animatePanel(el,pos,scale,opacity=1){
+    if(!el)return;
+    this.clearAnimations(el);
     el.object3D.visible=true;
-
-    el.removeAttribute("animation__pos");
-    el.removeAttribute("animation__scale");
-    el.removeAttribute("animation__opacity");
-
-    // Force A-Frame to commit the current transform before creating
-    // a fresh animation component for this new transition.
-    void el.object3D.position.x;
-
-    el.setAttribute("animation__pos","property: position; to: "+pos+"; dur: 760; easing: easeInOutCubic");
-    el.setAttribute("animation__scale","property: scale; to: "+scale+"; dur: 760; easing: easeInOutCubic");
-    el.setAttribute("animation__opacity","property: material.opacity; to: "+opacity+"; dur: 450; easing: easeInOutCubic");
-    if(opacity===0)setTimeout(()=>{el.object3D.visible=false;},520);
+    el.setAttribute("animation__pos",`property:position;to:${pos};dur:650;easing:easeInOutCubic`);
+    el.setAttribute("animation__scale",`property:scale;to:${scale};dur:650;easing:easeInOutCubic`);
+    el.setAttribute("animation__opacity",`property:material.opacity;to:${opacity};dur:420;easing:easeInOutCubic`);
+    if(opacity===0)setTimeout(()=>{el.object3D.visible=false},470);
   },
-  focusPark:function(){
-    if(window.ClassroomActivityMode?.switchEl)window.ClassroomActivityMode.switchEl.style.display="none";
 
-    // PERFORMANCE: no gesture inference is needed while PARK is enlarged
-    // and the child is scanning the PARK recognition card.
-    window.ClassroomHandMode?.stop();
+  enterStory(){
+    this.mode="story";
+    document.getElementById("storyModeBtn").classList.add("active");
+    document.getElementById("interactModeBtn").classList.remove("active");
 
-    window.citySelectedScene="park";
-    if(this.backBtn){this.backBtn.style.display="block";alignBackButtonWithHint();}
+    // Same three-image City composition, presented small/far for storytelling.
+    this.setPanel(this.building,"0 0.34 0.02","1 1 1",1);
+    this.setPanel(this.park,"-0.72 -0.42 0.03",".78 .78 .78",1);
+    this.setPanel(this.market,"0.72 -0.42 0.03",".78 .78 .78",1);
+    this.world.setAttribute("position","-0.72 0.48 -1.55");
+    this.world.setAttribute("scale",".58 .58 .58");
+    this.hideHits();
+    document.getElementById("hint").textContent="CITY · 🎭 STORY MODE · 用玩偶讲故事";
+  },
+
+  enterInteract(){
+    this.mode="interact";
+    document.getElementById("storyModeBtn").classList.remove("active");
+    document.getElementById("interactModeBtn").classList.add("active");
+
+    // Bring the whole City composition forward/center, like the later City demo.
+    this.setPanel(this.building,"0 0.34 0.02","1 1 1",1);
+    this.setPanel(this.park,"-0.72 -0.42 0.03",".78 .78 .78",1);
+    this.setPanel(this.market,"0.72 -0.42 0.03",".78 .78 .78",1);
+    this.world.setAttribute("position","0 0 0.02");
+    this.world.setAttribute("scale","1 1 1");
+    this.showHits();
+    setTimeout(()=>this.refreshHits(),40);
+    document.getElementById("hint").textContent="CITY · ✨ INTERACT MODE · 点击 PARK 或 MARKET";
+  },
+
+  focusPark(){
+    if(this.mode!=="interact")return;
     this.animatePanel(this.park,"0 0.08 0.03","1.95 1.95 1.95",1);
     this.animatePanel(this.building,"0 0.38 0.01",".8 .8 .8",0);
     this.animatePanel(this.market,"0.72 -0.42 0.01",".7 .7 .7",0);
-    this.hitPark.style.display="none";
-    this.hitMarket.style.display="none";
-    this.hint.textContent="PARK 已放大 · 现在扫描 PARK 识别图";alignBackButtonWithHint();
-  },
-  activateParkInteraction:function(){
-    if(this.backBtn){this.backBtn.style.display="block";alignBackButtonWithHint();}
-    if(!this.parkInteraction)return;
-
-    // First shrink the focused Park scene so the transition reads clearly.
-    const parkScene=this.park;
-    parkScene.object3D.visible=true;
-    parkScene.removeAttribute("animation__scale");
-    parkScene.removeAttribute("animation__pos");
-
-    parkScene.setAttribute("animation__scale",
-      "property:scale;to:.62 .62 .62;dur:520;easing:easeInOutCubic");
-    parkScene.setAttribute("animation__pos",
-      "property:position;to:-0.62 0.34 -0.15;dur:520;easing:easeInOutCubic");
-
-    // Keep interaction hidden during the shrink.
-    this.parkInteraction.object3D.visible=false;
-    if(this.marketInteraction)this.marketInteraction.object3D.visible=false;
-
-    const p=document.getElementById("parkDragLayer");
-    const m=document.getElementById("marketHoldLayer");
-    if(p)p.style.display="none";
-    if(m)m.style.display="none";
-
-    // Then reveal the Park interaction.
-    setTimeout(()=>{
-      // Transition finished: remove the CityWorld Park copy.
-      parkScene.object3D.visible=false;
-
-      // Reveal the single dynamic Park mini scene at the tracked Park pose.
-      const parkBg=document.getElementById("parkDynamicBackground");
-      if(parkBg)parkBg.object3D.visible=true;
-
-      // Then reveal the interaction in its messy STORY state.
-      const parkDisplay=document.getElementById("parkInteractiveDisplay");
-      const parkCanvasComp=parkDisplay?.components?.["park-canvas"];
-      if(parkCanvasComp)parkCanvasComp.setNarrativeMode("story");
-
-      this.parkInteraction.object3D.visible=true;
-      this.parkInteraction.setAttribute("position","0.22 -0.24 0.24");
-      this.parkInteraction.setAttribute("scale",".74 .74 .74");
-
-      if(p)p.style.display="block";
-      if(m)m.style.display="none";
-
-      window.ClassroomActivityMode?.setScene("park");
-    },540);
+    this.hideHits();
+    document.getElementById("hint").textContent="PARK 已放大";
   },
 
-  activateMarketInteraction:function(){
-    if(this.backBtn){this.backBtn.style.display="block";alignBackButtonWithHint();}
-    if(!this.marketInteraction)return;
-
-    // First shrink the focused Market scene.
-    const marketScene=this.market;
-    marketScene.object3D.visible=true;
-    marketScene.removeAttribute("animation__scale");
-    marketScene.removeAttribute("animation__pos");
-
-    marketScene.setAttribute("animation__scale",
-      "property:scale;to:.62 .62 .62;dur:520;easing:easeInOutCubic");
-    marketScene.setAttribute("animation__pos",
-      "property:position;to:-0.62 0.34 -0.15;dur:520;easing:easeInOutCubic");
-
-    // Keep interaction hidden until the scene has finished shrinking.
-    this.marketInteraction.object3D.visible=false;
-    if(this.parkInteraction)this.parkInteraction.object3D.visible=false;
-
-    const p=document.getElementById("parkDragLayer");
-    const m=document.getElementById("marketHoldLayer");
-    if(p)p.style.display="none";
-    if(m)m.style.display="none";
-
-    setTimeout(()=>{
-      // Transition finished: remove the CityWorld Market copy.
-      marketScene.object3D.visible=false;
-
-      // Reveal the single dynamic Market mini scene.
-      const marketBg=document.getElementById("marketDynamicBackground");
-      if(marketBg)marketBg.object3D.visible=true;
-
-      // Then reveal the interaction.
-      this.marketInteraction.object3D.visible=true;
-      this.marketInteraction.setAttribute("position","0.24 -0.22 0.22");
-      this.marketInteraction.setAttribute("scale",".72 .72 .72");
-
-      if(p)p.style.display="none";
-      if(m)m.style.display="block";
-
-      // Market enters STORY first; hand tracking starts only after INTERACT.
-      window.ClassroomActivityMode?.setScene("market");
-    },540);
-  },
-  focusMarket:function(){
-    if(window.ClassroomActivityMode?.switchEl)window.ClassroomActivityMode.switchEl.style.display="none";
-
-    // PERFORMANCE: no gesture inference is needed while MARKET is enlarged
-    // and the child is scanning the MARKET recognition card.
-    window.ClassroomHandMode?.stop();
-
-    window.citySelectedScene="market";
-    if(this.backBtn){this.backBtn.style.display="block";alignBackButtonWithHint();}
-
-    // Start from a clean state so Market can zoom every time.
-    [this.market,this.park,this.building].forEach(el=>{
-      if(!el)return;
-      el.removeAttribute("animation__pos");
-      el.removeAttribute("animation__scale");
-      el.removeAttribute("animation__opacity");
-      el.object3D.visible=true;
-    });
-
+  focusMarket(){
+    if(this.mode!=="interact")return;
+    [this.market,this.park,this.building].forEach(el=>{if(el){this.clearAnimations(el);el.object3D.visible=true}});
     this.animatePanel(this.market,"0 0 0.03","1.28 1.28 1.28",1);
     this.animatePanel(this.building,"0 0.38 0.01",".8 .8 .8",0);
     this.animatePanel(this.park,"-0.72 -0.42 0.01",".7 .7 .7",0);
-
-    this.hitPark.style.display="none";
-    this.hitMarket.style.display="none";
-    this.hint.textContent="MARKET 已放大 · 现在扫描 MARKET 识别图";
-    alignBackButtonWithHint();
+    this.hideHits();
+    document.getElementById("hint").textContent="MARKET 已放大";
   },
 
+  showHits(){this.hitPark.style.display="block";this.hitMarket.style.display="block"},
+  hideHits(){this.hitPark.style.display="none";this.hitMarket.style.display="none"},
 
+  project(v){
+    const cam=document.querySelector("a-camera")?.getObject3D("camera");
+    if(!cam)return null;
+    const p=v.clone().project(cam);
+    return{x:(p.x*.5+.5)*innerWidth,y:(-p.y*.5+.5)*innerHeight};
+  },
+
+  positionHit(el,image){
+    if(!el||!image||!image.object3D.visible)return;
+    image.object3D.updateMatrixWorld(true);
+    const m=image.object3D.matrixWorld;
+    const c=this.project(new THREE.Vector3(0,0,0).applyMatrix4(m));
+    const r=this.project(new THREE.Vector3(.5,0,0).applyMatrix4(m));
+    const u=this.project(new THREE.Vector3(0,.5,0).applyMatrix4(m));
+    if(!c||!r||!u)return;
+    const w=Math.max(80,Math.abs(r.x-c.x)*2*1.55);
+    const h=Math.max(70,Math.abs(u.y-c.y)*2*1.04);
+    el.style.left=(c.x-w/2)+"px";el.style.top=(c.y-h/2)+"px";el.style.width=w+"px";el.style.height=h+"px";
+  },
+
+  refreshHits(){
+    if(this.mode!=="interact")return;
+    this.positionHit(this.hitPark,this.park);
+    this.positionHit(this.hitMarket,this.market);
+  },
+
+  tick(){
+    if(!this.world)return;
+
+    // Track Building target pose only while the card is visible.
+    if(this.tracking){
+      this.el.object3D.updateMatrixWorld(true);
+      this.lastMatrix.copy(this.el.object3D.matrixWorld);
+      const p=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();
+      this.lastMatrix.decompose(p,q,s);
+      this.basePos.copy(p);this.baseScale.copy(s);
+
+      // The story/interact view intentionally uses screen-oriented City art.
+      if(this.mode==="story"){
+        // Story uses its designed distant offset relative to target.
+      }
+    }
+
+    // Only hit projection is throttled; no MediaPipe exists in this page.
+    if(this.mode==="interact"){
+      const now=performance.now();
+      if(!this._lastHit||now-this._lastHit>=100){
+        this._lastHit=now;this.refreshHits();
+      }
+    }
+  }
 });
+</script>
+</head>
+<body>
+<div id="cameraOrientationControl"><span>📷 CAMERA</span><select id="cameraOrientationSelect"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select></div>
+<div id="modeSwitch"><button id="storyModeBtn" class="active">🎭 STORY</button><button id="interactModeBtn">✨ INTERACT</button></div>
+<div id="hint">请把镜头对准 Building 识别图</div>
+<button id="hitPark" class="city-hit" aria-label="Park"></button>
+<button id="hitMarket" class="city-hit" aria-label="Market"></button>
 
+<a-scene mindar-image="imageTargetSrc: ../targets/building.mind; autoStart: true; maxTrack: 1;"
+ color-space="sRGB" renderer="colorManagement:true;physicallyCorrectLights:true;alpha:true;antialias:true"
+ vr-mode-ui="enabled:false" device-orientation-permission-ui="enabled:false">
+ <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+ <a-entity mindar-image-target="targetIndex:0" building-city-controller></a-entity>
 
+ <a-entity id="cityWorld" visible="false">
+   <a-image id="cityBuilding" src="../assets/city/building_scene.png" width="1.25" height="1.88" position="0 0.34 0.02" material="transparent:true;opacity:1;depthWrite:false"></a-image>
+   <a-image id="cityPark" src="../assets/city/park_scene.png" width="1.55" height="1.04" position="-0.72 -0.42 0.03" scale=".78 .78 .78" material="transparent:true;opacity:1;depthWrite:false"></a-image>
+   <a-image id="cityMarket" src="../assets/city/market_scene.png" width="1.55" height="1.04" position="0.72 -0.42 0.03" scale=".78 .78 .78" material="transparent:true;opacity:1;depthWrite:false"></a-image>
+ </a-entity>
+</a-scene>
+
+<script>
 document.addEventListener("DOMContentLoaded",()=>{
-  document.getElementById("storyModeBtn").onclick=()=>window.ClassroomActivityMode.setStory();
-  document.getElementById("interactModeBtn").onclick=()=>window.ClassroomActivityMode.setInteract();
+  const target=document.querySelector('[building-city-controller]');
+  const getComp=()=>target?.components?.["building-city-controller"];
+
+  document.getElementById("storyModeBtn").onclick=()=>getComp()?.enterStory();
+  document.getElementById("interactModeBtn").onclick=()=>getComp()?.enterInteract();
+  document.getElementById("hitPark").onclick=()=>getComp()?.focusPark();
+  document.getElementById("hitMarket").onclick=()=>getComp()?.focusMarket();
 
   const select=document.getElementById("cameraOrientationSelect");
   let angle=Number(localStorage.getItem("buildingCameraAngle")||0);
@@ -685,35 +235,6 @@ document.addEventListener("DOMContentLoaded",()=>{
   };
   select.onchange=()=>{angle=Number(select.value)||0;localStorage.setItem("buildingCameraAngle",String(angle));apply()};
   apply();
-});
-</script>
-</head>
-<body>
-<div id="cameraOrientationControl"><span>📷 CAMERA</span><select id="cameraOrientationSelect"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select></div>
-<div id="modeSwitch"><button id="storyModeBtn" class="active">🎭 STORY</button><button id="interactModeBtn">✨ INTERACT</button></div>
-<div id="hint">请把镜头对准 Building 识别图</div>
-
-<a-scene mindar-image="imageTargetSrc: ../targets/building.mind; autoStart: true; maxTrack: 1;"
- color-space="sRGB" renderer="colorManagement:true;physicallyCorrectLights:true;alpha:true;antialias:true"
- vr-mode-ui="enabled:false" device-orientation-permission-ui="enabled:false">
- <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
- <a-entity mindar-image-target="targetIndex:0" city-world-controller></a-entity>
- <a-entity id="cityWorld" visible="false">
-   <a-image id="cityBuilding" src="../assets/city/building_scene.png" width="1.25" height="1.88" position="0 0.34 0.02" material="transparent:true;opacity:1;depthWrite:false"></a-image>
-   <a-image id="cityPark" src="../assets/city/park_scene.png" width="1.55" height="1.04" position="-0.72 -0.42 0.03" scale=".78 .78 .78" material="transparent:true;opacity:1;depthWrite:false"></a-image>
-   <a-image id="cityMarket" src="../assets/city/market_scene.png" width="1.55" height="1.04" position="0.72 -0.42 0.03" scale=".78 .78 .78" material="transparent:true;opacity:1;depthWrite:false"></a-image>
- </a-entity>
-</a-scene>
-<script>
-const target=document.querySelector('[mindar-image-target="targetIndex:0"]');
-target.addEventListener("targetFound",()=>{
-  document.getElementById("modeSwitch").style.display="flex";
-  window.ClassroomActivityMode.setStory();
-});
-target.addEventListener("targetLost",()=>{
-  document.getElementById("hint").textContent=window.ClassroomActivityMode.isInteract()
-    ?"CITY · ✨ INTERACT MODE · 看看 PARK 和 MARKET"
-    :"CITY · 🎭 STORY MODE · 用玩偶讲故事";
 });
 </script>
 </body>
