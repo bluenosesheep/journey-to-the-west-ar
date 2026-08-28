@@ -49,11 +49,10 @@ canvas.a-canvas{background:transparent!important}.off{display:none}
 body.market-story #handBtn,body.market-story #handStatus,body.market-story #handCursor,body.market-story #holdHitLayer{display:none!important}
 
 #checkoutBtn{
-  position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));
-  transform:translateX(-50%);z-index:76;display:none;
-  border:0;border-radius:999px;padding:10px 17px;
+  position:fixed;z-index:76;display:none;
+  border:2px solid #6f8e42;border-radius:999px;padding:0 14px;
   background:rgba(255,248,220,.97);color:#8a5122;
-  font:800 14px/1 system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.18);
+  font:800 14px/1 system-ui,sans-serif;box-shadow:0 5px 16px rgba(0,0,0,.18);
   cursor:pointer;
 }
 </style>
@@ -287,6 +286,19 @@ AFRAME.registerComponent("market-persist",{
       b.style.width=bw+"px";
       b.style.height=bh+"px";
     });
+
+    // Place checkout immediately to the right of the real Reset button.
+    const reset=this.hits.reset;
+    const checkout=document.getElementById("checkoutBtn");
+    if(reset&&checkout&&reset.style.display!=="none"){
+      const rr=reset.getBoundingClientRect();
+      const gap=10;
+      const cw=Math.max(112,rr.width*.92);
+      checkout.style.left=(rr.right+gap)+"px";
+      checkout.style.top=rr.top+"px";
+      checkout.style.width=cw+"px";
+      checkout.style.height=rr.height+"px";
+    }
   },
 
   showHoldHits:function(){
