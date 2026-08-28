@@ -6,6 +6,7 @@
 <title>Market Interactive AR</title>
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+<script src="../js/input-router.js"></script>
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}
 video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}
@@ -19,6 +20,27 @@ canvas.a-canvas{background:transparent!important}.off{display:none}
 #cameraOrientationControl select{border:0;outline:0;border-radius:999px;padding:5px 8px;background:rgba(255,240,180,.92);color:#333;font:800 12px system-ui}
 .mindar-ui-scanning,.mindar-ui-scanning .scanning,.mindar-ui-scanning .scanning-line,.mindar-ui-scanning .inner,.mindar-ui-scanning .scanline{display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}
 #holdReset{z-index:58!important;border:2px solid #6f8e42!important;border-radius:999px!important;background:rgba(255,248,220,.97)!important;color:#56713b!important;font:700 14px/1 system-ui!important;box-shadow:0 5px 16px rgba(0,0,0,.18)!important}
+
+#handBtn{
+  position:fixed;right:18px;top:18px;z-index:90;border:0;border-radius:999px;padding:10px 14px;
+  background:rgba(255,248,220,.96);color:#56713b;font:800 13px/1 system-ui;
+  box-shadow:0 5px 18px rgba(0,0,0,.16);cursor:pointer
+}
+#handCursor{
+  position:fixed;z-index:100;width:68px;height:68px;margin:-34px 0 0 -34px;border-radius:50%;
+  display:none;place-items:center;pointer-events:none;font-size:34px;background:rgba(255,255,255,.90);
+  box-shadow:0 6px 26px rgba(0,0,0,.26)
+}
+#handCursor.pinching{
+  width:80px;height:80px;margin:-40px 0 0 -40px;background:rgba(255,238,165,.96)
+}
+#handCursor.gesture-locked{opacity:.72;background:rgba(235,245,255,.92)}
+#handStatus{
+  position:fixed;right:18px;top:62px;z-index:90;display:none;padding:8px 12px;border-radius:999px;
+  background:rgba(255,255,255,.90);color:#333;font:700 12px/1.2 system-ui;
+  box-shadow:0 4px 16px rgba(0,0,0,.16)
+}
+
 </style>
 <script>
 function roundRect(ctx,x,y,w,h,r){
@@ -76,10 +98,9 @@ AFRAME.registerComponent("market-persist",{
 
     const comp=()=>document.getElementById("marketDisplay")?.components?.["market-canvas"];
 
-    this.hits.peach.addEventListener("click",()=>comp()?.pick("peach"));
-    this.hits.cabbage.addEventListener("click",()=>comp()?.pick("cabbage"));
-    this.hits.egg.addEventListener("click",()=>comp()?.pick("egg"));
-    this.hits.reset.addEventListener("click",()=>comp()?.reset());
+    window.CityInput.register("market-standalone",{
+      down:(input)=>this.handleInputDown(input)
+    });
 
     if(this.world){
       this.world.object3D.visible=false;
@@ -152,6 +173,45 @@ AFRAME.registerComponent("market-persist",{
       if(this.timer){clearTimeout(this.timer);this.timer=null;}
       // Standalone mode: keep Market visible until the page is closed/reloaded.
     });
+  },
+
+  hitKindAt:function(x,y,source){
+    const resetEl=this.hits.reset;
+    if(resetEl && resetEl.style.display!=="none"){
+      const r=resetEl.getBoundingClientRect();
+      const pad=source==="hand"?10:4;
+      if(x>=r.left-pad&&x<=r.right+pad&&y>=r.top-pad&&y<=r.bottom+pad){
+        return "reset";
+      }
+    }
+
+    for(const [kind,el] of Object.entries(this.hits)){
+      if(kind==="reset"||!el||el.style.display==="none")continue;
+      const r=el.getBoundingClientRect();
+      const pad=source==="hand"?8:0;
+      if(x>=r.left-pad&&x<=r.right+pad&&y>=r.top-pad&&y<=r.bottom+pad){
+        return kind;
+      }
+    }
+    return null;
+  },
+
+  handleInputDown:function(input){
+    const kind=this.hitKindAt(input.x,input.y,input.source);
+    if(!kind)return;
+
+    if(input.nativeEvent)input.nativeEvent.preventDefault();
+
+    const comp=document.getElementById("marketDisplay")
+      ?.components?.["market-canvas"];
+    if(!comp)return;
+
+    if(kind==="reset"){
+      comp.reset();
+      document.getElementById("hint").textContent="MARKET · 已清空篮筐 🧺";
+    }else{
+      comp.pick(kind);
+    }
   },
 
   getCamera:function(){
@@ -266,8 +326,11 @@ AFRAME.registerComponent("market-persist",{
       obj.scale.copy(this.baseScale);
       obj.updateMatrixWorld(true);
 
-      // Keep the HTML tap zones exactly on top of the gently moving AR UI.
-      this.updateHoldHits();
+      // Re-project DOM hit zones only while hand tracking is active.
+      // Mouse keeps using the last stable positions while hand inference sleeps.
+      if(window.StandaloneMarketHandMode?.running){
+        this.updateHoldHits();
+      }
     }
   }
 });
@@ -418,14 +481,153 @@ AFRAME.registerComponent("reset-market",{
 });
 </script>
 <script>
+window.ClassroomCameraOrientation={
+  angle:0,
+  init(){
+    const select=document.getElementById("cameraOrientationSelect");
+    this.angle=Number(localStorage.getItem("marketCameraAngle")||0);
+    if(select){
+      select.value=String(this.angle);
+      select.addEventListener("change",()=>{
+        this.angle=Number(select.value)||0;
+        localStorage.setItem("marketCameraAngle",String(this.angle));
+        this.apply();
+      });
+    }
+    this.apply();
+  },
+  apply(){
+    const video=document.querySelector("video");
+    if(!video){setTimeout(()=>this.apply(),120);return}
+    const a=this.angle;
+    video.style.transformOrigin="50% 50%";
+    video.style.transform=`rotate(${a}deg)`;
+    if(a===90||a===270){
+      const scale=Math.max(innerWidth/innerHeight,innerHeight/innerWidth);
+      video.style.transform=`rotate(${a}deg) scale(${scale})`;
+    }
+  },
+  mapPoint(x,y,width,height){
+    const a=this.angle;
+    if(a===90)return{x:width-(y/height)*width,y:(x/width)*height};
+    if(a===180)return{x:width-x,y:height-y};
+    if(a===270)return{x:(y/height)*width,y:height-(x/width)*height};
+    return{x,y};
+  }
+};
+
+window.StandaloneMarketHandMode={
+  running:false,
+  sleeping:false,
+  timer:null,
+  sleepMs:5000,
+
+  clearTimer(){
+    if(this.timer){clearTimeout(this.timer);this.timer=null}
+  },
+
+  noteInteraction(){
+    if(!this.running)return;
+    this.clearTimer();
+    this.timer=setTimeout(()=>this.sleep(),this.sleepMs);
+  },
+
+  async start(){
+    if(this.running)return;
+
+    const status=document.getElementById("handStatus");
+    const cursor=document.getElementById("handCursor");
+    const video=document.querySelector("video");
+
+    if(!video||!window.ClassroomHandTracking)return;
+
+    if(status){
+      status.style.display="block";
+      status.textContent="手势：启动中…";
+    }
+
+    await window.ClassroomHandTracking.start({
+      video,
+      cursor,
+      mirror:false,
+      maxFps:18,
+      smoothing:.38,
+      pinchDownRatio:.34,
+      pinchUpRatio:.44,
+      reuseExistingVideo:true,
+      viewport:()=>({width:innerWidth,height:innerHeight}),
+      onStatus:(msg)=>{
+        if(status)status.textContent="手势："+msg;
+      },
+      onArmedChange:(armed)=>{
+        if(status)status.textContent=armed?"手势：MARKET":"放下识别卡，张开手 ✋";
+      },
+      onMetrics:(data)=>{
+        if(!status)return;
+        if(!data.handVisible)status.textContent="手势：请伸出一只手";
+        else if(data.armed===false)status.textContent="放下识别卡，张开手 ✋";
+        else if(data.pinching)status.textContent="手势：选择";
+        else status.textContent="手势：MARKET";
+      }
+    });
+
+    this.running=true;
+    this.sleeping=false;
+    this.noteInteraction();
+    window.ClassroomHandTracking.requireReleaseToArm(300);
+
+    const btn=document.getElementById("handBtn");
+    if(btn)btn.textContent="✨ INTERACT · ON";
+  },
+
+  sleep(){
+    if(!this.running)return;
+
+    this.clearTimer();
+    window.ClassroomHandTracking?.stop({keepVideo:true,keepModel:true});
+    this.running=false;
+    this.sleeping=true;
+
+    const cursor=document.getElementById("handCursor");
+    const status=document.getElementById("handStatus");
+    const btn=document.getElementById("handBtn");
+
+    if(cursor)cursor.style.display="none";
+    if(status){
+      status.style.display="block";
+      status.textContent="手势：已关闭 · 再点 INTERACT 唤醒";
+    }
+    if(btn)btn.textContent="✨ INTERACT · OFF";
+  },
+
+  toggle(){
+    this.running?this.sleep():this.start();
+  }
+};
+
 document.addEventListener("DOMContentLoaded",()=>{
- const select=document.getElementById("cameraOrientationSelect");
- let angle=Number(localStorage.getItem("marketCameraAngle")||0);select.value=String(angle);
- const apply=()=>{const v=document.querySelector("video");if(!v){setTimeout(apply,120);return}v.style.transformOrigin="50% 50%";v.style.transform=`rotate(${angle}deg)`;if(angle===90||angle===270){const sc=Math.max(innerWidth/innerHeight,innerHeight/innerWidth);v.style.transform=`rotate(${angle}deg) scale(${sc})`}};
- select.addEventListener("change",()=>{angle=Number(select.value)||0;localStorage.setItem("marketCameraAngle",String(angle));apply()});apply();
+  window.ClassroomCameraOrientation.init();
+
+  document.getElementById("handBtn")
+    ?.addEventListener("click",()=>window.StandaloneMarketHandMode.toggle());
+
+  // Only real hand gestures extend the 5-second inference window.
+  window.CityInput.register("market-hand-auto-sleep",{
+    down:(input)=>{
+      if(input.source==="hand")window.StandaloneMarketHandMode.noteInteraction();
+    },
+    up:(input)=>{
+      if(input.source==="hand")window.StandaloneMarketHandMode.noteInteraction();
+    }
+  });
 });
-</script></head>
+</script><script type="module" src="../js/hand-tracking-performance.js"></script>
+</head>
 <body>
+<button id="handBtn" type="button">✨ INTERACT · OFF</button>
+<div id="handStatus">手势：已关闭</div>
+<div id="handCursor">✨</div>
+
 <div id="cameraOrientationControl"><span>📷 CAMERA</span><select id="cameraOrientationSelect"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select></div>
 <div id="hint">请把镜头对准 Market 识别图</div>
 <div id="holdHitLayer">
