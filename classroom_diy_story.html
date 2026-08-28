@@ -491,6 +491,7 @@ AFRAME.registerComponent("park-drag-controller",{
       if(window.StandaloneParkMode?.mode==="story"){
         this.holding=false;this.hideHits();
         if(this.world)this.world.object3D.visible=false;
+        // Keep the current Park story hint unchanged after targetLost.
       }else{
         this.showHits();this.updateHitPositions();
         document.getElementById("hint").textContent="PARK · 可以继续拖动，或用玩偶讲故事 🌿";
@@ -733,6 +734,7 @@ AFRAME.registerComponent("market-persist",{
       if(window.StandaloneMarketMode?.mode==="story"){
         this.holding=false;this.hideHoldHits();
         if(this.world)this.world.object3D.visible=false;
+        // Keep the current Market story hint unchanged after targetLost.
       }else{
         this.updateHoldHits();this.showHoldHits();
       }
@@ -943,11 +945,6 @@ AFRAME.registerComponent("market-persist",{
   }
 });
 
-AFRAME.registerComponent("market-events",{init:function(){
-  const h=document.getElementById("hint");
-  this.el.addEventListener("targetFound",()=>h.textContent="MARKET · 点一个食物放进篮筐吧！🧺");
-  this.el.addEventListener("targetLost",()=>h.textContent="Market 还会停留 15 秒，可以继续选择 🧺");
-}});
 
 AFRAME.registerComponent("market-canvas",{
   init:function(){
@@ -1556,8 +1553,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   <a-entity mindar-image-target="targetIndex:2"
     diy-scene-trigger="kind:market"
-    market-events
-    market-persist="seconds:15; world:#marketWorld">
+    market-persist="world:#marketWorld">
   </a-entity>
 
   <!-- Magic targets remain exactly Magic Only's mapping -->
