@@ -3,508 +3,370 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Park Drag & Drop AR</title>
+<title>Park Interactive AR</title>
 
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+<script src="../js/input-router.js"></script>
 
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}
 video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}
 a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}
 canvas.a-canvas{background:transparent!important}.off{display:none}
-
 #hint{
   position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));
-  transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;
+  transform:translateX(-50%);z-index:60;max-width:88vw;padding:10px 14px;
   border-radius:999px;background:rgba(255,255,255,.92);color:#222;
-  font:14px/1.4 system-ui;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.16)
+  font:700 14px/1.4 system-ui,sans-serif;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.16)
 }
-
-#dragLayer{position:fixed;inset:0;z-index:40;pointer-events:none}
-.drag-hit{
-  position:fixed;display:none;border:0;background:transparent;
-  pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent;
+#dragLayer{position:fixed;inset:0;z-index:50;pointer-events:none}
+.drag-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}
+#dragReset{
+  z-index:58!important;border:2px solid #6f8e42!important;border-radius:999px!important;
+  background:rgba(255,248,220,.97)!important;color:#56713b!important;
+  font:700 14px/1 system-ui,sans-serif!important;box-shadow:0 5px 16px rgba(0,0,0,.18)!important;
+  cursor:pointer!important;pointer-events:auto!important;padding:0 12px!important
+}
+#handBtn{
+  position:fixed;right:18px;top:18px;z-index:90;border:0;border-radius:999px;padding:10px 14px;
+  background:rgba(255,248,220,.96);color:#56713b;font:800 13px/1 system-ui;box-shadow:0 5px 18px rgba(0,0,0,.16);cursor:pointer
+}
+#handCursor{
+  position:fixed;z-index:100;width:68px;height:68px;margin:-34px 0 0 -34px;border-radius:50%;
+  display:none;place-items:center;pointer-events:none;font-size:34px;background:rgba(255,255,255,.90);
+  box-shadow:0 6px 26px rgba(0,0,0,.26)
+}
+#handCursor.pinching{width:80px;height:80px;margin:-40px 0 0 -40px;background:rgba(255,238,165,.96)}
+#handStatus{
+  position:fixed;right:18px;top:62px;z-index:90;display:none;padding:8px 12px;border-radius:999px;
+  background:rgba(255,255,255,.90);color:#333;font:700 12px/1.2 system-ui;box-shadow:0 4px 16px rgba(0,0,0,.16)
+}
+#cameraOrientationControl{
+  position:fixed;left:18px;top:18px;z-index:90;display:flex;align-items:center;gap:7px;
+  padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.90);color:#444;
+  box-shadow:0 5px 18px rgba(0,0,0,.16);font:800 11px/1 system-ui
+}
+#cameraOrientationControl select{
+  border:0;outline:0;border-radius:999px;padding:5px 8px;background:rgba(255,240,180,.92);
+  color:#333;font:800 12px system-ui;cursor:pointer
+}
+.mindar-ui-scanning,
+.mindar-ui-scanning .scanning,
+.mindar-ui-scanning .scanning-line,
+.mindar-ui-scanning .inner,
+.mindar-ui-scanning .scanline{
+  display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important
 }
 </style>
 
 <script>
 function roundRect(ctx,x,y,w,h,r){
-  ctx.beginPath();
-  ctx.moveTo(x+r,y);
-  ctx.arcTo(x+w,y,x+w,y+h,r);
-  ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r);
-  ctx.arcTo(x,y,x+w,y,r);
-  ctx.closePath();
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
 }
 
-AFRAME.registerComponent("park-events",{
-  init:function(){
-    const h=document.getElementById("hint");
-    this.el.addEventListener("targetFound",()=>{
-      h.textContent="PARK · 拖动这些东西来布置公园吧！🌳";
-    });
-    this.el.addEventListener("targetLost",()=>{
-      h.textContent="Park 还会停留 15 秒，可以继续拖动 🌿";
-    });
+window.ParkCameraOrientation={
+  angle:0,
+  init(){
+    const select=document.getElementById("cameraOrientationSelect");
+    this.angle=Number(localStorage.getItem("parkCameraAngle")||0);
+    if(select){
+      select.value=String(this.angle);
+      select.addEventListener("change",()=>{
+        this.angle=Number(select.value)||0;
+        localStorage.setItem("parkCameraAngle",String(this.angle));
+        this.apply();
+      });
+    }
+    this.apply();
+  },
+  apply(){
+    const video=document.querySelector("video");
+    if(!video){setTimeout(()=>this.apply(),120);return}
+    const a=this.angle;
+    video.style.transformOrigin="50% 50%";
+    video.style.transform=`rotate(${a}deg)`;
+    if(a===90||a===270){
+      const scale=Math.max(innerWidth/innerHeight,innerHeight/innerWidth);
+      video.style.transform=`rotate(${a}deg) scale(${scale})`;
+    }
+  },
+  mapPoint(x,y,width,height){
+    const a=this.angle;
+    if(a===90)return{x:width-(y/height)*width,y:(x/width)*height};
+    if(a===180)return{x:width-x,y:height-y};
+    if(a===270)return{x:(y/height)*width,y:height-(x/width)*height};
+    return{x,y};
   }
+};
+
+window.StandaloneHandMode={
+  running:false,
+  sleeping:false,
+  timer:null,
+  sleepMs:5000,
+  clearTimer(){if(this.timer){clearTimeout(this.timer);this.timer=null}},
+  noteInteraction(){
+    if(!this.running)return;
+    this.clearTimer();
+    this.timer=setTimeout(()=>this.sleep(),this.sleepMs);
+  },
+  async start(){
+    if(this.running)return;
+    const status=document.getElementById("handStatus");
+    const cursor=document.getElementById("handCursor");
+    const video=document.querySelector("video");
+    if(!video||!window.ClassroomHandTracking)return;
+
+    if(status){status.style.display="block";status.textContent="手势：启动中…";}
+    await window.ClassroomHandTracking.start({
+      video,cursor,mirror:false,maxFps:18,smoothing:.38,
+      pinchDownRatio:.34,pinchUpRatio:.44,reuseExistingVideo:true,
+      viewport:()=>({width:innerWidth,height:innerHeight}),
+      onStatus:(msg)=>{if(status)status.textContent="手势："+msg},
+      onArmedChange:(armed)=>{if(status)status.textContent=armed?"手势：PARK":"放下识别卡，张开手 ✋"},
+      onMetrics:(data)=>{
+        if(!status)return;
+        if(!data.handVisible)status.textContent="手势：请伸出一只手";
+        else if(data.armed===false)status.textContent="放下识别卡，张开手 ✋";
+        else if(data.pinching)status.textContent="手势：抓住";
+        else status.textContent="手势：PARK";
+      }
+    });
+    this.running=true;this.sleeping=false;this.noteInteraction();
+    window.ClassroomHandTracking.requireReleaseToArm(300);
+    document.getElementById("handBtn").textContent="✨ INTERACT · ON";
+  },
+  sleep(){
+    if(!this.running)return;
+    this.clearTimer();
+    window.ClassroomHandTracking?.stop({keepVideo:true,keepModel:true});
+    this.running=false;this.sleeping=true;
+    const c=document.getElementById("handCursor"),s=document.getElementById("handStatus");
+    if(c)c.style.display="none";
+    if(s){s.style.display="block";s.textContent="手势：已关闭 · 再点 INTERACT 唤醒";}
+    document.getElementById("handBtn").textContent="✨ INTERACT · OFF";
+  },
+  toggle(){this.running?this.sleep():this.start()}
+};
+
+document.addEventListener("DOMContentLoaded",()=>{
+  window.ParkCameraOrientation.init();
+  document.getElementById("handBtn").addEventListener("click",()=>window.StandaloneHandMode.toggle());
+  window.CityInput.register("hand-auto-sleep",{
+    down:(input)=>{if(input.source==="hand")window.StandaloneHandMode.noteInteraction()},
+    up:(input)=>{if(input.source==="hand")window.StandaloneHandMode.noteInteraction()}
+  });
 });
 
 AFRAME.registerComponent("park-canvas",{
-  init:function(){
-    this.c=document.getElementById("parkCanvas");
-    this.ctx=this.c.getContext("2d");
+  init(){
+    this.c=document.getElementById("parkCanvas");this.ctx=this.c.getContext("2d");
+    this.images={};
+    ["tree","flower","bench","fountain"].forEach(kind=>{
+      const img=new Image();img.src=`../assets/park/${kind}.png?v=1`;this.images[kind]=img;
+    });
 
     this.initial={
-      tree:{x:245,y:120},
-      flower:{x:335,y:120},
-      bench:{x:435,y:120},
-      fountain:{x:530,y:120}
+      tree:{x:170,y:165,rotation:-.18,scale:1.0},
+      flower:{x:315,y:350,rotation:.25,scale:.82},
+      bench:{x:460,y:355,rotation:.24,scale:.86},
+      fountain:{x:565,y:215,rotation:-.12,scale:.92}
     };
-
-    this.items={
-      tree:{emoji:"🌳",x:245,y:120,scale:1.55},
-      flower:{emoji:"🌷",x:335,y:120,scale:.58},
-      bench:{emoji:"🪑",x:435,y:120,scale:.72},
-      fountain:{emoji:"⛲",x:530,y:120,scale:1.08}
-    };
+    this.items={};
+    this.resetMessy();
   },
-
-  setPosition:function(kind,x,y){
-    const item=this.items[kind];
-    if(!item)return;
-
-    // Keep objects inside the usable park area.
-    item.x=Math.max(90,Math.min(678,x));
-    item.y=Math.max(85,Math.min(430,y));
+  resetMessy(){
+    Object.entries(this.initial).forEach(([k,p])=>this.items[k]={...p});
   },
-
-  reset:function(){
-    Object.entries(this.initial).forEach(([k,p])=>{
-      this.items[k].x=p.x;
-      this.items[k].y=p.y;
-    });
-    document.getElementById("hint").textContent="PARK · 拖动这些东西来布置公园吧！🌳";
+  setPosition(kind,x,y){
+    const item=this.items[kind];if(!item)return;
+    item.x=Math.max(90,Math.min(678,x));item.y=Math.max(85,Math.min(430,y));item.rotation=0;
   },
+  reset(){
+    this.resetMessy();
+    document.getElementById("hint").textContent="PARK · 公园又乱了，重新修好它吧！✨";
+  },
+  tick(){
+    const now=performance.now();
+    const active=!!window.ParkDragController?.dragging;
+    const frameMs=active?33:67;
+    if(this._lastDraw&&now-this._lastDraw<frameMs)return;
+    this._lastDraw=now;
 
-  tick:function(){
     const ctx=this.ctx,c=this.c,w=c.width,h=c.height;
     ctx.clearRect(0,0,w,h);
-    ctx.textAlign="center";
-    ctx.textBaseline="middle";
-
-    // Light park environment, while keeping the camera visible behind it.
-    // 1) soft grass island
-    ctx.save();
-    ctx.fillStyle="rgba(126,181,92,.24)";
-    ctx.beginPath();
-    ctx.ellipse(w/2,390,245,74,0,0,Math.PI*2);
-    ctx.fill();
-
-    // 2) a subtle curved walking path
-    ctx.strokeStyle="rgba(210,180,125,.46)";
-    ctx.lineWidth=30;
-    ctx.lineCap="round";
-    ctx.beginPath();
-    ctx.moveTo(205,425);
-    ctx.bezierCurveTo(290,350,455,455,565,370);
-    ctx.stroke();
-
-    // soft highlight inside the path
-    ctx.strokeStyle="rgba(255,244,211,.34)";
-    ctx.lineWidth=12;
-    ctx.beginPath();
-    ctx.moveTo(205,425);
-    ctx.bezierCurveTo(290,350,455,455,565,370);
-    ctx.stroke();
-
-    // 3) tiny grass tufts
-    ctx.font='30px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-    ctx.globalAlpha=.72;
-    ctx.fillText("🌱",175,385);
-    ctx.fillText("🌱",585,410);
-    ctx.fillText("🌱",305,430);
-    ctx.restore();
-
-    // 4) butterfly flies clearly back and forth across the park.
-    const bt=performance.now()/1000;
-    const travel=(Math.sin(bt*.72)+1)/2; // 0 -> 1 -> 0
-    const butterflyX=185+travel*395;
-    const butterflyY=245+Math.sin(bt*1.55)*16;
-    const butterflyScale=.86+.10*Math.sin(bt*3.1);
 
     ctx.save();
-    ctx.globalAlpha=.86;
-    ctx.translate(butterflyX,butterflyY);
-    ctx.scale(butterflyScale,butterflyScale);
-    ctx.font='38px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-    ctx.fillText("🦋",0,0);
-    ctx.restore();
+    ctx.fillStyle="rgba(126,181,92,.24)";ctx.beginPath();ctx.ellipse(w/2,390,245,74,0,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle="rgba(210,180,125,.46)";ctx.lineWidth=30;ctx.lineCap="round";ctx.beginPath();
+    ctx.moveTo(205,425);ctx.bezierCurveTo(290,350,455,455,565,370);ctx.stroke();
+    ctx.strokeStyle="rgba(255,244,211,.34)";ctx.lineWidth=12;ctx.beginPath();
+    ctx.moveTo(205,425);ctx.bezierCurveTo(290,350,455,455,565,370);ctx.stroke();
+    ctx.font='30px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';ctx.globalAlpha=.72;
+    ctx.fillText("🌱",175,385);ctx.fillText("🌱",585,410);ctx.fillText("🌱",305,430);ctx.restore();
 
-    // Draw movable items.
-    Object.values(this.items).forEach(item=>{
-      ctx.save();
-      ctx.translate(item.x,item.y);
-      ctx.scale(item.scale||1,item.scale||1);
-      ctx.font='92px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-      ctx.fillText(item.emoji,0,0);
+    const bt=now/1000,travel=(Math.sin(bt*.72)+1)/2;
+    ctx.save();ctx.globalAlpha=.86;ctx.translate(185+travel*395,245+Math.sin(bt*1.55)*16);
+    ctx.scale(.86+.10*Math.sin(bt*3.1),.86+.10*Math.sin(bt*3.1));
+    ctx.font='38px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';ctx.fillText("🦋",0,0);ctx.restore();
+
+    Object.entries(this.items).forEach(([kind,item])=>{
+      ctx.save();ctx.translate(item.x,item.y);ctx.rotate(item.rotation||0);ctx.scale(item.scale||1,item.scale||1);
+      const img=this.images[kind];
+      if(img&&img.complete&&img.naturalWidth){
+        const size=kind==="bench"?118:kind==="tree"?112:kind==="flower"?110:108;
+        ctx.drawImage(img,-size/2,-size/2,size,size);
+      }
       ctx.restore();
     });
 
-    // RESET button.
-    const bx=w/2-86,by=458,bw=172,bh=40,br=20;
-    ctx.save();
-    roundRect(ctx,bx,by,bw,bh,br);
-    ctx.fillStyle="rgba(255,248,220,.96)";
-    ctx.fill();
-    ctx.lineWidth=3;
-    ctx.strokeStyle="#6f8e42";
-    ctx.stroke();
-    ctx.fillStyle="#56713b";
-    ctx.font='700 20px system-ui,sans-serif';
-    ctx.fillText("RESET",w/2,by+bh/2+1);
-    ctx.restore();
-
     const mesh=this.el.getObject3D("mesh");
-    if(mesh&&mesh.material&&mesh.material.map){
-      mesh.material.map.needsUpdate=true;
-    }
+    if(mesh&&mesh.material&&mesh.material.map)mesh.material.map.needsUpdate=true;
   }
 });
 
 AFRAME.registerComponent("park-drag-controller",{
-  schema:{
-    seconds:{type:"number",default:15},
-    world:{type:"selector"}
-  },
-
-  init:function(){
-    this.world=this.data.world;
-    this.tracking=false;
-    this.holding=false;
-    this.timer=null;
-    this.holdStart=0;
-
-    this.lastMatrix=new THREE.Matrix4();
-    this.basePos=new THREE.Vector3();
-    this.baseQuat=new THREE.Quaternion();
-    this.baseScale=new THREE.Vector3(1,1,1);
-    this.poseHistory=[];
-    this.maxPoseHistory=24;
-
-    this.planeWidth=2.15;
-    this.planeHeight=1.43;
-    this.canvasW=768;
-    this.canvasH=512;
-
+  schema:{world:{type:"selector"}},
+  init(){
+    window.ParkDragController=this;
+    this.world=this.data.world;this.tracking=false;this.holding=false;this.dragState=null;
+    this.lastMatrix=new THREE.Matrix4();this.basePos=new THREE.Vector3();this.baseScale=new THREE.Vector3(1,1,1);
+    this.poseHistory=[];this.maxPoseHistory=24;this.planeWidth=2.15;this.planeHeight=1.43;this.canvasW=768;this.canvasH=512;
     this.hits={
-      tree:document.getElementById("dragTree"),
-      flower:document.getElementById("dragFlower"),
-      bench:document.getElementById("dragBench"),
-      fountain:document.getElementById("dragFountain"),
+      tree:document.getElementById("dragTree"),flower:document.getElementById("dragFlower"),
+      bench:document.getElementById("dragBench"),fountain:document.getElementById("dragFountain"),
       reset:document.getElementById("dragReset")
     };
+    this.hits.reset.textContent="再试一次";
+    this.hits.reset.addEventListener("click",(e)=>{e.preventDefault();e.stopPropagation();this.getCanvasComp()?.reset()});
 
-    this.dragState=null;
-
-    Object.entries(this.hits).forEach(([kind,el])=>{
-      if(kind==="reset"){
-        el.addEventListener("pointerdown",(e)=>{
-          e.preventDefault();
-          const comp=this.getCanvasComp();
-          if(comp)comp.reset();
-        });
-      }else{
-        el.addEventListener("pointerdown",(e)=>this.startDrag(e,kind));
-      }
+    window.CityInput.register("park-standalone",{
+      down:(input)=>this.handleDown(input),move:(input)=>this.handleMove(input),
+      up:(input)=>this.handleUp(input),cancel:(input)=>this.handleUp(input)
     });
-
-    window.addEventListener("pointermove",(e)=>this.moveDrag(e),{passive:false});
-    window.addEventListener("pointerup",(e)=>this.endDrag(e));
-    window.addEventListener("pointercancel",(e)=>this.endDrag(e));
 
     if(this.world)this.world.object3D.visible=false;
 
     this.el.addEventListener("targetFound",()=>{
-      this.tracking=true;
-      this.holding=false;
-      this.poseHistory=[];
-
-      if(this.timer){
-        clearTimeout(this.timer);
-        this.timer=null;
-      }
-
+      this.tracking=true;this.holding=false;this.poseHistory=[];
       if(this.world)this.world.object3D.visible=true;
-      this.showHits();
+      this.showHits();this.updateHitPositions();
+      document.getElementById("hint").textContent="PARK · 拖动这些东西来修好公园吧！🌳";
     });
 
     this.el.addEventListener("targetLost",()=>{
-      this.tracking=false;
-      this.holding=true;
-      this.holdStart=performance.now();
-
+      this.tracking=false;this.holding=true;this.holdStart=performance.now();
       if(this.world){
-        const obj=this.world.object3D;
-        let stable=null;
-        const now=performance.now();
-
-        for(let i=this.poseHistory.length-1;i>=0;i--){
-          if(now-this.poseHistory[i].time>=280){
-            stable=this.poseHistory[i];
-            break;
-          }
-        }
-
-        if(!stable&&this.poseHistory.length){
-          stable=this.poseHistory[0];
-        }
-
+        const obj=this.world.object3D;let stable=null,now=performance.now();
+        for(let i=this.poseHistory.length-1;i>=0;i--){if(now-this.poseHistory[i].time>=280){stable=this.poseHistory[i];break}}
+        if(!stable&&this.poseHistory.length)stable=this.poseHistory[0];
         if(stable){
-          this.basePos.copy(stable.pos);
-          this.baseQuat.copy(stable.quat);
-          this.baseScale.copy(stable.scale);
-
-          obj.position.copy(this.basePos);
-          obj.quaternion.copy(this.baseQuat);
-          obj.scale.copy(this.baseScale);
-          obj.updateMatrixWorld(true);
-        }else{
-          this.basePos.copy(obj.position);
-          this.baseQuat.copy(obj.quaternion);
-          this.baseScale.copy(obj.scale);
+          this.basePos.copy(stable.pos);this.baseScale.copy(stable.scale);
+          obj.position.copy(this.basePos);obj.quaternion.identity();obj.scale.copy(this.baseScale);obj.visible=true;obj.updateMatrixWorld(true);
         }
-
-        obj.visible=true;
       }
-
-      this.showHits();
-      this.updateHitPositions();
-
-      if(this.timer)clearTimeout(this.timer);
-      this.timer=setTimeout(()=>{
-        if(this.world)this.world.object3D.visible=false;
-        this.holding=false;
-        this.hideHits();
-        this.timer=null;
-      },this.data.seconds*1000);
+      this.showHits();this.updateHitPositions();
+      document.getElementById("hint").textContent="PARK · 可以继续拖动，或用玩偶讲故事 🌿";
     });
   },
-
-  getCanvasComp:function(){
-    return document.getElementById("parkDisplay")?.components?.["park-canvas"];
-  },
-
-  getCamera:function(){
-    if(!this.camera){
-      const e=document.querySelector("a-camera");
-      this.camera=e&&e.getObject3D("camera");
-    }
-    return this.camera;
-  },
-
-  projectWorld:function(v){
-    const cam=this.getCamera();
-    if(!cam)return null;
-    const p=v.clone().project(cam);
-    return{
-      x:(p.x*.5+.5)*innerWidth,
-      y:(-p.y*.5+.5)*innerHeight
-    };
-  },
-
-  canvasToLocal:function(x,y){
-    return new THREE.Vector3(
-      (x/this.canvasW-.5)*this.planeWidth,
-      (.5-y/this.canvasH)*this.planeHeight,
-      .10
-    );
-  },
-
-  getScreenScale:function(){
-    if(!this.world)return null;
-    const obj=this.world.object3D;
-    obj.updateMatrixWorld(true);
-
+  get dragging(){return !!this.dragState},
+  getCanvasComp(){return document.getElementById("parkDisplay")?.components?.["park-canvas"]},
+  getCamera(){if(!this.camera){const e=document.querySelector("a-camera");this.camera=e&&e.getObject3D("camera")}return this.camera},
+  projectWorld(v){const cam=this.getCamera();if(!cam)return null;const p=v.clone().project(cam);return{x:(p.x*.5+.5)*innerWidth,y:(-p.y*.5+.5)*innerHeight}},
+  canvasToLocal(x,y){return new THREE.Vector3((x/this.canvasW-.5)*this.planeWidth,(.5-y/this.canvasH)*this.planeHeight,.10)},
+  getScreenScale(){
+    if(!this.world)return null;const obj=this.world.object3D;obj.updateMatrixWorld(true);
     const c=this.projectWorld(new THREE.Vector3(0,0,0).applyMatrix4(obj.matrixWorld));
     const r=this.projectWorld(new THREE.Vector3(.5,0,0).applyMatrix4(obj.matrixWorld));
     const u=this.projectWorld(new THREE.Vector3(0,.5,0).applyMatrix4(obj.matrixWorld));
-
     if(!c||!r||!u)return null;
-
-    return{
-      pxPerUnitX:Math.max(1,Math.abs(r.x-c.x)*2),
-      pxPerUnitY:Math.max(1,Math.abs(u.y-c.y)*2)
-    };
+    return{pxPerUnitX:Math.max(1,Math.abs(r.x-c.x)*2),pxPerUnitY:Math.max(1,Math.abs(u.y-c.y)*2)}
   },
-
-  startDrag:function(e,kind){
-    const comp=this.getCanvasComp();
-    const scale=this.getScreenScale();
-    if(!comp||!scale)return;
-
-    e.preventDefault();
-
+  hitKindAt(x,y,source){
+    for(const kind of ["reset","tree","flower","bench","fountain"]){
+      const b=this.hits[kind];if(!b||b.style.display==="none")continue;
+      const r=b.getBoundingClientRect(),pad=source==="hand"?8:0;
+      if(x>=r.left-pad&&x<=r.right+pad&&y>=r.top-pad&&y<=r.bottom+pad)return kind;
+    }
+    return null;
+  },
+  handleDown(input){
+    const kind=this.hitKindAt(input.x,input.y,input.source);if(!kind)return;
+    if(input.nativeEvent)input.nativeEvent.preventDefault();
+    if(kind==="reset"){this.getCanvasComp()?.reset();return}
+    const comp=this.getCanvasComp(),scale=this.getScreenScale();if(!comp||!scale)return;
     const item=comp.items[kind];
-
-    this.dragState={
-      pointerId:e.pointerId,
-      kind,
-      startScreenX:e.clientX,
-      startScreenY:e.clientY,
-      startCanvasX:item.x,
-      startCanvasY:item.y,
-      pxPerUnitX:scale.pxPerUnitX,
-      pxPerUnitY:scale.pxPerUnitY
-    };
-
+    this.dragState={pointerId:input.pointerId,kind,startScreenX:input.x,startScreenY:input.y,
+      startCanvasX:item.x,startCanvasY:item.y,pxPerUnitX:scale.pxPerUnitX,pxPerUnitY:scale.pxPerUnitY};
     document.getElementById("hint").textContent="拖到你喜欢的位置！";
   },
-
-  moveDrag:function(e){
-    if(!this.dragState||e.pointerId!==this.dragState.pointerId)return;
-
-    e.preventDefault();
-
-    const comp=this.getCanvasComp();
-    if(!comp)return;
-
-    const dx=e.clientX-this.dragState.startScreenX;
-    const dy=e.clientY-this.dragState.startScreenY;
-
-    const screenPxPerCanvasX=(this.dragState.pxPerUnitX*this.planeWidth)/this.canvasW;
-    const screenPxPerCanvasY=(this.dragState.pxPerUnitY*this.planeHeight)/this.canvasH;
-
-    const canvasDx=dx/Math.max(.001,screenPxPerCanvasX);
-    const canvasDy=dy/Math.max(.001,screenPxPerCanvasY);
-
-    comp.setPosition(
-      this.dragState.kind,
-      this.dragState.startCanvasX+canvasDx,
-      this.dragState.startCanvasY+canvasDy
-    );
-
+  handleMove(input){
+    if(!this.dragState||input.pointerId!==this.dragState.pointerId)return;
+    if(input.nativeEvent)input.nativeEvent.preventDefault();
+    const comp=this.getCanvasComp();if(!comp)return;
+    const dx=input.x-this.dragState.startScreenX,dy=input.y-this.dragState.startScreenY;
+    const sx=(this.dragState.pxPerUnitX*this.planeWidth)/this.canvasW;
+    const sy=(this.dragState.pxPerUnitY*this.planeHeight)/this.canvasH;
+    comp.setPosition(this.dragState.kind,this.dragState.startCanvasX+dx/Math.max(.001,sx),this.dragState.startCanvasY+dy/Math.max(.001,sy));
     this.updateHitPositions();
   },
-
-  endDrag:function(e){
-    if(!this.dragState||e.pointerId!==this.dragState.pointerId)return;
-    this.dragState=null;
-    document.getElementById("hint").textContent="PARK · 继续拖动来布置公园吧！🌳";
+  handleUp(input){
+    if(!this.dragState||input.pointerId!==this.dragState.pointerId)return;
+    this.dragState=null;document.getElementById("hint").textContent="PARK · 继续拖动来修好公园吧！🌳";
   },
-
-  showHits:function(){
-    Object.values(this.hits).forEach(b=>b.style.display="block");
-  },
-
-  hideHits:function(){
-    Object.values(this.hits).forEach(b=>b.style.display="none");
-  },
-
-  updateHitPositions:function(){
-    if(!this.world)return;
-
-    const comp=this.getCanvasComp();
-    if(!comp)return;
-
-    const obj=this.world.object3D;
-    obj.updateMatrixWorld(true);
-
-    const scale=this.getScreenScale();
-    if(!scale)return;
-
-    const baseSizePx=Math.max(52,.46*scale.pxPerUnitX);
-
+  showHits(){Object.values(this.hits).forEach(b=>b.style.display="block")},
+  hideHits(){Object.values(this.hits).forEach(b=>b.style.display="none")},
+  updateHitPositions(){
+    if(!this.world)return;const comp=this.getCanvasComp();if(!comp)return;
+    const obj=this.world.object3D;obj.updateMatrixWorld(true);const scale=this.getScreenScale();if(!scale)return;
+    const base=Math.max(52,.46*scale.pxPerUnitX);
     Object.entries(comp.items).forEach(([kind,item])=>{
-      const local=this.canvasToLocal(item.x,item.y);
-      const world=local.applyMatrix4(obj.matrixWorld);
-      const s=this.projectWorld(world);
-      if(!s)return;
-
-      const b=this.hits[kind];
-      const visualScale=item.scale||1;
-      const sizePx=baseSizePx*Math.max(.85,visualScale);
-      b.style.left=(s.x-sizePx/2)+"px";
-      b.style.top=(s.y-sizePx/2)+"px";
-      b.style.width=sizePx+"px";
-      b.style.height=sizePx+"px";
+      const s=this.projectWorld(this.canvasToLocal(item.x,item.y).applyMatrix4(obj.matrixWorld));if(!s)return;
+      const b=this.hits[kind],size=base*Math.max(.85,item.scale||1);
+      b.style.left=(s.x-size/2)+"px";b.style.top=(s.y-size/2)+"px";b.style.width=size+"px";b.style.height=size+"px";
     });
-
-    const resetLocal=this.canvasToLocal(this.canvasW/2,478);
-    const resetWorld=resetLocal.applyMatrix4(obj.matrixWorld);
-    const rs=this.projectWorld(resetWorld);
-
+    const rs=this.projectWorld(this.canvasToLocal(this.canvasW/2,505).applyMatrix4(obj.matrixWorld));
     if(rs){
-      const bw=Math.max(90,.74*scale.pxPerUnitX);
-      const bh=Math.max(44,.30*scale.pxPerUnitY);
-      this.hits.reset.style.left=(rs.x-bw/2)+"px";
-      this.hits.reset.style.top=(rs.y-bh/2)+"px";
-      this.hits.reset.style.width=bw+"px";
-      this.hits.reset.style.height=bh+"px";
+      const bw=Math.max(104,.54*scale.pxPerUnitX),bh=Math.max(32,.145*scale.pxPerUnitY);
+      const b=this.hits.reset;b.style.left=(rs.x-bw/2)+"px";b.style.top=(rs.y-bh/2)+"px";b.style.width=bw+"px";b.style.height=bh+"px";
     }
   },
-
-  tick:function(){
+  tick(){
     if(!this.world)return;
-
+    const now=performance.now(),active=this.tracking||this.dragState,frameMs=active?33:67;
+    if(this._lastTick&&now-this._lastTick<frameMs)return;this._lastTick=now;
     const obj=this.world.object3D;
-
     if(this.tracking){
-      this.el.object3D.updateMatrixWorld(true);
-      this.lastMatrix.copy(this.el.object3D.matrixWorld);
-
-      const p=new THREE.Vector3();
-      const q=new THREE.Quaternion();
-      const s=new THREE.Vector3();
-      this.lastMatrix.decompose(p,q,s);
-
-      this.poseHistory.push({
-        pos:p.clone(),
-        quat:q.clone(),
-        scale:s.clone(),
-        time:performance.now()
-      });
-
-      if(this.poseHistory.length>this.maxPoseHistory){
-        this.poseHistory.shift();
-      }
-
-      obj.position.copy(p);
-      obj.quaternion.copy(q);
-      obj.scale.copy(s);
-      obj.updateMatrixWorld(true);
-
-      this.updateHitPositions();
-      return;
+      this.el.object3D.updateMatrixWorld(true);this.lastMatrix.copy(this.el.object3D.matrixWorld);
+      const p=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();this.lastMatrix.decompose(p,q,s);
+      this.poseHistory.push({pos:p.clone(),scale:s.clone(),time:now});if(this.poseHistory.length>this.maxPoseHistory)this.poseHistory.shift();
+      obj.position.copy(p);obj.quaternion.identity();obj.scale.copy(s);obj.updateMatrixWorld(true);this.updateHitPositions();return;
     }
-
     if(this.holding){
-      const t=(performance.now()-this.holdStart)/1000;
-
-      const bob=Math.sin(t*1.35)*.014;
-      const sway=Math.sin(t*.95)*.008;
-      const roll=Math.sin(t*1.05)*THREE.MathUtils.degToRad(.8);
-
-      obj.position.copy(this.basePos);
-      obj.position.x+=sway;
-      obj.position.y+=bob;
-
-      const qr=new THREE.Quaternion()
-        .setFromAxisAngle(new THREE.Vector3(0,0,1),roll);
-
-      obj.quaternion.copy(this.baseQuat).multiply(qr);
-      obj.scale.copy(this.baseScale);
-      obj.updateMatrixWorld(true);
-
+      const t=(now-this.holdStart)/1000;
+      obj.position.copy(this.basePos);obj.position.x+=Math.sin(t*.95)*.008;obj.position.y+=Math.sin(t*1.35)*.014;
+      obj.quaternion.identity();obj.scale.copy(this.baseScale);obj.updateMatrixWorld(true);
       this.updateHitPositions();
     }
   }
 });
 </script>
+
+<script type="module" src="../js/hand-tracking-performance.js"></script>
 </head>
 
 <body>
+<div id="cameraOrientationControl">
+  <span>📷 CAMERA</span>
+  <select id="cameraOrientationSelect" aria-label="Camera orientation">
+    <option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option>
+  </select>
+</div>
+<button id="handBtn" type="button">✨ INTERACT · OFF</button>
+<div id="handStatus">手势：已关闭</div>
+<div id="handCursor">✨</div>
 <div id="hint">请把镜头对准 Park 识别图</div>
 
 <div id="dragLayer">
@@ -518,19 +380,15 @@ AFRAME.registerComponent("park-drag-controller",{
 <canvas id="parkCanvas" class="off" width="768" height="512"></canvas>
 
 <a-scene
-  mindar-image="imageTargetSrc: ../targets/park.mind; autoStart: true;"
+  mindar-image="imageTargetSrc: ../targets/park.mind; autoStart: true; maxTrack: 1;"
   color-space="sRGB"
-  renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true"
+  renderer="colorManagement:true;physicallyCorrectLights:true;alpha:true;antialias:true"
   vr-mode-ui="enabled:false"
   device-orientation-permission-ui="enabled:false">
 
   <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
-  <a-entity
-    mindar-image-target="targetIndex:0"
-    park-events
-    park-drag-controller="seconds:15; world:#parkWorld">
-  </a-entity>
+  <a-entity mindar-image-target="targetIndex:0" park-drag-controller="world:#parkWorld"></a-entity>
 
   <a-entity id="parkWorld" visible="false">
     <a-plane
@@ -542,7 +400,6 @@ AFRAME.registerComponent("park-drag-controller",{
       park-canvas>
     </a-plane>
   </a-entity>
-
 </a-scene>
 </body>
 </html>

@@ -16,87 +16,162 @@ canvas.a-canvas{background:transparent!important}
 .off{display:none}
 #hint{
   position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));
-  transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;
+  transform:translateX(-50%);z-index:40;max-width:88vw;padding:10px 14px;
   border-radius:999px;background:rgba(255,255,255,.92);color:#222;
-  font:14px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font:700 14px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.16)
+}
+#cameraOrientationControl{
+  position:fixed;left:18px;top:18px;z-index:90;display:flex;align-items:center;gap:7px;
+  padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.90);color:#444;
+  box-shadow:0 5px 18px rgba(0,0,0,.16);font:800 11px/1 system-ui,sans-serif
+}
+#cameraOrientationControl select{
+  border:0;outline:0;border-radius:999px;padding:5px 8px;background:rgba(255,240,180,.92);
+  color:#333;font:800 12px system-ui,sans-serif;cursor:pointer
+}
+/* Hide MindAR's scanning animation only. Recognition stays active. */
+.mindar-ui-scanning,
+.mindar-ui-scanning .scanning,
+.mindar-ui-scanning .scanning-line,
+.mindar-ui-scanning .inner,
+.mindar-ui-scanning .scanline{
+  display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important
 }
 </style>
 
 <script>
-AFRAME.registerComponent("park-events",{
-  init:function(){
-    const hint=document.getElementById("hint");
-    this.el.addEventListener("targetFound",()=>hint.textContent="城市公园出现啦！🌳⛲");
-    this.el.addEventListener("targetLost",()=>hint.textContent="请把镜头对准 Park 识别图");
+window.StandaloneCameraOrientation={
+  angle:0,
+  init(){
+    const select=document.getElementById("cameraOrientationSelect");
+    this.angle=Number(localStorage.getItem("parkCameraAngle")||0);
+    if(select){
+      select.value=String(this.angle);
+      select.addEventListener("change",()=>{
+        this.angle=Number(select.value)||0;
+        localStorage.setItem("parkCameraAngle",String(this.angle));
+        this.apply();
+      });
+    }
+    this.apply();
+  },
+  apply(){
+    const video=document.querySelector("video");
+    if(!video){setTimeout(()=>this.apply(),120);return}
+    const a=this.angle;
+    video.style.transformOrigin="50% 50%";
+    video.style.transform=`rotate(${a}deg)`;
+    if(a===90||a===270){
+      const scale=Math.max(innerWidth/innerHeight,innerHeight/innerWidth);
+      video.style.transform=`rotate(${a}deg) scale(${scale})`;
+    }
+  }
+};
+document.addEventListener("DOMContentLoaded",()=>window.StandaloneCameraOrientation.init());
+
+function dc(ctx,img,cx,cy,w,h){
+  ctx.save();ctx.translate(cx,cy);ctx.drawImage(img,-w/2,-h/2,w,h);ctx.restore();
+}
+
+AFRAME.registerComponent("park-static-canvas",{
+  init(){
+    this.c=document.getElementById("parkCanvas");
+    this.ctx=this.c.getContext("2d");
+    this.img=new Image();
+    this.img.onload=()=>this.draw();
+    this.img.src="../assets/city/park_scene.png";
+  },
+  draw(){
+    const c=this.c,ctx=this.ctx,w=c.width,h=c.height;
+    ctx.clearRect(0,0,w,h);
+    dc(ctx,this.img,w*.50,h*.50,w*.98,h*.66);
+    const mesh=this.el.getObject3D("mesh");
+    if(mesh&&mesh.material&&mesh.material.map)mesh.material.map.needsUpdate=true;
   }
 });
 
-function dc(ctx,img,cx,cy,w,h,r=0,a=1){
-  ctx.save();ctx.globalAlpha=a;ctx.translate(cx,cy);ctx.rotate(r);
-  ctx.drawImage(img,-w/2,-h/2,w,h);ctx.restore();
-}
+AFRAME.registerComponent("park-static-controller",{
+  schema:{world:{type:"selector"}},
+  init(){
+    this.world=this.data.world;
+    this.tracking=false;
+    this.lastMatrix=new THREE.Matrix4();
+    if(this.world)this.world.object3D.visible=false;
 
-function makeUpdater(canvasId,sources,drawFn){
-  return {
-    init:function(){
-      this.c=document.getElementById(canvasId);
-      this.ctx=this.c.getContext("2d");
-      this.images={};this.loaded=0;
-      const entries=Object.entries(sources);
-      entries.forEach(([k,src])=>{
-        const img=new Image();
-        img.onload=()=>{this.images[k]=img;this.loaded++};
-        img.src=src;
-      });
-      this.total=entries.length;
-    },
-    tick:function(){
-      if(this.loaded<this.total)return;
-      const c=this.c,ctx=this.ctx,w=c.width,h=c.height;
-      ctx.clearRect(0,0,w,h);
-      drawFn(ctx,this.images,w,h);
-      const mesh=this.el.getObject3D("mesh");
-      if(mesh&&mesh.material&&mesh.material.map)mesh.material.map.needsUpdate=true;
-    }
-  };
-}
+    const hint=document.getElementById("hint");
 
-AFRAME.registerComponent(
-  "park-canvas",
-  makeUpdater(
-    "parkCanvas",
-    {park:"../assets/city/park_scene.png"},
-    (ctx,I,w,h)=>{dc(ctx,I.park,w*.50,h*.50,w*.98,h*.66,0,1)}
-  )
-);
+    this.el.addEventListener("targetFound",()=>{
+      this.tracking=true;
+      if(this.world)this.world.object3D.visible=true;
+      hint.textContent="PARK · 城市公园出现啦！🌳⛲";
+    });
+
+    this.el.addEventListener("targetLost",()=>{
+      this.tracking=false;
+      if(this.world){
+        const obj=this.world.object3D;
+        const p=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();
+        this.lastMatrix.decompose(p,q,s);
+        obj.position.copy(p);
+        obj.quaternion.identity();
+        obj.scale.copy(s);
+        obj.visible=true;
+      }
+      hint.textContent="PARK · 继续讲你的故事吧 🌿";
+    });
+  },
+  tick(){
+    if(!this.tracking||!this.world)return;
+    this.el.object3D.updateMatrixWorld(true);
+    this.lastMatrix.copy(this.el.object3D.matrixWorld);
+    const p=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();
+    this.lastMatrix.decompose(p,q,s);
+    const obj=this.world.object3D;
+    obj.position.copy(p);
+    obj.quaternion.identity();
+    obj.scale.copy(s);
+    obj.updateMatrixWorld(true);
+  }
+});
 </script>
 </head>
 
 <body>
-<div id="hint">请把镜头对准 Park 识别图</div>
+<div id="cameraOrientationControl">
+  <span>📷 CAMERA</span>
+  <select id="cameraOrientationSelect" aria-label="Camera orientation">
+    <option value="0">0°</option>
+    <option value="90">90°</option>
+    <option value="180">180°</option>
+    <option value="270">270°</option>
+  </select>
+</div>
 
+<div id="hint">请把镜头对准 Park 识别图</div>
 <canvas id="parkCanvas" class="off" width="768" height="512"></canvas>
 
 <a-scene
-  mindar-image="imageTargetSrc: ../targets/park.mind; autoStart: true;"
+  mindar-image="imageTargetSrc: ../targets/park.mind; autoStart: true; maxTrack: 1;"
   color-space="sRGB"
-  renderer="colorManagement:true; physicallyCorrectLights:true; alpha:true; antialias:true"
+  renderer="colorManagement:true;physicallyCorrectLights:true;alpha:true;antialias:true"
   vr-mode-ui="enabled:false"
   device-orientation-permission-ui="enabled:false">
 
   <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
-  <a-entity mindar-image-target="targetIndex:0" park-events>
+  <a-entity mindar-image-target="targetIndex:0" park-static-controller="world:#parkWorld"></a-entity>
+
+  <a-entity id="parkWorld" visible="false">
     <a-plane
+      id="parkDisplay"
       width="2.35"
       height="1.57"
       position="0 0.03 0.03"
       material="shader:flat;src:#parkCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
-      park-canvas>
+      park-static-canvas>
     </a-plane>
   </a-entity>
-
 </a-scene>
 </body>
 </html>
