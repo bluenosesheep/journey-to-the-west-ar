@@ -111,16 +111,27 @@ window.ParkCameraOrientation={
 
 window.StandaloneParkMode={
   mode:"story",
-  showStory(){
+  showStory(keepTracking=false){
     this.mode="story";
     document.body.classList.add("park-story");
     window.StandaloneHandMode?.sleep();
     document.getElementById("parkStoryLayer").style.display="block";
     document.getElementById("fixParkBtn").style.display="block";
     document.getElementById("doneParkBtn").style.display="none";
+
     const c=document.querySelector('[park-drag-controller]')?.components?.["park-drag-controller"];
-    if(c){c.tracking=false;c.holding=false;c.dragState=null;c.hideHits()}
-    const w=document.getElementById("parkWorld");if(w)w.object3D.visible=false;
+    if(c){
+      // When called from targetFound, keep tracking alive long enough to capture
+      // the Park card pose for the later interactive handoff.
+      if(!keepTracking)c.tracking=false;
+      c.holding=false;
+      c.dragState=null;
+      c.hideHits();
+    }
+
+    const w=document.getElementById("parkWorld");
+    if(w)w.object3D.visible=false;
+
     document.getElementById("hint").textContent="PARK · 先用玩偶讲讲公园里发生了什么吧 🌳";
   },
   enterFix(){
@@ -134,6 +145,9 @@ window.StandaloneParkMode={
     if(c&&w){
       const o=w.object3D;o.position.copy(c.basePos);o.quaternion.identity();o.scale.copy(c.baseScale);o.visible=true;o.updateMatrixWorld(true);
       c.tracking=false;c.holding=true;c.holdStart=performance.now();c.showHits();c.updateHitPositions();
+
+      const canvasComp=document.getElementById("parkDisplay")?.components?.["park-canvas"];
+      if(canvasComp)canvasComp._lastDraw=0;
     }
     document.getElementById("hint").textContent="PARK · 把乱掉的东西拖回合适的位置吧！🌳";
   },
@@ -303,7 +317,7 @@ AFRAME.registerComponent("park-drag-controller",{
       if(window.StandaloneParkMode?.mode==="story"){
         if(this.world)this.world.object3D.visible=false;
         this.hideHits();
-        window.StandaloneParkMode.showStory();
+        window.StandaloneParkMode.showStory(true);
       }else{
         if(this.world)this.world.object3D.visible=true;
         this.showHits();this.updateHitPositions();
@@ -318,9 +332,23 @@ AFRAME.registerComponent("park-drag-controller",{
         for(let i=this.poseHistory.length-1;i>=0;i--){if(now-this.poseHistory[i].time>=280){stable=this.poseHistory[i];break}}
         if(!stable&&this.poseHistory.length)stable=this.poseHistory[0];
         if(stable){
-          this.basePos.copy(stable.pos);this.baseScale.copy(stable.scale);
-          obj.position.copy(this.basePos);obj.quaternion.identity();obj.scale.copy(this.baseScale);obj.visible=true;obj.updateMatrixWorld(true);
+          this.basePos.copy(stable.pos);
+          this.baseScale.copy(stable.scale);
+        }else{
+          // Very short scans may not build enough pose history. Use the current
+          // target matrix as a fallback so FIX still has a valid position/scale.
+          this.el.object3D.updateMatrixWorld(true);
+          const p=new THREE.Vector3(),q=new THREE.Quaternion(),sc=new THREE.Vector3();
+          this.el.object3D.matrixWorld.decompose(p,q,sc);
+          this.basePos.copy(p);
+          this.baseScale.copy(sc);
         }
+
+        obj.position.copy(this.basePos);
+        obj.quaternion.identity();
+        obj.scale.copy(this.baseScale);
+        obj.visible=true;
+        obj.updateMatrixWorld(true);
       }
       if(window.StandaloneParkMode?.mode==="story"){
         this.holding=false;this.hideHits();
