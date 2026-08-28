@@ -39,9 +39,12 @@ AFRAME.registerComponent("building-city-controller",{
 
     this.el.addEventListener("targetFound",()=>{
       this.tracking=true;
-      if(this.world)this.world.object3D.visible=true;
       document.getElementById("modeSwitch").style.display="flex";
       this.enterStory();
+      if(this.world){
+        this.world.object3D.visible=true;
+        this.world.object3D.updateMatrixWorld(true);
+      }
     });
 
     this.el.addEventListener("targetLost",()=>{
@@ -97,8 +100,11 @@ AFRAME.registerComponent("building-city-controller",{
     this.setPanel(this.park,"-0.72 -0.42 0.03",".78 .78 .78",1);
     this.setPanel(this.market,"0.72 -0.42 0.03",".78 .78 .78",1);
 
-    this.world.setAttribute("position","-0.92 0.62 -1.85");
+    // FAR is a narrative screen layout: small + upper-left.
+    // Do not push cityWorld behind the camera with a large negative Z.
+    this.world.setAttribute("position","-0.82 0.52 0.02");
     this.world.setAttribute("scale",".44 .44 .44");
+    this.world.object3D.visible=true;
 
     this.hideHits();
     document.getElementById("hint").textContent="CITY · 🌆 远处 · 用玩偶讲故事";
