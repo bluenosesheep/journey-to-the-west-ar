@@ -36,7 +36,7 @@ canvas.a-canvas{background:transparent!important}
 <div id="hint">自由讲故事吧 · 需要魔法时扫描 CLOUD / FIRE / RAIN / GROW</div>
 
 <a-scene
-  mindar-image="imageTargetSrc: ./targets/citywithmagic.mind; autoStart: true; maxTrack: 1;"
+  mindar-image="imageTargetSrc: ./targets/citywithmagic.mind; autoStart: false; maxTrack: 1;"
   color-space="sRGB"
   renderer="colorManagement:true;physicallyCorrectLights:true;alpha:true;antialias:true"
   vr-mode-ui="enabled:false"
@@ -48,6 +48,66 @@ canvas.a-canvas{background:transparent!important}
   <a-entity mindar-image-target="targetIndex:5" magic-target="kind:rain"></a-entity>
   <a-entity mindar-image-target="targetIndex:6" magic-target="kind:grow"></a-entity>
 </a-scene>
+
+<script>
+(() => {
+  const TARGET_URL = './targets/citywithmagic.mind';
+  const scene = document.querySelector('a-scene');
+  const hint = document.getElementById('hint');
+  let started = false;
+
+  const setHint = text => { if (hint) hint.textContent = text; };
+
+  function waitForSceneLoaded(){
+    return new Promise(resolve => {
+      if (scene && scene.hasLoaded) return resolve();
+      scene?.addEventListener('loaded', resolve, {once:true});
+    });
+  }
+
+  async function warmTarget(){
+    // This is intentionally done before MindAR starts. If Index already warmed
+    // the file, this resolves from the browser cache; otherwise it completes the
+    // first download here instead of racing MindAR's own startup.
+    const response = await fetch(TARGET_URL, {cache:'force-cache', credentials:'same-origin'});
+    if (!response.ok) throw new Error(`Target HTTP ${response.status}`);
+    await response.arrayBuffer();
+  }
+
+  async function startMindAR(){
+    if (started) return;
+    started = true;
+    setHint('正在准备 AR 识别…');
+
+    try {
+      await Promise.all([waitForSceneLoaded(), warmTarget()]);
+      const system = scene?.systems?.['mindar-image-system'];
+      if (!system) throw new Error('MindAR image system is not ready');
+
+      const ready = () => setHint('自由讲故事吧 · 需要魔法时扫描 CLOUD / FIRE / RAIN / GROW');
+      const failed = () => {
+        started = false;
+        setHint('AR 启动失败，请刷新页面再试一次');
+      };
+      scene.addEventListener('arReady', ready, {once:true});
+      scene.addEventListener('arError', failed, {once:true});
+
+      await system.start();
+    } catch (err) {
+      console.error('Magic Only startup failed:', err);
+      started = false;
+      setHint('AR 启动失败，请刷新页面再试一次');
+    }
+  }
+
+  // Start only after DOM exists; camera/MindAR no longer races the .mind download.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startMindAR, {once:true});
+  } else {
+    startMindAR();
+  }
+})();
+</script>
 
 <script>
 document.getElementById("homeBtn").addEventListener("click",()=>location.href="./index.html");

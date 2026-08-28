@@ -8,10 +8,10 @@
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 body{min-height:100vh;display:grid;place-items:center;padding:32px;background:linear-gradient(145deg,#fff8e9,#eef8ef);color:#26332a}
-main{width:min(920px,100%);text-align:center}
+main{width:min(1180px,100%);text-align:center}
 h1{margin:0 0 8px;font-size:clamp(30px,5vw,54px)}
 .lead{margin:0 0 30px;color:#5a665d;font-size:clamp(15px,2vw,19px)}
-.choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+.choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
 .card{min-height:270px;border-radius:28px;padding:30px 26px;background:rgba(255,255,255,.94);box-shadow:0 16px 42px rgba(45,65,50,.13);color:inherit;text-decoration:none;display:flex;flex-direction:column;justify-content:center;align-items:center;transition:transform .18s,box-shadow .18s}
 .card:hover,.card:focus-visible{transform:translateY(-4px);box-shadow:0 20px 48px rgba(45,65,50,.18)}
 .icon{font-size:62px;margin-bottom:14px}
@@ -19,7 +19,7 @@ h1{margin:0 0 8px;font-size:clamp(30px,5vw,54px)}
 .card h2{font-size:27px;margin:7px 0 8px}
 .desc{margin:12px auto 0;max-width:330px;line-height:1.6;color:#59645d}
 .go{margin-top:20px;font-weight:800}
-@media(max-width:680px){.choices{grid-template-columns:1fr}.card{min-height:220px}}
+@media(max-width:900px){.choices{grid-template-columns:1fr}.card{min-height:220px}}
 
 .preload-status{margin-top:18px;color:#7a847d;font-size:12px;min-height:18px}
 .preload-status.ready{color:#61775f}
@@ -37,11 +37,20 @@ h1{margin:0 0 8px;font-size:clamp(30px,5vw,54px)}
     <p class="desc">You will see AR scene</p>
     <div class="go">START →</div>
   </a>
+
+  <a class="card" href="./classroom_diy_story.html">
+    <div class="icon">🎨</div>
+    <div class="en">DIY STORY</div>
+    <h2>Build My Own Story World</h2>
+    <p class="desc">Choose AR scenes when you need them, and use magic cards freely in your story</p>
+    <div class="go">START →</div>
+  </a>
+
   <a class="card" href="./classroom_magic_only.html">
     <div class="icon">✨</div>
-    <div class="en">MY OWN STORY</div>
-    <h2>Build My Own Story World</h2>
-    <p class="desc">Build your own scene and you can use AR magic card</p>
+    <div class="en">MAGIC ONLY</div>
+    <h2>Use Magic Only</h2>
+    <p class="desc">Build your own scene and only use AR magic cards when your story needs them</p>
     <div class="go">START →</div>
   </a>
 </div>
@@ -66,6 +75,7 @@ h1{margin:0 0 8px;font-size:clamp(30px,5vw,54px)}
     './assets/grow/grow_flower.png'
   ];
 
+  const MIND_TARGET = './targets/citywithmagic.mind';
   const status = document.getElementById('magicPreloadStatus');
 
   function preloadOne(src){
@@ -81,8 +91,25 @@ h1{margin:0 0 8px;font-size:clamp(30px,5vw,54px)}
     });
   }
 
+  async function warmMindTarget(){
+    try {
+      const response = await fetch(MIND_TARGET, {cache:'force-cache', credentials:'same-origin'});
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      await response.arrayBuffer();
+      return true;
+    } catch (err) {
+      console.debug('Mind target preload skipped:', err);
+      return false;
+    }
+  }
+
   async function warmMagicAssets(){
-    // Load sequentially so the launcher stays responsive and avoids a network/CPU spike.
+    // First warm the large MindAR target database. The Magic page will not start
+    // recognition until this same file is available.
+    if (status) status.textContent = 'Preparing AR tracker…';
+    await warmMindTarget();
+
+    // Keep the already-tested sequential PNG preload so the launcher stays responsive.
     for (let i = 0; i < MAGIC_ASSETS.length; i++) {
       await preloadOne(MAGIC_ASSETS[i]);
       if (status) status.textContent = `Preparing AR magic… ${i + 1}/${MAGIC_ASSETS.length}`;
