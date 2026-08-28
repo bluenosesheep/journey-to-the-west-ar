@@ -1,8 +1,7 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Building · City World</title>
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -11,17 +10,30 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
 video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}
 a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}
 canvas.a-canvas{background:transparent!important}
-#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:70;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:700 14px/1.4 system-ui;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.16)}
-#modeSwitch{position:fixed;right:18px;top:18px;z-index:90;display:none;gap:7px;padding:6px;border-radius:999px;background:rgba(255,255,255,.90);box-shadow:0 5px 18px rgba(0,0,0,.16)}
-#modeSwitch button{border:0;border-radius:999px;padding:9px 13px;background:transparent;color:#555;font:800 12px/1 system-ui;cursor:pointer}
+#storyCityMini{position:fixed;left:5vw;top:10vh;width:min(27vw,330px);height:min(34vh,280px);z-index:45;pointer-events:none;opacity:0;transform:scale(.86);transform-origin:left top;transition:opacity .3s,transform .3s}
+#storyCityMini.show{opacity:1;transform:scale(1)}
+#storyCityMini.to-center{left:50%;top:50%;transform:translate(-50%,-50%) scale(2.1);opacity:0;transition:left .76s,top .76s,transform .76s,opacity .68s}
+#storyCityMini img{position:absolute;object-fit:contain;filter:drop-shadow(0 5px 9px rgba(0,0,0,.18))}
+#storyCityMini .mini-building{width:42%;height:72%;left:29%;top:0}
+#storyCityMini .mini-park{width:48%;height:40%;left:0;bottom:0}
+#storyCityMini .mini-market{width:48%;height:40%;right:0;bottom:0}
+#hint{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:70;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);font:700 14px system-ui;box-shadow:0 6px 24px rgba(0,0,0,.16)}
+#modeSwitch{position:fixed;right:18px;top:18px;z-index:90;display:none;gap:7px;padding:6px;border-radius:999px;background:rgba(255,255,255,.9);box-shadow:0 5px 18px rgba(0,0,0,.16)}
+#modeSwitch button{border:0;border-radius:999px;padding:9px 13px;background:transparent;font:800 12px system-ui;cursor:pointer}
 #modeSwitch button.active{background:rgba(255,240,180,.96);color:#4e6537}
-#cameraOrientationControl{position:fixed;left:18px;top:18px;z-index:90;display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.90);color:#444;box-shadow:0 5px 18px rgba(0,0,0,.16);font:800 11px/1 system-ui}
-#cameraOrientationControl select{border:0;outline:0;border-radius:999px;padding:5px 8px;background:rgba(255,240,180,.92);color:#333;font:800 12px system-ui}
+#cameraOrientationControl{position:fixed;left:18px;top:18px;z-index:90;display:flex;gap:7px;align-items:center;padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.9);font:800 11px system-ui}
+#cameraOrientationControl select{border:0;border-radius:999px;padding:5px 8px;background:rgba(255,240,180,.92);font:800 12px system-ui}
 .city-hit{position:fixed;display:none;z-index:60;border:0;background:transparent;pointer-events:auto;cursor:pointer}
-.mindar-ui-scanning,.mindar-ui-scanning .scanning,.mindar-ui-scanning .scanning-line,.mindar-ui-scanning .inner,.mindar-ui-scanning .scanline{display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+.mindar-ui-scanning,.mindar-ui-scanning .scanning,.mindar-ui-scanning .scanning-line,.mindar-ui-scanning .inner,.mindar-ui-scanning .scanline{display:none!important;opacity:0!important;visibility:hidden!important}
 </style>
 <script>
-AFRAME.registerComponent("building-city-controller",{
+window.cityAssetsReady=Promise.all([
+  "../assets/city/building_scene.png","../assets/city/park_scene.png","../assets/city/market_scene.png"
+].map(src=>new Promise(resolve=>{
+  const i=new Image();i.onload=()=>resolve();i.onerror=()=>resolve();i.src=src;
+})));
+
+AFRAME.registerComponent("standalone-city",{
   init(){
     this.world=document.getElementById("cityWorld");
     this.building=document.getElementById("cityBuilding");
@@ -29,258 +41,131 @@ AFRAME.registerComponent("building-city-controller",{
     this.market=document.getElementById("cityMarket");
     this.hitPark=document.getElementById("hitPark");
     this.hitMarket=document.getElementById("hitMarket");
-    this.tracking=false;
-    this.mode="story";
     this.lastMatrix=new THREE.Matrix4();
-    this.basePos=new THREE.Vector3();
-    this.baseScale=new THREE.Vector3(1,1,1);
-
-    if(this.world)this.world.object3D.visible=false;
+    this.mode="far";
+    this.tracking=false;
+    this.world.object3D.visible=false;
 
     this.el.addEventListener("targetFound",()=>{
       this.tracking=true;
+      this.el.object3D.updateMatrixWorld(true);
+      this.lastMatrix.copy(this.el.object3D.matrixWorld);
       document.getElementById("modeSwitch").style.display="flex";
-      requestAnimationFrame(()=>{
-        this.enterStory();
-        if(this.world){
-          this.world.object3D.visible=true;
-          this.world.object3D.updateMatrixWorld(true);
-        }
-      });
+      document.getElementById("hint").textContent="CITY WORLD · 正在加载场景…";
+      window.cityAssetsReady.then(()=>this.enterFar());
     });
-
-    this.el.addEventListener("targetLost",()=>{
-      this.tracking=false;
-
-      // Freeze the last pose captured while tracking. Do not sample the
-      // targetLost frame itself because it can be skewed while the card exits.
-      if(this.world){
-        // Keep whichever narrative layout is currently active (FAR or WALK-IN).
-        this.world.object3D.visible=true;
-        this.world.object3D.updateMatrixWorld(true);
-      }
-
-      this.refreshHits();
-    });
+    this.el.addEventListener("targetLost",()=>{this.tracking=false});
   },
 
-  clearAnimations(el){
-    ["animation__pos","animation__scale","animation__opacity"].forEach(a=>el?.removeAttribute(a));
-  },
-
-  setPanel(el,pos,scale,opacity=1){
-    if(!el)return;
-    this.clearAnimations(el);
-    el.object3D.visible=opacity>0;
-    el.setAttribute("position",pos);
-    el.setAttribute("scale",scale);
-    el.setAttribute("material","opacity",opacity);
-  },
-
-  animatePanel(el,pos,scale,opacity=1){
-    if(!el)return;
-    this.clearAnimations(el);
-    el.object3D.visible=true;
-    el.setAttribute("animation__pos",`property:position;to:${pos};dur:650;easing:easeInOutCubic`);
-    el.setAttribute("animation__scale",`property:scale;to:${scale};dur:650;easing:easeInOutCubic`);
-    el.setAttribute("animation__opacity",`property:material.opacity;to:${opacity};dur:420;easing:easeInOutCubic`);
-    if(opacity===0)setTimeout(()=>{el.object3D.visible=false},470);
-  },
-
-  enterStory(){
-    this.mode="story";
-    if(this.world){
-      this.world.removeAttribute("animation__walkpos");
-      this.world.removeAttribute("animation__walkscale");
-    }
-    document.getElementById("storyModeBtn").classList.add("active");
-    document.getElementById("interactModeBtn").classList.remove("active");
-
-    // FAR / STORY: City is a small distant composition in the upper-left.
-    // There is deliberately NO Park/Market interaction in this state.
-    this.setPanel(this.building,"0 0.34 0.02","1 1 1",1);
-    this.setPanel(this.park,"-0.72 -0.42 0.03",".78 .78 .78",1);
-    this.setPanel(this.market,"0.72 -0.42 0.03",".78 .78 .78",1);
-
-    // FAR is camera-space: small and upper-left, safely in front of the camera.
-    this.world.setAttribute("position","-0.95 0.62 -3.2");
-    this.world.setAttribute("scale",".44 .44 .44");
-    this.world.object3D.visible=true;
-    this.world.object3D.updateMatrixWorld(true);
-
+  enterFar(){
+    this.mode="far";
+    this.world.object3D.visible=false;
     this.hideHits();
+    document.getElementById("farBtn").classList.add("active");
+    document.getElementById("walkBtn").classList.remove("active");
+    const mini=document.getElementById("storyCityMini");
+    mini.hidden=false;mini.style.display="block";mini.classList.remove("to-center");mini.style.opacity="";
+    requestAnimationFrame(()=>mini.classList.add("show"));
     document.getElementById("hint").textContent="CITY · 🌆 远处 · 用玩偶讲故事";
   },
 
-  enterInteract(){
-    this.mode="interact";
-    document.getElementById("storyModeBtn").classList.remove("active");
-    document.getElementById("interactModeBtn").classList.add("active");
+  walkIn(){
+    if(this.mode==="walk")return;
+    this.mode="walk";
+    document.getElementById("farBtn").classList.remove("active");
+    document.getElementById("walkBtn").classList.add("active");
 
-    // WALK IN: pull the entire City from the small upper-left story view
-    // toward the viewer and center it before enabling Park/Market clicks.
-    this.setPanel(this.building,"0 0.34 0.02","1 1 1",1);
-    this.setPanel(this.park,"-0.72 -0.42 0.03",".78 .78 .78",1);
-    this.setPanel(this.market,"0.72 -0.42 0.03",".78 .78 .78",1);
+    const mini=document.getElementById("storyCityMini");
+    mini.classList.add("to-center");mini.classList.remove("show");
 
-    this.world.removeAttribute("animation__walkpos");
-    this.world.removeAttribute("animation__walkscale");
-    this.world.setAttribute("animation__walkpos","property:position;to:0 -0.02 -2.15;dur:760;easing:easeInOutCubic");
-    this.world.setAttribute("animation__walkscale","property:scale;to:1 1 1;dur:760;easing:easeInOutCubic");
+    const p=new THREE.Vector3(),q=new THREE.Quaternion(),sc=new THREE.Vector3();
+    this.lastMatrix.decompose(p,q,sc);
+    const endScale=sc.clone().multiplyScalar(.82);
+    const startScale=endScale.clone().multiplyScalar(.62);
+    const endPos=new THREE.Vector3(0,-.16,p.z);
+    const o=this.world.object3D;
+    o.position.copy(endPos);o.quaternion.identity();o.scale.copy(startScale);o.visible=true;o.updateMatrixWorld(true);
 
-    this.hideHits();
-    setTimeout(()=>{
-      if(this.mode!=="interact")return;
-      this.showHits();
-      this.refreshHits();
-    },780);
-
+    const start=performance.now(),dur=760,ease=t=>1-Math.pow(1-t,3);
+    const step=now=>{
+      const t=Math.min(1,(now-start)/dur),e=ease(t);
+      o.position.copy(endPos);o.quaternion.identity();o.scale.lerpVectors(startScale,endScale,e);o.updateMatrixWorld(true);
+      if(t<1)requestAnimationFrame(step);
+      else{this.showHits();this.updateHits()}
+    };
+    requestAnimationFrame(step);
+    setTimeout(()=>{mini.style.display="none";mini.hidden=true},760);
     document.getElementById("hint").textContent="CITY · 🚶 走进城市…";
-    setTimeout(()=>{
-      if(this.mode==="interact")document.getElementById("hint").textContent="CITY · 点击 PARK 或 MARKET";
-    },780);
+    setTimeout(()=>{if(this.mode==="walk")document.getElementById("hint").textContent="CITY · 点击 PARK 或 MARKET"},780);
   },
 
-  focusPark(){
-    if(this.mode!=="interact")return;
-    this.animatePanel(this.park,"0 0.08 0.03","1.95 1.95 1.95",1);
-    this.animatePanel(this.building,"0 0.38 0.01",".8 .8 .8",0);
-    this.animatePanel(this.market,"0.72 -0.42 0.01",".7 .7 .7",0);
+  resetPanels(){
+    [[this.building,"0 0.34 0.02","1 1 1"],[this.park,"-0.72 -0.42 0.03",".78 .78 .78"],[this.market,"0.72 -0.42 0.03",".78 .78 .78"]].forEach(([el,pos,scale])=>{
+      ["animation__pos","animation__scale","animation__opacity"].forEach(a=>el.removeAttribute(a));
+      el.object3D.visible=true;el.setAttribute("position",pos);el.setAttribute("scale",scale);el.setAttribute("material","opacity",1);
+    });
+  },
+
+  zoom(kind){
+    if(this.mode!=="walk")return;
+    this.resetPanels();
+    const chosen=kind==="park"?this.park:this.market;
+    const other=kind==="park"?this.market:this.park;
+    const pos=kind==="park"?"0 0.08 0.03":"0 0 0.03";
+    const scale=kind==="park"?"1.95 1.95 1.95":"1.28 1.28 1.28";
+    chosen.setAttribute("animation__pos",`property:position;to:${pos};dur:760;easing:easeInOutCubic`);
+    chosen.setAttribute("animation__scale",`property:scale;to:${scale};dur:760;easing:easeInOutCubic`);
+    [this.building,other].forEach(el=>{el.setAttribute("animation__opacity","property:material.opacity;to:0;dur:450");setTimeout(()=>el.object3D.visible=false,500)});
     this.hideHits();
-    document.getElementById("hint").textContent="PARK 已放大";
+    document.getElementById("hint").textContent=(kind==="park"?"PARK":"MARKET")+" 已放大";
   },
 
-  focusMarket(){
-    if(this.mode!=="interact")return;
-    [this.market,this.park,this.building].forEach(el=>{if(el){this.clearAnimations(el);el.object3D.visible=true}});
-    this.animatePanel(this.market,"0 0 0.03","1.28 1.28 1.28",1);
-    this.animatePanel(this.building,"0 0.38 0.01",".8 .8 .8",0);
-    this.animatePanel(this.park,"-0.72 -0.42 0.01",".7 .7 .7",0);
-    this.hideHits();
-    document.getElementById("hint").textContent="MARKET 已放大";
-  },
-
+  project(v){const cam=document.querySelector("a-camera")?.getObject3D("camera");if(!cam)return null;const p=v.clone().project(cam);return{x:(p.x*.5+.5)*innerWidth,y:(-p.y*.5+.5)*innerHeight}},
+  place(el,img){img.object3D.updateMatrixWorld(true);const m=img.object3D.matrixWorld,c=this.project(new THREE.Vector3().applyMatrix4(m)),r=this.project(new THREE.Vector3(.5,0,0).applyMatrix4(m)),u=this.project(new THREE.Vector3(0,.5,0).applyMatrix4(m));if(!c||!r||!u)return;const w=Math.max(80,Math.abs(r.x-c.x)*3.1),h=Math.max(70,Math.abs(u.y-c.y)*2.08);el.style.left=(c.x-w/2)+"px";el.style.top=(c.y-h/2)+"px";el.style.width=w+"px";el.style.height=h+"px"},
+  updateHits(){if(this.mode!=="walk")return;this.place(this.hitPark,this.park);this.place(this.hitMarket,this.market)},
   showHits(){this.hitPark.style.display="block";this.hitMarket.style.display="block"},
   hideHits(){this.hitPark.style.display="none";this.hitMarket.style.display="none"},
-
-  project(v){
-    const cam=document.querySelector("a-camera")?.getObject3D("camera");
-    if(!cam)return null;
-    const p=v.clone().project(cam);
-    return{x:(p.x*.5+.5)*innerWidth,y:(-p.y*.5+.5)*innerHeight};
-  },
-
-  positionHit(el,image){
-    if(!el||!image||!image.object3D.visible)return;
-    image.object3D.updateMatrixWorld(true);
-    const m=image.object3D.matrixWorld;
-    const c=this.project(new THREE.Vector3(0,0,0).applyMatrix4(m));
-    const r=this.project(new THREE.Vector3(.5,0,0).applyMatrix4(m));
-    const u=this.project(new THREE.Vector3(0,.5,0).applyMatrix4(m));
-    if(!c||!r||!u)return;
-    const w=Math.max(80,Math.abs(r.x-c.x)*2*1.55);
-    const h=Math.max(70,Math.abs(u.y-c.y)*2*1.04);
-    el.style.left=(c.x-w/2)+"px";el.style.top=(c.y-h/2)+"px";el.style.width=w+"px";el.style.height=h+"px";
-  },
-
-  refreshHits(){
-    if(this.mode!=="interact")return;
-    this.positionHit(this.hitPark,this.park);
-    this.positionHit(this.hitMarket,this.market);
-  },
-
   tick(){
-    if(!this.world)return;
-
-    // While the Building card is visible, continuously copy the tracked target
-    // pose to cityWorld. This is what makes the City visible DURING recognition.
     if(this.tracking){
       this.el.object3D.updateMatrixWorld(true);
       this.lastMatrix.copy(this.el.object3D.matrixWorld);
-
-      const p=new THREE.Vector3();
-      const q=new THREE.Quaternion();
-      const s=new THREE.Vector3();
-      this.lastMatrix.decompose(p,q,s);
-
-      this.basePos.copy(p);
-      this.baseScale.copy(s);
-
-      // Recognition is only the trigger in this standalone page.
-      // cityWorld is camera-relative, so it must not inherit the target pose.
-      this.world.object3D.visible=true;
     }
-
-    // Only hit projection is throttled; no MediaPipe exists in this page.
-    if(this.mode==="interact"){
-      const now=performance.now();
-      if(!this._lastHit||now-this._lastHit>=100){
-        this._lastHit=now;
-        this.refreshHits();
-      }
+    if(this.mode==="walk"){
+      const now=performance.now();if(!this._h||now-this._h>=100){this._h=now;this.updateHits()}
     }
   }
 });
 </script>
 </head>
 <body>
+<div id="storyCityMini" hidden style="display:none;opacity:0">
+ <img class="mini-building" src="../assets/city/building_scene.png">
+ <img class="mini-park" src="../assets/city/park_scene.png">
+ <img class="mini-market" src="../assets/city/market_scene.png">
+</div>
 <div id="cameraOrientationControl"><span>📷 CAMERA</span><select id="cameraOrientationSelect"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select></div>
-<div id="modeSwitch"><button id="storyModeBtn" class="active">🌆 远处</button><button id="interactModeBtn">🚶 走进</button></div>
-<div id="hint">请把镜头对准 Building 识别图 · 首次识别后默认「远处」</div>
-<button id="hitPark" class="city-hit" aria-label="Park"></button>
-<button id="hitMarket" class="city-hit" aria-label="Market"></button>
-
-<a-scene mindar-image="imageTargetSrc: ../targets/building.mind; autoStart: true; maxTrack: 1;"
- color-space="sRGB" renderer="colorManagement:true;physicallyCorrectLights:true;alpha:true;antialias:true"
- vr-mode-ui="enabled:false" device-orientation-permission-ui="enabled:false">
- <a-camera position="0 0 0" look-controls="enabled:false">
-   <a-entity id="cityWorld" visible="false">
-     <a-image id="cityBuilding" src="../assets/city/building_scene.png"
-       width="1.25" height="1.88" position="0 0.34 0.02"
-       material="transparent:true;opacity:1;depthWrite:false"></a-image>
-
-     <a-image id="cityPark" src="../assets/city/park_scene.png"
-       width="1.55" height="1.04" position="-0.72 -0.42 0.03"
-       scale=".78 .78 .78"
-       material="transparent:true;opacity:1;depthWrite:false"></a-image>
-
-     <a-image id="cityMarket" src="../assets/city/market_scene.png"
-       width="1.55" height="1.04" position="0.72 -0.42 0.03"
-       scale=".78 .78 .78"
-       material="transparent:true;opacity:1;depthWrite:false"></a-image>
-   </a-entity>
- </a-camera>
- <a-entity mindar-image-target="targetIndex:0" building-city-controller></a-entity>
-
-
+<div id="modeSwitch"><button id="farBtn" class="active">🌆 远处</button><button id="walkBtn">🚶 走进</button></div>
+<div id="hint">请把镜头对准 Building 识别图</div>
+<button id="hitPark" class="city-hit"></button><button id="hitMarket" class="city-hit"></button>
+<a-scene mindar-image="imageTargetSrc: ../targets/building.mind;autoStart:true;maxTrack:1;" color-space="sRGB" renderer="colorManagement:true;physicallyCorrectLights:true;alpha:true;antialias:true" vr-mode-ui="enabled:false" device-orientation-permission-ui="enabled:false">
+ <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+ <a-entity mindar-image-target="targetIndex:0" standalone-city></a-entity>
+ <a-entity id="cityWorld" visible="false">
+  <a-image id="cityBuilding" src="../assets/city/building_scene.png" width="1.25" height="1.88" position="0 0.34 0.02" material="transparent:true;opacity:1;depthWrite:false"></a-image>
+  <a-image id="cityPark" src="../assets/city/park_scene.png" width="1.55" height="1.04" position="-0.72 -0.42 0.03" scale=".78 .78 .78" material="transparent:true;opacity:1;depthWrite:false"></a-image>
+  <a-image id="cityMarket" src="../assets/city/market_scene.png" width="1.55" height="1.04" position="0.72 -0.42 0.03" scale=".78 .78 .78" material="transparent:true;opacity:1;depthWrite:false"></a-image>
+ </a-entity>
 </a-scene>
-
 <script>
 document.addEventListener("DOMContentLoaded",()=>{
-  const target=document.querySelector('[building-city-controller]');
-  const getComp=()=>target?.components?.["building-city-controller"];
-
-  document.getElementById("storyModeBtn").onclick=()=>getComp()?.enterStory();
-  document.getElementById("interactModeBtn").onclick=()=>getComp()?.enterInteract();
-  document.getElementById("hitPark").onclick=()=>getComp()?.focusPark();
-  document.getElementById("hitMarket").onclick=()=>getComp()?.focusMarket();
-
-  const select=document.getElementById("cameraOrientationSelect");
-  let angle=Number(localStorage.getItem("buildingCameraAngle")||0);
-  select.value=String(angle);
-  const apply=()=>{
-    const v=document.querySelector("video");
-    if(!v){setTimeout(apply,120);return}
-    v.style.transformOrigin="50% 50%";
-    v.style.transform=`rotate(${angle}deg)`;
-    if(angle===90||angle===270){
-      const sc=Math.max(innerWidth/innerHeight,innerHeight/innerWidth);
-      v.style.transform=`rotate(${angle}deg) scale(${sc})`;
-    }
-  };
-  select.onchange=()=>{angle=Number(select.value)||0;localStorage.setItem("buildingCameraAngle",String(angle));apply()};
-  apply();
+ const t=document.querySelector("[standalone-city]"),c=()=>t?.components?.["standalone-city"];
+ document.getElementById("farBtn").onclick=()=>c()?.enterFar();
+ document.getElementById("walkBtn").onclick=()=>c()?.walkIn();
+ document.getElementById("hitPark").onclick=()=>c()?.zoom("park");
+ document.getElementById("hitMarket").onclick=()=>c()?.zoom("market");
+ const sel=document.getElementById("cameraOrientationSelect");let a=Number(localStorage.getItem("buildingCameraAngle")||0);sel.value=String(a);
+ const apply=()=>{const v=document.querySelector("video");if(!v){setTimeout(apply,120);return}v.style.transformOrigin="50% 50%";v.style.transform=`rotate(${a}deg)`;if(a===90||a===270){const sc=Math.max(innerWidth/innerHeight,innerHeight/innerWidth);v.style.transform=`rotate(${a}deg) scale(${sc})`}};
+ sel.onchange=()=>{a=Number(sel.value)||0;localStorage.setItem("buildingCameraAngle",String(a));apply()};apply();
 });
 </script>
-</body>
-</html>
+</body></html>
