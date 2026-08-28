@@ -329,7 +329,7 @@ AFRAME.registerComponent("park-drag-controller",{
     });
     const rs=this.projectWorld(this.canvasToLocal(this.canvasW/2,505).applyMatrix4(obj.matrixWorld));
     if(rs){
-      const bw=Math.max(104,.54*scale.pxPerUnitX),bh=Math.max(32,.145*scale.pxPerUnitY);
+      const bw=Math.max(96,.46*scale.pxPerUnitX),bh=Math.max(26,.095*scale.pxPerUnitY);
       const b=this.hits.reset;b.style.left=(rs.x-bw/2)+"px";b.style.top=(rs.y-bh/2)+"px";b.style.width=bw+"px";b.style.height=bh+"px";
     }
   },
