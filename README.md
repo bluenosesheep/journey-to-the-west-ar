@@ -72,12 +72,8 @@ journey-to-the-west-webar/
 ├── classroom_city_story_scene_demo.html         ← 由统一入口进入到city场景 使用citywithmagic.mind
 ├── classroom_magic_only.html                    ← 由统一入口进入到只是用magic 使用citywithmagic.mind
 |
-├── classroom_city_story_actor_magic_demo.html   ← Performance优化后city场景stable版本，使用citywithmagic.mind + with gesture, 可用于city场景单独demo
-├── play_city_world_stable_nogesture.html        ← 原 Stable without gesture
-├── classroom_city.html                          ← 原 Stable with gesture，但是没有区分story/interact mode
-├── classroom_city_story_actor_demo.html         ← 原 Stable with gesture and actor on the front in story mode
 ├──preview/                                      ← preview AR animate， don't need AR scan
-├── assets/
+├── assets/                                      ← 所有AR资源文件
 ├── scenes/                                      ← 独立场景入口地址，以market为例
 │   ├── market_story_interactive.html            ← market完整大场景+AR交互
 │   ├── market_interactive.html                  ← marketAR交互
