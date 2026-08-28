@@ -59,12 +59,55 @@ canvas.a-canvas{background:transparent!important}
 AFRAME.registerComponent("market-events",{
   init:function(){
     const hint=document.getElementById("hint");
+    const world=document.getElementById("marketWorld");
+
+    this.lastMatrix=new THREE.Matrix4();
+
     this.el.addEventListener("targetFound",()=>{
+      if(world)world.object3D.visible=true;
       hint.textContent="热闹的市场出现啦！🧺🥕";
     });
+
     this.el.addEventListener("targetLost",()=>{
-      hint.textContent="请把镜头对准 Market 识别图";
+      // Standalone story mode: keep Market at the last tracked pose
+      // after the recognition card is removed.
+      if(world){
+        this.el.object3D.updateMatrixWorld(true);
+        this.lastMatrix.copy(this.el.object3D.matrixWorld);
+
+        const p=new THREE.Vector3();
+        const q=new THREE.Quaternion();
+        const sc=new THREE.Vector3();
+        this.lastMatrix.decompose(p,q,sc);
+
+        const obj=world.object3D;
+        obj.position.copy(p);
+        obj.quaternion.identity();
+        obj.scale.copy(sc);
+        obj.visible=true;
+        obj.updateMatrixWorld(true);
+      }
+      hint.textContent="MARKET · 继续讲你的故事吧 🧺";
     });
+  },
+
+  tick:function(){
+    const world=document.getElementById("marketWorld");
+    if(!world || !this.el.object3D.visible)return;
+
+    this.el.object3D.updateMatrixWorld(true);
+    this.lastMatrix.copy(this.el.object3D.matrixWorld);
+
+    const p=new THREE.Vector3();
+    const q=new THREE.Quaternion();
+    const sc=new THREE.Vector3();
+    this.lastMatrix.decompose(p,q,sc);
+
+    const obj=world.object3D;
+    obj.position.copy(p);
+    obj.quaternion.identity();
+    obj.scale.copy(sc);
+    obj.updateMatrixWorld(true);
   }
 });
 
@@ -143,7 +186,9 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
-  <a-entity mindar-image-target="targetIndex:0" market-events>
+  <a-entity mindar-image-target="targetIndex:0" market-events></a-entity>
+
+  <a-entity id="marketWorld" visible="false">
     <a-plane
       width="2.35"
       height="1.57"
