@@ -1467,80 +1467,6 @@ document.addEventListener("DOMContentLoaded",()=>{
 });
 </script>
 
-
-<script>
-(() => {
-  const TARGET_URL = "./targets/citywithmagic.mind";
-  let started = false;
-
-  async function ensureTargetReady() {
-    try {
-      const response = await fetch(TARGET_URL, {
-        cache: "force-cache",
-        credentials: "same-origin"
-      });
-      if (!response.ok) throw new Error(`Target preload failed: ${response.status}`);
-      await response.arrayBuffer();
-      return true;
-    } catch (err) {
-      console.warn("DIY target preload failed; MindAR will still try to load it:", err);
-      return false;
-    }
-  }
-
-  function waitForSceneLoaded(scene) {
-    return new Promise(resolve => {
-      if (scene.hasLoaded) {
-        resolve();
-        return;
-      }
-      scene.addEventListener("loaded", resolve, { once: true });
-    });
-  }
-
-  async function startDIYMindAR() {
-    if (started) return;
-    started = true;
-
-    const scene = document.querySelector("a-scene");
-    if (!scene) return;
-
-    const hint = document.getElementById("hint");
-    const originalHint = hint ? hint.textContent : "";
-
-    if (hint) hint.textContent = "正在准备 AR 扫描…";
-
-    await Promise.all([
-      ensureTargetReady(),
-      waitForSceneLoaded(scene)
-    ]);
-
-    try {
-      const system = scene.systems["mindar-image-system"];
-      if (!system || typeof system.start !== "function") {
-        throw new Error("MindAR image system is not ready");
-      }
-
-      await system.start();
-
-      if (hint && window.DIYSceneManager?.active == null) {
-        hint.textContent = originalHint || "✨ 扫描 BUILDING / PARK / MARKET 开始一个场景，也可以随时扫描 CLOUD / FIRE / RAIN / GROW";
-      }
-    } catch (err) {
-      console.error("DIY MindAR startup failed:", err);
-      if (hint) hint.textContent = "AR 扫描启动失败，请刷新页面再试";
-      started = false;
-    }
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", startDIYMindAR, { once: true });
-  } else {
-    startDIYMindAR();
-  }
-})();
-</script>
-
 <script src="./js/magic-only-manager.js?v=1"></script>
 <script type="module" src="./js/hand-tracking-performance.js"></script>
 </head>
@@ -1607,7 +1533,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 <canvas id="marketCanvas" class="off" width="768" height="512"></canvas>
 
 <a-scene
-  mindar-image="imageTargetSrc: ./targets/citywithmagic.mind; autoStart: false; maxTrack: 1;"
+  mindar-image="imageTargetSrc: ./targets/citywithmagic.mind; autoStart: true; maxTrack: 1;"
   color-space="sRGB"
   renderer="colorManagement:true;physicallyCorrectLights:true;alpha:true;antialias:true"
   vr-mode-ui="enabled:false"
