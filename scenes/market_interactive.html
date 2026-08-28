@@ -387,22 +387,7 @@ AFRAME.registerComponent("market-canvas",{
     ctx.restore();
     ctx.restore();
 
-    // Friendly rounded RESET button with more space below the basket.
-    const bx=w/2-86, by=458, bw=172, bh=40, br=20;
-    ctx.save();
-    roundRect(ctx,bx,by,bw,bh,br);
-    ctx.fillStyle="rgba(255,248,220,.96)";
-    ctx.fill();
-    ctx.lineWidth=3;
-    ctx.strokeStyle="#6f8e42";
-    ctx.stroke();
-
-    ctx.fillStyle="#8f2f2a";
-    ctx.font='700 20px system-ui, sans-serif';
-    ctx.textAlign="center";
-    ctx.textBaseline="middle";
-    ctx.fillText("RESET",w/2,by+bh/2+1);
-    ctx.restore();
+    // RESET UI is provided by the DOM button #holdReset.
 
     const mesh=this.el.getObject3D("mesh");
     if(mesh&&mesh.material&&mesh.material.map)mesh.material.map.needsUpdate=true;
