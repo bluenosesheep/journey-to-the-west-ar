@@ -78,6 +78,12 @@ journey-to-the-west-webar/
 ├── classroom_city_story_actor_demo.html         ← 原 Stable with gesture and actor on the front in story mode
 ├──preview/                                      ← preview AR animate， don't need AR scan
 ├── assets/
+├── scenes/                                      ← 独立场景入口地址，以market为例
+│   ├── market_story_interactive.html            ← market完整大场景+AR交互
+│   ├── market_interactive.html                  ← marketAR交互
+│   ├── market.html                              ← market完整大场景
+│   ├── cloud.html                               ← 提示页面，进行preload
+│   ├── cloud_ar.html                            ← cloud magic AR识别
 └── target-images/
 
 ```
