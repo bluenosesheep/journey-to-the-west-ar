@@ -47,6 +47,15 @@ canvas.a-canvas{background:transparent!important}.off{display:none}
 #marketStoryCard img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 8px 16px rgba(0,0,0,.20))}
 #shopBtn{position:fixed;left:50%;bottom:max(76px,calc(env(safe-area-inset-bottom) + 58px));transform:translateX(-50%);z-index:75;display:none;border:0;border-radius:999px;padding:11px 18px;background:rgba(255,248,220,.97);color:#8a5122;font:800 14px/1 system-ui;box-shadow:0 6px 20px rgba(0,0,0,.18);cursor:pointer}
 body.market-story #handBtn,body.market-story #handStatus,body.market-story #handCursor,body.market-story #holdHitLayer{display:none!important}
+
+#checkoutBtn{
+  position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);z-index:76;display:none;
+  border:0;border-radius:999px;padding:10px 17px;
+  background:rgba(255,248,220,.97);color:#8a5122;
+  font:800 14px/1 system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.18);
+  cursor:pointer;
+}
 </style>
 <script>
 function roundRect(ctx,x,y,w,h,r){
@@ -540,14 +549,39 @@ window.StandaloneMarketMode={
     document.body.classList.add("market-story");
     document.getElementById("marketStoryLayer").style.display="block";
     document.getElementById("shopBtn").style.display="block";
+    document.getElementById("checkoutBtn").style.display="none";
     const w=document.getElementById("marketWorld");if(w)w.object3D.visible=false;
     document.getElementById("hint").textContent="MARKET · 先用玩偶讲讲这里发生了什么吧 🧺";
   },
+  checkout(){
+    window.StandaloneMarketHandMode?.sleep();
+
+    this.mode="story";
+    document.body.classList.add("market-story");
+
+    document.getElementById("marketStoryLayer").style.display="block";
+    document.getElementById("shopBtn").style.display="block";
+    document.getElementById("checkoutBtn").style.display="none";
+
+    const persist=document.querySelector('[market-persist]')?.components?.["market-persist"];
+    if(persist){
+      persist.tracking=false;
+      persist.holding=false;
+      persist.hideHoldHits();
+    }
+
+    const world=document.getElementById("marketWorld");
+    if(world)world.object3D.visible=false;
+
+    document.getElementById("hint").textContent="MARKET · 买好东西啦，继续讲故事吧 🧺";
+  },
+
   enterShop(){
     this.mode="shop";
     document.body.classList.remove("market-story");
     document.getElementById("marketStoryLayer").style.display="none";
     document.getElementById("shopBtn").style.display="none";
+    document.getElementById("checkoutBtn").style.display="block";
     const c=document.querySelector('[market-persist]')?.components?.["market-persist"];
     const w=document.getElementById("marketWorld");
     if(c&&w){
@@ -650,6 +684,7 @@ window.StandaloneMarketHandMode={
 document.addEventListener("DOMContentLoaded",()=>{
   window.ClassroomCameraOrientation.init();
   document.getElementById("shopBtn")?.addEventListener("click",()=>window.StandaloneMarketMode.enterShop());
+  document.getElementById("checkoutBtn")?.addEventListener("click",()=>window.StandaloneMarketMode.checkout());
 
   document.getElementById("handBtn")
     ?.addEventListener("click",()=>window.StandaloneMarketHandMode.toggle());
@@ -669,6 +704,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 <body class="market-story">
 <div id="marketStoryLayer"><div id="marketStoryCard"><img src="../assets/city/market_scene.png" alt=""></div></div>
 <button id="shopBtn" type="button">🧺 买点东西吧</button>
+<button id="checkoutBtn" type="button">🧾 去结账喽</button>
 <button id="handBtn" type="button">✨ INTERACT · OFF</button>
 <div id="handStatus">手势：已关闭</div>
 <div id="handCursor">✨</div>
