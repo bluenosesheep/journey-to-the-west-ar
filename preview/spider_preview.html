@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Giant Spider · Animation Preview</title>
+<style>
+:root{--stage-w:min(88vw,920px);--stage-h:min(72vh,680px)}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at 50% 35%,#2a211b 0,#171310 44%,#0c0a09 100%);color:#f7ead1}
+body{display:grid;place-items:center}
+#wrap{width:min(1100px,96vw);display:flex;flex-direction:column;align-items:center;gap:14px}
+#title{font-weight:900;letter-spacing:.08em;font-size:clamp(18px,2.4vw,30px);color:#f4c879;text-shadow:0 2px 12px rgba(0,0,0,.5)}
+#stage{position:relative;width:var(--stage-w);height:var(--stage-h);min-height:420px;overflow:hidden;border-radius:28px;background:radial-gradient(circle at 50% 60%,rgba(145,89,42,.18),rgba(0,0,0,0) 45%),linear-gradient(180deg,rgba(255,255,255,.025),rgba(255,255,255,.01));box-shadow:inset 0 0 0 1px rgba(255,214,149,.15),0 18px 60px rgba(0,0,0,.38)}
+#web{position:absolute;left:50%;top:58%;width:72%;height:auto;transform:translate(-50%,-50%) scaleY(.58);opacity:.45;filter:brightness(1.05) drop-shadow(0 0 10px rgba(210,225,255,.10));pointer-events:none}
+#shadow{position:absolute;left:50%;top:71%;width:45%;height:auto;transform:translate(-50%,-50%) scale(1,.62);opacity:.48;filter:blur(.4px);pointer-events:none}
+#dust{position:absolute;left:50%;top:71%;width:72%;height:auto;transform:translate(-50%,-50%) scale(.75);opacity:0;pointer-events:none}
+#attackLines{position:absolute;left:50%;top:47%;width:92%;height:auto;transform:translate(-50%,-50%) scale(.72);opacity:0;pointer-events:none;mix-blend-mode:screen}
+#spider{position:absolute;left:50%;top:47%;width:48%;max-width:520px;height:auto;transform-origin:50% 66%;transform:translate(-50%,-50%) scale(1);filter:drop-shadow(0 12px 14px rgba(0,0,0,.45));pointer-events:none;will-change:transform,filter}
+#phase{position:absolute;left:18px;top:18px;padding:8px 12px;border-radius:999px;background:rgba(0,0,0,.42);border:1px solid rgba(255,215,149,.14);color:#f7d99c;font-size:13px;font-weight:800;backdrop-filter:blur(6px)}
+#timeline{position:absolute;left:18px;right:18px;bottom:18px;height:5px;border-radius:999px;background:rgba(255,255,255,.10);overflow:hidden}
+#timelineFill{height:100%;width:0%;background:linear-gradient(90deg,#a94625,#f0a340,#ffd57a)}
+#controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+button{border:0;border-radius:999px;padding:10px 16px;background:rgba(255,244,216,.95);color:#4b321e;font:800 13px/1 system-ui;cursor:pointer;box-shadow:0 5px 16px rgba(0,0,0,.18)}
+button.primary{background:#b8512f;color:white}
+button:active{transform:translateY(1px)}
+#note{max-width:860px;text-align:center;color:#c9b99d;font-size:13px;line-height:1.5}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="title">GIANT SPIDER · ANIMATION PREVIEW</div>
+  <div id="stage">
+    <img id="web" src="../assets/spider/spider_web.png" alt="">
+    <img id="attackLines" src="../assets/spider/spider_attack_lines.png" alt="">
+    <img id="shadow" src="../assets/spider/spider_shadow.png" alt="">
+    <img id="dust" src="../assets/spider/spider_dust.png" alt="">
+    <img id="spider" src="../assets/spider/spider_body.png" alt="Giant spider">
+    <div id="phase">待机呼吸</div>
+    <div id="timeline"><div id="timelineFill"></div></div>
+  </div>
+  <div id="controls">
+    <button id="playBtn" class="primary">▶ 播放</button>
+    <button id="pauseBtn">⏸ 暂停</button>
+    <button id="restartBtn">↻ 从头播放</button>
+    <button id="attackBtn">⚡ 立即攻击</button>
+  </div>
+  <div id="note">预览循环：待机呼吸 → 轻微爬动 → 扬尘 → 前冲攻击 → 回到待机。<br>本页面只读取 <b>assets/spider</b> 下的 5 个素材，不使用摄像头和 MindAR。</div>
+</div>
+<script>
+(() => {
+  const LOOP_MS = 3800;
+  const spider = document.getElementById("spider");
+  const shadow = document.getElementById("shadow");
+  const dust = document.getElementById("dust");
+  const lines = document.getElementById("attackLines");
+  const phase = document.getElementById("phase");
+  const fill = document.getElementById("timelineFill");
+  let playing = true;
+  let startAt = performance.now();
+  let pausedAt = 0;
+  let forceAttackUntil = 0;
+
+  const smooth = t => t*t*(3-2*t);
+  const easeOut = t => 1-Math.pow(1-t,3);
+
+  function setTransform(x,y,sx,sy,rot=0){
+    spider.style.transform = `translate(-50%,-50%) translate(${x}px,${y}px) scale(${sx},${sy}) rotate(${rot}deg)`;
+  }
+
+  function drawFrame(now){
+    if(!playing){
+      requestAnimationFrame(drawFrame);
+      return;
+    }
+
+    let t = (now-startAt) % LOOP_MS;
+    let p = t / LOOP_MS;
+
+    if(now < forceAttackUntil){
+      t = 2800 + ((700-(forceAttackUntil-now)) % 700);
+      p = t / LOOP_MS;
+    }
+
+    fill.style.width = `${p*100}%`;
+
+    let x=0,y=0,sx=1,sy=1,rot=0;
+    let shadowSx=1,shadowSy=.62,shadowOp=.48;
+    let dustOp=0,dustScale=.75,dustX=0;
+    let linesOp=0,linesScale=.72;
+
+    if(t < 1450){
+      phase.textContent = "待机呼吸";
+      const u=t/1450;
+      const breathe=Math.sin(u*Math.PI*4);
+      y = breathe*4;
+      sx = 1 + breathe*.012;
+      sy = 1 - breathe*.018;
+      rot = Math.sin(u*Math.PI*2)*.7;
+      shadowSx = 1 - breathe*.018;
+      shadowSy = .62 + breathe*.015;
+    }
+    else if(t < 2550){
+      phase.textContent = "向前爬动";
+      const u=(t-1450)/1100;
+      const e=smooth(u);
+      y = -8*e + Math.sin(u*Math.PI*4)*3;
+      x = Math.sin(u*Math.PI*2)*7;
+      sx = 1.015 + .02*Math.sin(u*Math.PI*2);
+      sy = .985 - .015*Math.sin(u*Math.PI*2);
+      rot = Math.sin(u*Math.PI*2)*1.2;
+      dustOp = .18 + .28*Math.sin(Math.PI*u);
+      dustScale = .72 + .12*e;
+      dustX = -x*.7;
+      shadowSx = 1.02;
+      shadowSy = .58;
+    }
+    else if(t < 3150){
+      const u=(t-2550)/600;
+      if(u < .34){
+        phase.textContent = "蓄力";
+        const q=u/.34;
+        y = 12*q;
+        sx = 1.05 - .04*q;
+        sy = .94 + .03*q;
+        rot = Math.sin(q*Math.PI)*1.2;
+        shadowSx=.92;shadowSy=.56;
+      }else{
+        phase.textContent = "攻击前冲";
+        const q=(u-.34)/.66;
+        const e=easeOut(q);
+        y = 12 - 58*e;
+        sx = 1.01 + .20*e;
+        sy = .97 + .16*e;
+        rot = Math.sin(q*Math.PI)*1.8;
+        linesOp = Math.sin(Math.PI*q)*.90;
+        linesScale = .70 + .20*e;
+        dustOp = .30 + .45*Math.sin(Math.PI*q);
+        dustScale = .82 + .18*e;
+        shadowSx = 1.04 + .10*e;
+        shadowSy = .55 - .08*e;
+        shadowOp = .48 - .10*e;
+      }
+    }
+    else{
+      phase.textContent = "回到待机";
+      const u=(t-3150)/650;
+      const e=smooth(u);
+      y = -42*(1-e);
+      sx = 1.18 - .18*e;
+      sy = 1.12 - .12*e;
+      rot = Math.sin((1-u)*Math.PI)*.8;
+      linesOp = (1-u)*.18;
+      dustOp = (1-u)*.25;
+      dustScale = .95 - .12*e;
+      shadowSx = 1.12 - .12*e;
+      shadowSy = .50 + .12*e;
+      shadowOp = .40 + .08*e;
+    }
+
+    setTransform(x,y,sx,sy,rot);
+    shadow.style.transform = `translate(-50%,-50%) scale(${shadowSx},${shadowSy})`;
+    shadow.style.opacity = shadowOp;
+    dust.style.opacity = dustOp;
+    dust.style.transform = `translate(-50%,-50%) translateX(${dustX}px) scale(${dustScale})`;
+    lines.style.opacity = linesOp;
+    lines.style.transform = `translate(-50%,-50%) scale(${linesScale})`;
+
+    requestAnimationFrame(drawFrame);
+  }
+
+  document.getElementById("playBtn").addEventListener("click",()=>{
+    if(playing)return;
+    playing=true;
+    startAt=performance.now()-pausedAt;
+  });
+
+  document.getElementById("pauseBtn").addEventListener("click",()=>{
+    if(!playing)return;
+    pausedAt=(performance.now()-startAt)%LOOP_MS;
+    playing=false;
+  });
+
+  document.getElementById("restartBtn").addEventListener("click",()=>{
+    startAt=performance.now();
+    pausedAt=0;
+    playing=true;
+  });
+
+  document.getElementById("attackBtn").addEventListener("click",()=>{
+    playing=true;
+    forceAttackUntil=performance.now()+700;
+  });
+
+  requestAnimationFrame(drawFrame);
+})();
+</script>
+</body>
+</html>
