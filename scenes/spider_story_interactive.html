@@ -492,8 +492,9 @@ AFRAME.registerComponent("spider-canvas",{
     const dt=Math.min(.05,(now-this.lastGameTime)/1000);
     this.lastGameTime=now;
 
-    // Larger web base for the interactive play area.
-    this.drawCentered(this.img.web,w*.50,h*.50,w*1.12,h*.76,0,.20);
+    // Web extends beyond the full roaming area of all four small spiders.
+    // Oversize it deliberately so spiders always appear to be running on the web.
+    this.drawCentered(this.img.web,w*.50,h*.48,w*1.48,h*1.08,0,.21);
 
     // Bin at bottom-center.
     // First draw the whole bin behind the spiders. After the spiders are drawn,
