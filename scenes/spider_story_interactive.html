@@ -309,25 +309,33 @@ AFRAME.registerComponent("spider-canvas",{
     if(!s||s.caught)return false;
     s.dragging=false;
 
-    const bin={x:384,y:426,w:220,h:118};
-    const inside=
-      s.x>=bin.x-bin.w*.48 && s.x<=bin.x+bin.w*.48 &&
-      s.y>=bin.y-bin.h*.58 && s.y<=bin.y+bin.h*.38;
+    const bin={x:384,y:416,w:220,h:130};
 
-    if(inside){
+    // The spider only counts as captured after it has been dragged BELOW the
+    // visible front rim. This matches the visual: shrink at the opening,
+    // then disappear once it passes behind the front wall.
+    const withinMouthX =
+      s.x>=bin.x-bin.w*.44 && s.x<=bin.x+bin.w*.44;
+
+    const belowFrontRim =
+      s.y>=bin.y-bin.h*.02;
+
+    if(withinMouthX && belowFrontRim){
       s.caught=true;
+      s.dragging=false;
       this.updateProgress();
+
       const caught=this.spiders.filter(x=>x.caught).length;
 
       if(caught>=4){
-        setTimeout(()=>window.SpiderMode.complete(),220);
+        setTimeout(()=>window.SpiderMode.complete(),180);
       }else{
         window.SpiderMode.setHint(`抓到了！还有 ${4-caught} 只小蜘蛛`);
       }
       return true;
     }
 
-    window.SpiderMode.setHint("没放进垃圾筐，再抓一次！");
+    window.SpiderMode.setHint("继续往垃圾桶里面放！");
     return false;
   },
 
@@ -429,7 +437,12 @@ AFRAME.registerComponent("spider-canvas",{
     const binRatio=this.img.bin?.naturalHeight/Math.max(1,this.img.bin?.naturalWidth||1);
     const binH=binW*binRatio;
     const binCX=w*.50;
-    const binCY=h*.81;
+    const binCY=h*.79;
+
+    // Approximate visible mouth / front-rim positions in canvas space.
+    const mouthY=binCY-binH*.34;
+    const frontRimY=binCY-binH*.12;
+
     this.drawCentered(this.img.bin,binCX,binCY,binW,binH,0,1);
 
     for(const s of this.spiders){
@@ -451,23 +464,29 @@ AFRAME.registerComponent("spider-canvas",{
 
       let visualScale=1;
       let visualY=s.y;
+      let visualAlpha=1;
 
-      // When a dragged spider reaches the bin mouth, make it look as if it is
-      // entering the opening: slightly smaller and a little lower.
-      const overBin =
-        s.dragging &&
-        Math.abs(s.x-binCX) < binW*.46 &&
-        s.y > binCY-binH*.48;
+      const insideMouthX =
+        Math.abs(s.x-binCX) < binW*.44;
 
-      if(overBin){
-        const depth=Math.max(0,Math.min(1,(s.y-(binCY-binH*.48))/(binH*.56)));
-        visualScale=1-.34*depth;
-        visualY=s.y+12*depth;
+      if(s.dragging && insideMouthX){
+        // At the bin opening: gradually shrink.
+        if(s.y>=mouthY && s.y<frontRimY){
+          const depth=Math.max(0,Math.min(1,(s.y-mouthY)/(frontRimY-mouthY)));
+          visualScale=1-.48*depth;
+          visualY=s.y+8*depth;
+        }
+        // Once below the front rim, hide the spider completely.
+        else if(s.y>=frontRimY){
+          visualScale=.52;
+          visualY=s.y+8;
+          visualAlpha=0;
+        }
       }
 
       const size=w*s.scale*(1+.025*wiggle)*visualScale;
       const ratio=body.naturalHeight/body.naturalWidth;
-      this.drawCentered(body,s.x,visualY,size,size*ratio,wiggle*.045,1);
+      this.drawCentered(body,s.x,visualY,size,size*ratio,wiggle*.045,visualAlpha);
     }
 
     // Front-wall occlusion pass.
@@ -475,10 +494,10 @@ AFRAME.registerComponent("spider-canvas",{
     // bin back on top. This creates a convincing "drop into the bin" effect.
     if(this.img.bin){
       const img=this.img.bin;
-      const srcY=Math.round(img.naturalHeight*.36);
+      const srcY=Math.round(img.naturalHeight*.38);
       const srcH=img.naturalHeight-srcY;
-      const dstTop=binCY-binH/2+binH*.36;
-      const dstH=binH*.64;
+      const dstTop=frontRimY;
+      const dstH=(binCY+binH/2)-frontRimY;
 
       this.ctx.save();
       this.ctx.drawImage(
