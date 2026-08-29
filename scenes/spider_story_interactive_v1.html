@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Magic 05 · Giant Spider Interactive</title>
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}
+a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}
+canvas.a-canvas{background:transparent!important}.off{display:none!important}
+#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:90;max-width:min(88vw,760px);padding:11px 17px;border-radius:999px;background:rgba(255,255,255,.94);color:#252b27;text-align:center;font:800 14px/1.35 system-ui;box-shadow:0 6px 22px rgba(0,0,0,.18)}
+#killBtn,#congratsBtn,#exitBtn{position:fixed;left:50%;transform:translateX(-50%);z-index:95;display:none;border:0;border-radius:999px;padding:12px 20px;font:900 15px/1 system-ui;box-shadow:0 7px 22px rgba(0,0,0,.22);cursor:pointer}
+#killBtn{bottom:max(76px,calc(env(safe-area-inset-bottom) + 58px));background:rgba(176,50,34,.97);color:#fff}
+#congratsBtn{bottom:max(80px,calc(env(safe-area-inset-bottom) + 62px));background:rgba(255,242,185,.98);color:#6f4a16}
+#exitBtn{bottom:max(28px,calc(env(safe-area-inset-bottom) + 12px));background:rgba(255,255,255,.94);color:#39423a}
+#progress{position:fixed;right:18px;top:18px;z-index:95;display:none;padding:9px 13px;border-radius:999px;background:rgba(255,255,255,.94);font:900 14px/1 system-ui;box-shadow:0 5px 18px rgba(0,0,0,.16)}
+#dragLayer{position:fixed;inset:0;z-index:80;pointer-events:none}
+.leg-hit{position:fixed;display:none;border:0;background:rgba(255,255,255,0.001);pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent;border-radius:40px}
+#thumb{position:fixed;left:50%;top:48%;transform:translate(-50%,-50%) scale(.72);z-index:100;display:none;font-size:min(35vw,280px);filter:drop-shadow(0 12px 24px rgba(0,0,0,.25));animation:thumbPop .7s cubic-bezier(.2,.9,.2,1) forwards}
+@keyframes thumbPop{0%{transform:translate(-50%,-50%) scale(.35);opacity:0}70%{transform:translate(-50%,-50%) scale(1.12);opacity:1}100%{transform:translate(-50%,-50%) scale(1);opacity:1}}
+#flash{position:fixed;inset:0;z-index:88;pointer-events:none;opacity:0;background:rgba(255,245,200,.85)}
+#flash.go{animation:flash .34s ease}@keyframes flash{0%{opacity:0}35%{opacity:.8}100%{opacity:0}}
+#cameraOrientationControl{position:fixed;left:18px;top:18px;z-index:95;display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.90);color:#444;box-shadow:0 5px 18px rgba(0,0,0,.16);font:800 11px/1 system-ui}
+#cameraOrientationControl select{border:0;outline:0;border-radius:999px;padding:5px 8px;background:rgba(255,240,180,.92);color:#333;font:800 12px system-ui}
+.mindar-ui-scanning,.mindar-ui-scanning .scanning,.mindar-ui-scanning .scanning-line,.mindar-ui-scanning .inner,.mindar-ui-scanning .scanline{display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+</style>
+<script>
+window.SpiderGame={
+  mode:"waiting",brokenCount:0,
+  legs:{left1:{stage:0},left3:{stage:0},right2:{stage:0},right4:{stage:0}},
+  setHint(t){const h=document.getElementById("hint");if(h)h.textContent=t},
+  showStory(){if(this.mode!=="waiting")return;this.mode="story";document.getElementById("killBtn").style.display="block";this.setHint("MAGIC 05 · 大蜘蛛出现了！🕷️")},
+  startAttack(){if(this.mode!=="story")return;this.mode="attack";document.getElementById("killBtn").style.display="none";document.getElementById("progress").style.display="block";document.getElementById("progress").textContent="🕷️ 0 / 4";this.setHint("拖住蜘蛛腿向外拉！先拉伤，再继续拉断");const c=document.querySelector("[spider-persist]")?.components?.["spider-persist"];c?.showHits();c?.updateHitPositions()},
+  noteDamage(kind){if(this.legs[kind].stage!==0)return;this.legs[kind].stage=1;document.getElementById("spiderDisplay")?.components?.["spider-canvas"]?.setLegStage(kind,1);this.flash();this.setHint("这条腿受伤了！继续向外拉，把它拉断！")},
+  noteBreak(kind){if(this.legs[kind].stage===2)return;this.legs[kind].stage=2;document.getElementById("spiderDisplay")?.components?.["spider-canvas"]?.setLegStage(kind,2);this.brokenCount++;document.getElementById("progress").textContent=`🕷️ ${this.brokenCount} / 4`;this.flash();if(this.brokenCount>=4)this.defeat();else this.setHint(`拉断了 ${this.brokenCount} 条！继续！`)},
+  defeat(){this.mode="defeated";document.querySelector("[spider-persist]")?.components?.["spider-persist"]?.hideHits();document.getElementById("progress").style.display="none";document.getElementById("spiderDisplay")?.components?.["spider-canvas"]?.defeat();this.setHint("大蜘蛛被消灭了！🎉");setTimeout(()=>document.getElementById("congratsBtn").style.display="block",450)},
+  celebrate(){if(this.mode!=="defeated")return;this.mode="celebrate";document.getElementById("congratsBtn").style.display="none";document.getElementById("thumb").style.display="block";this.setHint("太棒了！👍");setTimeout(()=>document.getElementById("exitBtn").style.display="block",650)},
+  exit(){this.mode="waiting";this.brokenCount=0;Object.values(this.legs).forEach(x=>x.stage=0);document.getElementById("thumb").style.display="none";document.getElementById("exitBtn").style.display="none";document.getElementById("killBtn").style.display="none";document.getElementById("congratsBtn").style.display="none";document.getElementById("progress").style.display="none";const c=document.querySelector("[spider-persist]")?.components?.["spider-persist"];c?.hideHits();if(c?.world)c.world.object3D.visible=false;document.getElementById("spiderDisplay")?.components?.["spider-canvas"]?.reset();this.setHint("请把镜头对准 Spider 卡")},
+  flash(){const f=document.getElementById("flash");f.classList.remove("go");void f.offsetWidth;f.classList.add("go")}
+};
+
+AFRAME.registerComponent("spider-canvas",{
+  init(){
+    this.c=document.getElementById("spiderCanvas");this.ctx=this.c.getContext("2d");this.defeated=false;
+    this.img={};this.stage={left1:0,left3:0,right2:0,right4:0};
+    const src={
+      body:"./assets/spider/spider_body.png",
+      left1g:"./assets/spider/spider_leg_left_1_good.png",left1b:"./assets/spider/spider_leg_left_1_broken.png",
+      left3g:"./assets/spider/spider_leg_left_3_good.png",left3b:"./assets/spider/spider_leg_left_3_broken.png",
+      right2g:"./assets/spider/spider_leg_right_2_good.png",right2b:"./assets/spider/spider_leg_right_2_broken.png",
+      right4g:"./assets/spider/spider_leg_right_4_good.png",right4b:"./assets/spider/spider_leg_right_4_broken.png"
+    };
+    for(const [k,url] of Object.entries(src)){const im=new Image();im.src=url;this.img[k]=im}
+  },
+  setLegStage(k,s){this.stage[k]=s;this._last=0},
+  reset(){this.defeated=false;Object.keys(this.stage).forEach(k=>this.stage[k]=0);this._last=0},
+  defeat(){this.defeated=true;this._defeatAt=performance.now();this._last=0},
+  drawLayer(key,alpha=1,dy=0,rot=0){
+    const im=this.img[key];if(!im||!im.complete||!im.naturalWidth)return;
+    const c=this.c,ctx=this.ctx;ctx.save();ctx.globalAlpha=alpha;ctx.translate(c.width/2,c.height/2+dy);ctx.rotate(rot);
+    const scale=Math.min(c.width/im.naturalWidth,c.height/im.naturalHeight);const w=im.naturalWidth*scale,h=im.naturalHeight*scale;
+    ctx.drawImage(im,-w/2,-h/2,w,h);ctx.restore();
+  },
+  tick(){
+    const now=performance.now();if(this._last&&now-this._last<50)return;this._last=now;
+    const c=this.c,ctx=this.ctx;ctx.clearRect(0,0,c.width,c.height);
+    let alpha=1,dy=0,rot=0;if(this.defeated){const p=Math.min(1,(now-this._defeatAt)/700);alpha=1-.55*p;dy=70*p;rot=.10*p}
+    this.drawLayer("body",alpha,dy,rot);
+    const map={left1:["left1g","left1b"],left3:["left3g","left3b"],right2:["right2g","right2b"],right4:["right4g","right4b"]};
+    for(const [kind,[good,broken]] of Object.entries(map)){const st=this.stage[kind];if(st===2)continue;this.drawLayer(st===0?good:broken,alpha,dy,rot)}
+    const mesh=this.el.getObject3D("mesh");if(mesh?.material?.map)mesh.material.map.needsUpdate=true;
+  }
+});
+
+AFRAME.registerComponent("spider-persist",{
+  schema:{world:{type:"selector"}},
+  init(){
+    this.world=this.data.world;this.tracking=false;this.holding=false;this.poseHistory=[];this.basePos=new THREE.Vector3();this.baseScale=new THREE.Vector3(1,1,1);this.camera=null;this.drag=null;
+    this.hits={left1:document.getElementById("hitLeft1"),left3:document.getElementById("hitLeft3"),right2:document.getElementById("hitRight2"),right4:document.getElementById("hitRight4")};
+    if(this.world)this.world.object3D.visible=false;
+    Object.entries(this.hits).forEach(([kind,el])=>{el.addEventListener("pointerdown",e=>this.down(kind,e));el.addEventListener("pointermove",e=>this.move(kind,e));el.addEventListener("pointerup",e=>this.up(kind,e));el.addEventListener("pointercancel",e=>this.up(kind,e))});
+    this.el.addEventListener("targetFound",()=>{this.tracking=true;this.holding=false;this.poseHistory=[];if(this.world)this.world.object3D.visible=true;window.SpiderGame.showStory()});
+    this.el.addEventListener("targetLost",()=>{
+      this.tracking=false;this.holding=true;this.holdStart=performance.now();
+      let stable=null,now=performance.now();for(let i=this.poseHistory.length-1;i>=0;i--){if(now-this.poseHistory[i].time>=260){stable=this.poseHistory[i];break}}
+      if(!stable&&this.poseHistory.length)stable=this.poseHistory[0];
+      if(stable){this.basePos.copy(stable.pos);this.baseScale.copy(stable.scale)}else{this.el.object3D.updateMatrixWorld(true);const p=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();this.el.object3D.matrixWorld.decompose(p,q,s);this.basePos.copy(p);this.baseScale.copy(s)}
+      if(this.world){const o=this.world.object3D;o.position.copy(this.basePos);o.quaternion.identity();o.scale.copy(this.baseScale);o.visible=true;o.updateMatrixWorld(true)}
+      if(window.SpiderGame.mode==="attack"){this.showHits();this.updateHitPositions()}
+    });
+  },
+  getCamera(){if(!this.camera){const cam=document.querySelector("a-camera");this.camera=cam&&cam.getObject3D("camera")}return this.camera},
+  project(v){const cam=this.getCamera();if(!cam)return null;const p=v.clone().project(cam);return{x:(p.x*.5+.5)*innerWidth,y:(-p.y*.5+.5)*innerHeight}},
+  showHits(){Object.values(this.hits).forEach(x=>x.style.display="block")},
+  hideHits(){Object.values(this.hits).forEach(x=>x.style.display="none")},
+  updateHitPositions(){
+    if(!this.world)return;const o=this.world.object3D;o.updateMatrixWorld(true);
+    const pts={left1:new THREE.Vector3(-.73,.34,.10),left3:new THREE.Vector3(-.70,-.18,.10),right2:new THREE.Vector3(.72,.12,.10),right4:new THREE.Vector3(.66,-.42,.10)};
+    const sizes={left1:[.62,.42],left3:[.60,.44],right2:[.60,.42],right4:[.58,.42]};
+    const center=this.project(new THREE.Vector3(0,0,0).applyMatrix4(o.matrixWorld)),right=this.project(new THREE.Vector3(.5,0,0).applyMatrix4(o.matrixWorld)),up=this.project(new THREE.Vector3(0,.5,0).applyMatrix4(o.matrixWorld));if(!center||!right||!up)return;
+    const pxX=Math.max(1,Math.abs(right.x-center.x)*2),pxY=Math.max(1,Math.abs(up.y-center.y)*2);
+    for(const [kind,p] of Object.entries(pts)){const sc=this.project(p.clone().applyMatrix4(o.matrixWorld));if(!sc)continue;const [wu,hu]=sizes[kind],w=Math.max(70,wu*pxX),h=Math.max(60,hu*pxY),el=this.hits[kind];el.style.left=(sc.x-w/2)+"px";el.style.top=(sc.y-h/2)+"px";el.style.width=w+"px";el.style.height=h+"px"}
+  },
+  down(kind,e){if(window.SpiderGame.mode!=="attack"||window.SpiderGame.legs[kind].stage===2)return;e.preventDefault();e.currentTarget.setPointerCapture?.(e.pointerId);this.drag={kind,id:e.pointerId,x:e.clientX,y:e.clientY}},
+  move(kind,e){if(!this.drag||this.drag.id!==e.pointerId||this.drag.kind!==kind)return;e.preventDefault();const dist=Math.hypot(e.clientX-this.drag.x,e.clientY-this.drag.y),st=window.SpiderGame.legs[kind].stage;if(st===0&&dist>=55)window.SpiderGame.noteDamage(kind);if(dist>=120){window.SpiderGame.noteBreak(kind);this.drag=null;this.hits[kind].style.display="none"}},
+  up(kind,e){if(this.drag&&this.drag.id===e.pointerId)this.drag=null},
+  tick(){
+    if(!this.world)return;const now=performance.now();if(this._last&&now-this._last<50)return;this._last=now;const o=this.world.object3D;
+    if(this.tracking){this.el.object3D.updateMatrixWorld(true);const p=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();this.el.object3D.matrixWorld.decompose(p,q,s);this.poseHistory.push({pos:p.clone(),scale:s.clone(),time:now});if(this.poseHistory.length>24)this.poseHistory.shift();this.basePos.copy(p);this.baseScale.copy(s);o.position.copy(p);o.quaternion.identity();o.scale.copy(s);o.visible=true;o.updateMatrixWorld(true)}
+    else if(this.holding){const t=(now-this.holdStart)/1000;o.position.copy(this.basePos);o.position.x+=Math.sin(t*.8)*.006;o.position.y+=Math.sin(t*1.2)*.010;o.quaternion.identity();o.scale.copy(this.baseScale);o.visible=true;o.updateMatrixWorld(true)}
+    if(window.SpiderGame.mode==="attack")this.updateHitPositions();
+  }
+});
+
+document.addEventListener("DOMContentLoaded",()=>{
+  document.getElementById("killBtn").addEventListener("click",()=>window.SpiderGame.startAttack());
+  document.getElementById("congratsBtn").addEventListener("click",()=>window.SpiderGame.celebrate());
+  document.getElementById("exitBtn").addEventListener("click",()=>window.SpiderGame.exit());
+  const select=document.getElementById("cameraOrientationSelect");let angle=Number(localStorage.getItem("spiderCameraAngle")||0);select.value=String(angle);
+  const apply=()=>{const video=document.querySelector("video");if(!video){setTimeout(apply,120);return}video.style.transformOrigin="50% 50%";video.style.transform=`rotate(${angle}deg)`;if(angle===90||angle===270){const sc=Math.max(innerWidth/innerHeight,innerHeight/innerWidth);video.style.transform=`rotate(${angle}deg) scale(${sc})`}};
+  select.addEventListener("change",()=>{angle=Number(select.value)||0;localStorage.setItem("spiderCameraAngle",String(angle));apply()});apply();
+});
+</script>
+</head>
+<body>
+<div id="cameraOrientationControl"><span>📷 CAMERA</span><select id="cameraOrientationSelect"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select></div>
+<div id="progress">🕷️ 0 / 4</div>
+<div id="dragLayer">
+  <button id="hitLeft1" class="leg-hit" aria-label="Left leg 1"></button>
+  <button id="hitLeft3" class="leg-hit" aria-label="Left leg 3"></button>
+  <button id="hitRight2" class="leg-hit" aria-label="Right leg 2"></button>
+  <button id="hitRight4" class="leg-hit" aria-label="Right leg 4"></button>
+</div>
+<button id="killBtn" type="button">⚔️ 消灭大蜘蛛</button>
+<button id="congratsBtn" type="button">🎉 祝贺</button>
+<button id="exitBtn" type="button">退出 AR 交互</button>
+<div id="thumb">👍</div><div id="flash"></div>
+<div id="hint">请把镜头对准 Spider 卡</div>
+<canvas id="spiderCanvas" class="off" width="900" height="900"></canvas>
+
+<a-scene mindar-image="imageTargetSrc: ./targets/spider.mind; autoStart: true; maxTrack: 1;" color-space="sRGB" renderer="colorManagement:true;physicallyCorrectLights:true;alpha:true;antialias:true" vr-mode-ui="enabled:false" device-orientation-permission-ui="enabled:false">
+  <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+  <a-entity mindar-image-target="targetIndex:0" spider-persist="world:#spiderWorld"></a-entity>
+  <a-entity id="spiderWorld" visible="false">
+    <a-plane id="spiderDisplay" width="2.15" height="2.15" position="0 0.03 0.02" material="shader:flat;src:#spiderCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double" spider-canvas></a-plane>
+  </a-entity>
+</a-scene>
+</body>
+</html>
