@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Spider Interactive AR</title>
+<title>Spider Interactive AR · Layout v2</title>
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <style>
@@ -58,19 +58,45 @@ AFRAME.registerComponent("spider-canvas",{
   setLegStage(k,s){this.stage[k]=s;this._last=0},
   reset(){this.defeated=false;Object.keys(this.stage).forEach(k=>this.stage[k]=0);this._last=0},
   defeat(){this.defeated=true;this._defeatAt=performance.now();this._last=0},
-  drawLayer(key,alpha=1,dy=0,rot=0){
+  // Each PNG is a tightly-cropped part, not a same-size aligned sheet.
+  // So every part needs its own position / scale around the body.
+  layout:{
+    body:  {x:.50,y:.52,s:.72,r:0},
+    left1: {x:.30,y:.28,s:.52,r:-.18},
+    left3: {x:.28,y:.62,s:.50,r:.10},
+    right2:{x:.72,y:.39,s:.50,r:.08},
+    right4:{x:.70,y:.70,s:.48,r:.18}
+  },
+
+  drawLayer(key,kind,alpha=1,dy=0,rot=0){
     const im=this.img[key];if(!im||!im.complete||!im.naturalWidth)return;
-    const c=this.c,ctx=this.ctx;ctx.save();ctx.globalAlpha=alpha;ctx.translate(c.width/2,c.height/2+dy);ctx.rotate(rot);
-    const scale=Math.min(c.width/im.naturalWidth,c.height/im.naturalHeight);const w=im.naturalWidth*scale,h=im.naturalHeight*scale;
-    ctx.drawImage(im,-w/2,-h/2,w,h);ctx.restore();
+    const c=this.c,ctx=this.ctx;
+    const cfg=this.layout[kind]||this.layout.body;
+
+    const base=Math.min(c.width,c.height);
+    const maxW=base*cfg.s;
+    const ratio=im.naturalHeight/im.naturalWidth;
+    const w=maxW;
+    const h=w*ratio;
+
+    ctx.save();
+    ctx.globalAlpha=alpha;
+    ctx.translate(c.width*cfg.x,c.height*cfg.y+dy);
+    ctx.rotate(cfg.r+rot);
+    ctx.drawImage(im,-w/2,-h/2,w,h);
+    ctx.restore();
   },
   tick(){
     const now=performance.now();if(this._last&&now-this._last<50)return;this._last=now;
     const c=this.c,ctx=this.ctx;ctx.clearRect(0,0,c.width,c.height);
     let alpha=1,dy=0,rot=0;if(this.defeated){const p=Math.min(1,(now-this._defeatAt)/700);alpha=1-.55*p;dy=70*p;rot=.10*p}
-    this.drawLayer("body",alpha,dy,rot);
+    this.drawLayer("body","body",alpha,dy,rot);
     const map={left1:["left1g","left1b"],left3:["left3g","left3b"],right2:["right2g","right2b"],right4:["right4g","right4b"]};
-    for(const [kind,[good,broken]] of Object.entries(map)){const st=this.stage[kind];if(st===2)continue;this.drawLayer(st===0?good:broken,alpha,dy,rot)}
+    for(const [kind,[good,broken]] of Object.entries(map)){
+      const st=this.stage[kind];
+      if(st===2)continue;
+      this.drawLayer(st===0?good:broken,kind,alpha,dy,rot);
+    }
     const mesh=this.el.getObject3D("mesh");if(mesh?.material?.map)mesh.material.map.needsUpdate=true;
   }
 });
@@ -98,8 +124,15 @@ AFRAME.registerComponent("spider-persist",{
   hideHits(){Object.values(this.hits).forEach(x=>x.style.display="none")},
   updateHitPositions(){
     if(!this.world)return;const o=this.world.object3D;o.updateMatrixWorld(true);
-    const pts={left1:new THREE.Vector3(-.73,.34,.10),left3:new THREE.Vector3(-.70,-.18,.10),right2:new THREE.Vector3(.72,.12,.10),right4:new THREE.Vector3(.66,-.42,.10)};
-    const sizes={left1:[.62,.42],left3:[.60,.44],right2:[.60,.42],right4:[.58,.42]};
+    const pts={
+      left1:new THREE.Vector3(-.42,.46,.10),
+      left3:new THREE.Vector3(-.46,-.22,.10),
+      right2:new THREE.Vector3(.44,.22,.10),
+      right4:new THREE.Vector3(.40,-.48,.10)
+    };
+    const sizes={
+      left1:[.52,.46],left3:[.52,.46],right2:[.52,.46],right4:[.52,.46]
+    };
     const center=this.project(new THREE.Vector3(0,0,0).applyMatrix4(o.matrixWorld)),right=this.project(new THREE.Vector3(.5,0,0).applyMatrix4(o.matrixWorld)),up=this.project(new THREE.Vector3(0,.5,0).applyMatrix4(o.matrixWorld));if(!center||!right||!up)return;
     const pxX=Math.max(1,Math.abs(right.x-center.x)*2),pxY=Math.max(1,Math.abs(up.y-center.y)*2);
     for(const [kind,p] of Object.entries(pts)){const sc=this.project(p.clone().applyMatrix4(o.matrixWorld));if(!sc)continue;const [wu,hu]=sizes[kind],w=Math.max(70,wu*pxX),h=Math.max(60,hu*pxY),el=this.hits[kind];el.style.left=(sc.x-w/2)+"px";el.style.top=(sc.y-h/2)+"px";el.style.width=w+"px";el.style.height=h+"px"}
