@@ -309,7 +309,7 @@ AFRAME.registerComponent("spider-canvas",{
     if(!s||s.caught)return false;
     s.dragging=false;
 
-    const bin={x:384,y:438,w:170,h:120};
+    const bin={x:384,y:448,w:170,h:105};
     const inside=
       s.x>=bin.x-bin.w*.48 && s.x<=bin.x+bin.w*.48 &&
       s.y>=bin.y-bin.h*.58 && s.y<=bin.y+bin.h*.38;
@@ -422,10 +422,15 @@ AFRAME.registerComponent("spider-canvas",{
     this.drawCentered(this.img.web,w*.50,h*.52,w*.86,h*.55,0,.18);
 
     // Bin at bottom-center.
+    // First draw the whole bin behind the spiders. After the spiders are drawn,
+    // redraw only the FRONT wall of the bin so a dragged spider appears to go
+    // inside the opening instead of floating in front of the bin.
     const binW=178;
     const binRatio=this.img.bin?.naturalHeight/Math.max(1,this.img.bin?.naturalWidth||1);
     const binH=binW*binRatio;
-    this.drawCentered(this.img.bin,w*.50,h*.83,binW,binH,0,1);
+    const binCX=w*.50;
+    const binCY=h*.83;
+    this.drawCentered(this.img.bin,binCX,binCY,binW,binH,0,1);
 
     for(const s of this.spiders){
       if(s.caught)continue;
@@ -446,6 +451,25 @@ AFRAME.registerComponent("spider-canvas",{
       if(!body)continue;
       const ratio=body.naturalHeight/body.naturalWidth;
       this.drawCentered(body,s.x,s.y,size,size*ratio,wiggle*.045,1);
+    }
+
+    // Front-wall occlusion pass.
+    // Keep the top/opening behind the spider, but paint the lower ~72% of the
+    // bin back on top. This creates a convincing "drop into the bin" effect.
+    if(this.img.bin){
+      const img=this.img.bin;
+      const srcY=Math.round(img.naturalHeight*.28);
+      const srcH=img.naturalHeight-srcY;
+      const dstTop=binCY-binH/2+binH*.28;
+      const dstH=binH*.72;
+
+      this.ctx.save();
+      this.ctx.drawImage(
+        img,
+        0,srcY,img.naturalWidth,srcH,
+        binCX-binW/2,dstTop,binW,dstH
+      );
+      this.ctx.restore();
     }
   },
 
