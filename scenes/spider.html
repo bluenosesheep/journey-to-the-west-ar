@@ -61,7 +61,9 @@ canvas.a-canvas{background:transparent!important}
 
   <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
-  <a-entity mindar-image-target="targetIndex:0" spider-events>
+  <a-entity mindar-image-target="targetIndex:0" spider-persist="world:#spiderWorld"></a-entity>
+
+  <a-entity id="spiderWorld" visible="false">
     <a-plane
       width="2.15"
       height="2.15"
@@ -73,15 +75,111 @@ canvas.a-canvas{background:transparent!important}
 </a-scene>
 
 <script>
-AFRAME.registerComponent("spider-events",{
+AFRAME.registerComponent("spider-persist",{
+  schema:{world:{type:"selector"}},
+
   init:function(){
+    this.world=this.data.world;
+    this.tracking=false;
+    this.holding=false;
+    this.poseHistory=[];
+    this.basePos=new THREE.Vector3();
+    this.baseQuat=new THREE.Quaternion();
+    this.baseScale=new THREE.Vector3(1,1,1);
+
+    if(this.world)this.world.object3D.visible=false;
+
     const hint=document.getElementById("hint");
+
     this.el.addEventListener("targetFound",()=>{
+      this.tracking=true;
+      this.holding=false;
+      this.poseHistory=[];
+
+      if(this.world)this.world.object3D.visible=true;
       hint.textContent="MAGIC 05 · GIANT SPIDER 🕷️";
     });
+
     this.el.addEventListener("targetLost",()=>{
-      hint.textContent="请把镜头对准 SPIDER 卡";
+      this.tracking=false;
+      this.holding=true;
+
+      // Use a slightly older tracked pose to avoid the jump that can happen
+      // in the final unstable frames just before targetLost.
+      const now=performance.now();
+      let stable=null;
+      for(let i=this.poseHistory.length-1;i>=0;i--){
+        if(now-this.poseHistory[i].time>=220){
+          stable=this.poseHistory[i];
+          break;
+        }
+      }
+      if(!stable && this.poseHistory.length){
+        stable=this.poseHistory[0];
+      }
+
+      if(stable){
+        this.basePos.copy(stable.pos);
+        this.baseQuat.copy(stable.quat);
+        this.baseScale.copy(stable.scale);
+      }
+
+      if(this.world){
+        const o=this.world.object3D;
+        o.position.copy(this.basePos);
+        o.quaternion.copy(this.baseQuat);
+        o.scale.copy(this.baseScale);
+        o.visible=true;
+        o.updateMatrixWorld(true);
+      }
+
+      // Deliberately keep the current MAGIC 05 hint and animation visible.
     });
+  },
+
+  tick:function(){
+    if(!this.world)return;
+
+    const now=performance.now();
+    if(this._last && now-this._last<33)return;
+    this._last=now;
+
+    const o=this.world.object3D;
+
+    if(this.tracking){
+      this.el.object3D.updateMatrixWorld(true);
+
+      const p=new THREE.Vector3();
+      const q=new THREE.Quaternion();
+      const sc=new THREE.Vector3();
+      this.el.object3D.matrixWorld.decompose(p,q,sc);
+
+      this.poseHistory.push({
+        pos:p.clone(),
+        quat:q.clone(),
+        scale:sc.clone(),
+        time:now
+      });
+      if(this.poseHistory.length>24)this.poseHistory.shift();
+
+      this.basePos.copy(p);
+      this.baseQuat.copy(q);
+      this.baseScale.copy(sc);
+
+      o.position.copy(p);
+      o.quaternion.copy(q);
+      o.scale.copy(sc);
+      o.visible=true;
+      o.updateMatrixWorld(true);
+    }
+    else if(this.holding){
+      // Hold the last stable AR pose after the card is removed.
+      o.position.copy(this.basePos);
+      o.quaternion.copy(this.baseQuat);
+      o.scale.copy(this.baseScale);
+      o.visible=true;
+      o.updateMatrixWorld(true);
+    }
   }
 });
 
