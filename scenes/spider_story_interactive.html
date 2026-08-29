@@ -1,0 +1,798 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Spider Story Interactive</title>
+
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}
+a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}
+canvas.a-canvas{background:transparent!important}.off{display:none!important}
+
+#hint{
+  position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);
+  z-index:70;max-width:min(88vw,760px);padding:11px 17px;border-radius:999px;
+  background:rgba(255,255,255,.94);color:#27322b;text-align:center;
+  font:700 15px/1.35 system-ui,sans-serif;box-shadow:0 6px 22px rgba(0,0,0,.16)
+}
+
+#fightBtn,#leaveBtn{
+  position:fixed;left:50%;transform:translateX(-50%);z-index:85;display:none;border:0;border-radius:999px;
+  padding:12px 19px;font:900 14px/1 system-ui;box-shadow:0 6px 20px rgba(0,0,0,.20);cursor:pointer
+}
+#fightBtn{
+  bottom:max(76px,calc(env(safe-area-inset-bottom) + 58px));
+  background:rgba(171,57,37,.97);color:white
+}
+#leaveBtn{
+  bottom:max(76px,calc(env(safe-area-inset-bottom) + 58px));
+  background:rgba(255,248,220,.98);color:#56713b;border:2px solid #6f8e42
+}
+
+#progress{
+  position:fixed;right:18px;top:72px;z-index:88;display:none;
+  padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.92);
+  color:#333;font:800 13px/1 system-ui;box-shadow:0 5px 18px rgba(0,0,0,.16)
+}
+
+#handBtn{
+  position:fixed;right:18px;top:18px;z-index:90;display:none;border:0;border-radius:999px;padding:10px 14px;
+  background:rgba(255,248,220,.96);color:#56713b;font:800 13px/1 system-ui;
+  box-shadow:0 5px 18px rgba(0,0,0,.16);cursor:pointer
+}
+#handCursor{
+  position:fixed;z-index:100;width:68px;height:68px;margin:-34px 0 0 -34px;border-radius:50%;
+  display:none;place-items:center;pointer-events:none;font-size:34px;background:rgba(255,255,255,.90);
+  box-shadow:0 6px 26px rgba(0,0,0,.26)
+}
+#handCursor.pinching{width:80px;height:80px;margin:-40px 0 0 -40px;background:rgba(255,238,165,.96)}
+#handStatus{
+  position:fixed;right:18px;top:62px;z-index:90;display:none;padding:8px 12px;border-radius:999px;
+  background:rgba(255,255,255,.90);color:#333;font:700 12px/1.2 system-ui;box-shadow:0 4px 16px rgba(0,0,0,.16)
+}
+
+#cameraOrientationControl{
+  position:fixed;left:18px;top:18px;z-index:90;display:flex;align-items:center;gap:7px;
+  padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.90);color:#444;
+  box-shadow:0 5px 18px rgba(0,0,0,.16);font:800 11px/1 system-ui
+}
+#cameraOrientationControl select{
+  border:0;outline:0;border-radius:999px;padding:5px 8px;background:rgba(255,240,180,.92);
+  color:#333;font:800 12px system-ui
+}
+
+.mindar-ui-scanning,.mindar-ui-scanning .scanning,.mindar-ui-scanning .scanning-line,
+.mindar-ui-scanning .inner,.mindar-ui-scanning .scanline{
+  display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important
+}
+</style>
+
+<script>
+window.SpiderMode={
+  mode:"waiting",
+
+  setHint(text){
+    const h=document.getElementById("hint");
+    if(h)h.textContent=text;
+  },
+
+  showStory(){
+    this.mode="story";
+    window.SpiderHandMode?.sleep();
+
+    document.getElementById("fightBtn").style.display="block";
+    document.getElementById("leaveBtn").style.display="none";
+    document.getElementById("handBtn").style.display="none";
+    document.getElementById("handStatus").style.display="none";
+    document.getElementById("progress").style.display="none";
+
+    const comp=document.getElementById("spiderDisplay")?.components?.["spider-canvas"];
+    comp?.setMode("story");
+
+    this.setHint("MAGIC 05 · 大蜘蛛出现了！🕷️");
+  },
+
+  enterGame(){
+    if(this.mode!=="story")return;
+    this.mode="game";
+
+    document.getElementById("fightBtn").style.display="none";
+    document.getElementById("leaveBtn").style.display="none";
+    document.getElementById("handBtn").style.display="block";
+    document.getElementById("handBtn").textContent="✨ INTERACT · OFF";
+    document.getElementById("progress").style.display="block";
+
+    const comp=document.getElementById("spiderDisplay")?.components?.["spider-canvas"];
+    comp?.setMode("game");
+    comp?.resetGame();
+
+    this.setHint("抓住 4 只小蜘蛛，把它们放进垃圾筐！🗑️");
+  },
+
+  complete(){
+    if(this.mode!=="game")return;
+    this.mode="complete";
+    window.SpiderHandMode?.sleep();
+
+    document.getElementById("handBtn").style.display="none";
+    document.getElementById("handStatus").style.display="none";
+    document.getElementById("progress").style.display="none";
+    document.getElementById("leaveBtn").style.display="block";
+
+    this.setHint("🎉 任务完成！4 只小蜘蛛都清理掉了！");
+  },
+
+  leave(){
+    window.SpiderHandMode?.sleep();
+    this.mode="waiting";
+
+    ["fightBtn","leaveBtn","handBtn","handStatus","progress"].forEach(id=>{
+      const el=document.getElementById(id);if(el)el.style.display="none";
+    });
+
+    const comp=document.getElementById("spiderDisplay")?.components?.["spider-canvas"];
+    comp?.setMode("waiting");
+    comp?.resetGame();
+
+    const ctrl=document.querySelector("[spider-controller]")?.components?.["spider-controller"];
+    if(ctrl){
+      ctrl.dragState=null;
+      ctrl.hideWorld();
+    }
+
+    this.setHint("请把镜头对准 SPIDER 卡");
+  }
+};
+
+window.SpiderHandMode={
+  running:false,
+  sleeping:false,
+  timer:null,
+  sleepMs:5000,
+
+  clearTimer(){
+    if(this.timer){clearTimeout(this.timer);this.timer=null}
+  },
+
+  noteInteraction(){
+    if(!this.running)return;
+    this.clearTimer();
+    this.timer=setTimeout(()=>this.sleep(),this.sleepMs);
+  },
+
+  async start(){
+    if(this.running || window.SpiderMode.mode!=="game")return;
+
+    const status=document.getElementById("handStatus");
+    const cursor=document.getElementById("handCursor");
+    const video=document.querySelector("video");
+    if(!video||!window.ClassroomHandTracking)return;
+
+    status.style.display="block";
+    status.textContent="手势：启动中…";
+
+    await window.ClassroomHandTracking.start({
+      video,
+      cursor,
+      mirror:false,
+      maxFps:18,
+      smoothing:.38,
+      pinchDownRatio:.34,
+      pinchUpRatio:.44,
+      reuseExistingVideo:true,
+      viewport:()=>({width:innerWidth,height:innerHeight}),
+      onStatus:(msg)=>{if(status)status.textContent="手势："+msg},
+      onArmedChange:(armed)=>{
+        if(status)status.textContent=armed?"手势：抓小蜘蛛":"张开手 ✋";
+      },
+      onMetrics:(data)=>{
+        if(!status)return;
+        if(!data.handVisible)status.textContent="手势：请伸出一只手";
+        else if(data.pinching)status.textContent="手势：抓住";
+        else status.textContent="手势：抓小蜘蛛";
+      }
+    });
+
+    this.running=true;
+    this.sleeping=false;
+    this.noteInteraction();
+    window.ClassroomHandTracking.requireReleaseToArm(300);
+    document.getElementById("handBtn").textContent="✨ INTERACT · ON";
+  },
+
+  sleep(){
+    this.clearTimer();
+    if(this.running){
+      window.ClassroomHandTracking?.stop({keepVideo:true,keepModel:true});
+    }
+    this.running=false;
+    this.sleeping=true;
+
+    const cursor=document.getElementById("handCursor");
+    const status=document.getElementById("handStatus");
+    const btn=document.getElementById("handBtn");
+
+    if(cursor)cursor.style.display="none";
+    if(window.SpiderMode.mode==="game"){
+      if(status){
+        status.style.display="block";
+        status.textContent="手势：已关闭 · 再点 INTERACT 唤醒";
+      }
+      if(btn)btn.textContent="✨ INTERACT · OFF";
+    }else{
+      if(status)status.style.display="none";
+    }
+  },
+
+  toggle(){
+    this.running?this.sleep():this.start();
+  }
+};
+
+AFRAME.registerComponent("spider-canvas",{
+  init(){
+    this.c=document.getElementById("spiderCanvas");
+    this.ctx=this.c.getContext("2d");
+    this.mode="waiting";
+    this.start=performance.now();
+
+    this.img={};
+    this.loaded=0;
+
+    const sources={
+      body:"../assets/spider/spider_body.png",
+      shadow:"../assets/spider/spider_shadow.png",
+      web:"../assets/spider/spider_web.png",
+      dust:"../assets/spider/spider_dust.png",
+      lines:"../assets/spider/spider_attack_lines.png",
+      bin:"../assets/spider/spider_bin.png"
+    };
+
+    const entries=Object.entries(sources);
+    this.total=entries.length;
+
+    entries.forEach(([k,src])=>{
+      const im=new Image();
+      im.onload=()=>{this.img[k]=im;this.loaded++};
+      im.src=src;
+    });
+
+    this.resetGame();
+  },
+
+  setMode(mode){
+    this.mode=mode;
+    this.start=performance.now();
+    this._last=0;
+  },
+
+  resetGame(){
+    const specs=[
+      {x:175,y:190,vx:38,vy:26,phase:.2,scale:.19},
+      {x:590,y:175,vx:-34,vy:30,phase:1.4,scale:.18},
+      {x:215,y:365,vx:42,vy:-27,phase:2.7,scale:.20},
+      {x:555,y:355,vx:-39,vy:-24,phase:4.1,scale:.18}
+    ];
+    this.spiders=specs.map((s,i)=>({...s,id:i,caught:false,dragging:false}));
+    this.lastGameTime=performance.now();
+    this.updateProgress();
+    this._last=0;
+  },
+
+  updateProgress(){
+    const caught=this.spiders?.filter(s=>s.caught).length||0;
+    const p=document.getElementById("progress");
+    if(p)p.textContent=`🕷️ ${caught} / 4`;
+  },
+
+  getSpider(id){
+    return this.spiders.find(s=>s.id===id);
+  },
+
+  setSpiderPosition(id,x,y){
+    const s=this.getSpider(id);
+    if(!s||s.caught)return;
+    s.x=Math.max(70,Math.min(698,x));
+    s.y=Math.max(70,Math.min(400,y));
+    s.dragging=true;
+    this._last=0;
+  },
+
+  releaseSpider(id){
+    const s=this.getSpider(id);
+    if(!s||s.caught)return false;
+    s.dragging=false;
+
+    const bin={x:384,y:438,w:170,h:120};
+    const inside=
+      s.x>=bin.x-bin.w*.48 && s.x<=bin.x+bin.w*.48 &&
+      s.y>=bin.y-bin.h*.58 && s.y<=bin.y+bin.h*.38;
+
+    if(inside){
+      s.caught=true;
+      this.updateProgress();
+      const caught=this.spiders.filter(x=>x.caught).length;
+
+      if(caught>=4){
+        setTimeout(()=>window.SpiderMode.complete(),220);
+      }else{
+        window.SpiderMode.setHint(`抓到了！还有 ${4-caught} 只小蜘蛛`);
+      }
+      return true;
+    }
+
+    window.SpiderMode.setHint("没放进垃圾筐，再抓一次！");
+    return false;
+  },
+
+  drawCentered(img,cx,cy,w,h,r=0,a=1){
+    if(!img)return;
+    const ctx=this.ctx;
+    ctx.save();
+    ctx.globalAlpha=a;
+    ctx.translate(cx,cy);
+    ctx.rotate(r);
+    ctx.drawImage(img,-w/2,-h/2,w,h);
+    ctx.restore();
+  },
+
+  drawStory(now){
+    const c=this.c,w=c.width,h=c.height;
+    const t=((now-this.start)/1000)%3.8;
+
+    this.drawCentered(this.img.web,w*.50,h*.61,w*.86,h*.49,0,.46);
+
+    let x=0,y=0,sx=1,sy=1,rot=0;
+    let shadowSx=1,shadowSy=.62,shadowA=.48;
+    let dustA=0,dustScale=.75,dustX=0;
+    let linesA=0,linesScale=.72;
+
+    if(t<1.45){
+      const u=t/1.45,b=Math.sin(u*Math.PI*4);
+      y=b*5;sx=1+b*.012;sy=1-b*.018;
+      rot=Math.sin(u*Math.PI*2)*.7*Math.PI/180;
+      shadowSx=1-b*.018;shadowSy=.62+b*.015;
+    }else if(t<2.55){
+      const u=(t-1.45)/1.10,e=u*u*(3-2*u);
+      y=-9*e+Math.sin(u*Math.PI*4)*4;
+      x=Math.sin(u*Math.PI*2)*8;
+      sx=1.015+.02*Math.sin(u*Math.PI*2);
+      sy=.985-.015*Math.sin(u*Math.PI*2);
+      rot=Math.sin(u*Math.PI*2)*1.2*Math.PI/180;
+      dustA=.18+.28*Math.sin(Math.PI*u);
+      dustScale=.72+.12*e;dustX=-x*.7;
+      shadowSx=1.02;shadowSy=.58;
+    }else if(t<3.15){
+      const u=(t-2.55)/.60;
+      if(u<.34){
+        const q=u/.34;
+        y=13*q;sx=1.05-.04*q;sy=.94+.03*q;
+        rot=Math.sin(q*Math.PI)*1.2*Math.PI/180;
+        shadowSx=.92;shadowSy=.56;
+      }else{
+        const q=(u-.34)/.66,e=1-Math.pow(1-q,3);
+        y=13-62*e;sx=1.01+.20*e;sy=.97+.16*e;
+        rot=Math.sin(q*Math.PI)*1.8*Math.PI/180;
+        linesA=Math.sin(Math.PI*q)*.88;
+        linesScale=.70+.20*e;
+        dustA=.30+.45*Math.sin(Math.PI*q);
+        dustScale=.82+.18*e;
+        shadowSx=1.04+.10*e;shadowSy=.55-.08*e;shadowA=.48-.10*e;
+      }
+    }else{
+      const u=(t-3.15)/.65,e=u*u*(3-2*u);
+      y=-44*(1-e);sx=1.18-.18*e;sy=1.12-.12*e;
+      rot=Math.sin((1-u)*Math.PI)*.8*Math.PI/180;
+      linesA=(1-u)*.18;dustA=(1-u)*.25;dustScale=.95-.12*e;
+      shadowSx=1.12-.12*e;shadowSy=.50+.12*e;shadowA=.40+.08*e;
+    }
+
+    if(linesA>0){
+      this.drawCentered(this.img.lines,w*.50,h*.47,w*.94*linesScale,h*.94*linesScale,0,linesA);
+    }
+    this.drawCentered(this.img.shadow,w*.50,h*.70,w*.49*shadowSx,h*.18*shadowSy,0,shadowA);
+    if(dustA>0){
+      this.drawCentered(this.img.dust,w*.50+dustX,h*.69,w*.79*dustScale,h*.40*dustScale,0,dustA);
+    }
+
+    const body=this.img.body;
+    if(body){
+      const ratio=body.naturalHeight/body.naturalWidth;
+      const bw=w*.58,bh=bw*ratio;
+      this.ctx.save();
+      this.ctx.translate(w*.50+x,h*.47+y);
+      this.ctx.rotate(rot);this.ctx.scale(sx,sy);
+      this.ctx.drawImage(body,-bw/2,-bh/2,bw,bh);
+      this.ctx.restore();
+    }
+  },
+
+  drawGame(now){
+    const c=this.c,w=c.width,h=c.height;
+    const dt=Math.min(.05,(now-this.lastGameTime)/1000);
+    this.lastGameTime=now;
+
+    // Subtle web base.
+    this.drawCentered(this.img.web,w*.50,h*.52,w*.86,h*.55,0,.18);
+
+    // Bin at bottom-center.
+    const binW=178;
+    const binRatio=this.img.bin?.naturalHeight/Math.max(1,this.img.bin?.naturalWidth||1);
+    const binH=binW*binRatio;
+    this.drawCentered(this.img.bin,w*.50,h*.83,binW,binH,0,1);
+
+    for(const s of this.spiders){
+      if(s.caught)continue;
+
+      if(!s.dragging){
+        s.x+=s.vx*dt;
+        s.y+=s.vy*dt;
+
+        if(s.x<85){s.x=85;s.vx=Math.abs(s.vx)}
+        if(s.x>w-85){s.x=w-85;s.vx=-Math.abs(s.vx)}
+        if(s.y<80){s.y=80;s.vy=Math.abs(s.vy)}
+        if(s.y>h-175){s.y=h-175;s.vy=-Math.abs(s.vy)}
+      }
+
+      const wiggle=Math.sin(now*.006+s.phase);
+      const size=w*s.scale*(1+.025*wiggle);
+      const body=this.img.body;
+      if(!body)continue;
+      const ratio=body.naturalHeight/body.naturalWidth;
+      this.drawCentered(body,s.x,s.y,size,size*ratio,wiggle*.045,1);
+    }
+  },
+
+  tick(){
+    if(this.loaded<this.total)return;
+
+    const now=performance.now();
+    const frameMs=this.mode==="game"?33:50;
+    if(this._last&&now-this._last<frameMs)return;
+    this._last=now;
+
+    const c=this.c,ctx=this.ctx;
+    ctx.clearRect(0,0,c.width,c.height);
+
+    if(this.mode==="story")this.drawStory(now);
+    else if(this.mode==="game"||this.mode==="complete")this.drawGame(now);
+
+    const mesh=this.el.getObject3D("mesh");
+    if(mesh?.material?.map)mesh.material.map.needsUpdate=true;
+  }
+});
+
+AFRAME.registerComponent("spider-controller",{
+  schema:{world:{type:"selector"}},
+
+  init(){
+    this.world=this.data.world;
+    this.tracking=false;
+    this.holding=false;
+    this.dragState=null;
+    this.poseHistory=[];
+    this.maxPoseHistory=24;
+    this.basePos=new THREE.Vector3();
+    this.baseScale=new THREE.Vector3(1,1,1);
+
+    this.planeWidth=2.15;
+    this.planeHeight=2.15;
+    this.canvasW=768;
+    this.canvasH=512;
+
+    if(this.world)this.world.object3D.visible=false;
+
+    window.CityInput.register("spider-game",{
+      down:(input)=>this.handleDown(input),
+      move:(input)=>this.handleMove(input),
+      up:(input)=>this.handleUp(input),
+      cancel:(input)=>this.handleUp(input)
+    });
+
+    window.CityInput.register("spider-hand-auto-sleep",{
+      down:(input)=>{if(input.source==="hand")window.SpiderHandMode.noteInteraction()},
+      up:(input)=>{if(input.source==="hand")window.SpiderHandMode.noteInteraction()}
+    });
+
+    this.el.addEventListener("targetFound",()=>{
+      if(window.SpiderMode.mode!=="waiting")return;
+
+      this.tracking=true;
+      this.holding=false;
+      this.poseHistory=[];
+
+      if(this.world)this.world.object3D.visible=true;
+      window.SpiderMode.showStory();
+    });
+
+    this.el.addEventListener("targetLost",()=>{
+      if(window.SpiderMode.mode==="waiting")return;
+
+      this.tracking=false;
+      this.holding=true;
+      this.holdStart=performance.now();
+
+      let stable=null;
+      const now=performance.now();
+
+      for(let i=this.poseHistory.length-1;i>=0;i--){
+        if(now-this.poseHistory[i].time>=260){
+          stable=this.poseHistory[i];
+          break;
+        }
+      }
+      if(!stable&&this.poseHistory.length)stable=this.poseHistory[0];
+
+      if(stable){
+        this.basePos.copy(stable.pos);
+        this.baseScale.copy(stable.scale);
+      }else{
+        this.el.object3D.updateMatrixWorld(true);
+        const p=new THREE.Vector3(),q=new THREE.Quaternion(),sc=new THREE.Vector3();
+        this.el.object3D.matrixWorld.decompose(p,q,sc);
+        this.basePos.copy(p);
+        this.baseScale.copy(sc);
+      }
+
+      if(this.world){
+        const o=this.world.object3D;
+        o.position.copy(this.basePos);
+        o.quaternion.identity();
+        o.scale.copy(this.baseScale);
+        o.visible=true;
+        o.updateMatrixWorld(true);
+      }
+    });
+  },
+
+  getCanvasComp(){
+    return document.getElementById("spiderDisplay")?.components?.["spider-canvas"];
+  },
+
+  getCamera(){
+    if(!this.camera){
+      const e=document.querySelector("a-camera");
+      this.camera=e&&e.getObject3D("camera");
+    }
+    return this.camera;
+  },
+
+  projectWorld(v){
+    const cam=this.getCamera();
+    if(!cam)return null;
+    const p=v.clone().project(cam);
+    return{x:(p.x*.5+.5)*innerWidth,y:(-p.y*.5+.5)*innerHeight};
+  },
+
+  canvasToLocal(x,y){
+    return new THREE.Vector3(
+      (x/this.canvasW-.5)*this.planeWidth,
+      (.5-y/this.canvasH)*this.planeHeight,
+      .10
+    );
+  },
+
+  screenToCanvas(x,y){
+    if(!this.world)return null;
+    const obj=this.world.object3D;
+    obj.updateMatrixWorld(true);
+
+    const center=this.projectWorld(new THREE.Vector3(0,0,0).applyMatrix4(obj.matrixWorld));
+    const right=this.projectWorld(new THREE.Vector3(.5,0,0).applyMatrix4(obj.matrixWorld));
+    const up=this.projectWorld(new THREE.Vector3(0,.5,0).applyMatrix4(obj.matrixWorld));
+    if(!center||!right||!up)return null;
+
+    const pxPerUnitX=Math.max(1,Math.abs(right.x-center.x)*2);
+    const pxPerUnitY=Math.max(1,Math.abs(up.y-center.y)*2);
+
+    const localX=(x-center.x)/pxPerUnitX;
+    const localY=-(y-center.y)/pxPerUnitY;
+
+    return{
+      x:(localX/this.planeWidth+.5)*this.canvasW,
+      y:(.5-localY/this.planeHeight)*this.canvasH
+    };
+  },
+
+  hitSpiderAt(screenX,screenY,source){
+    if(window.SpiderMode.mode!=="game")return null;
+    const c=this.screenToCanvas(screenX,screenY);
+    const comp=this.getCanvasComp();
+    if(!c||!comp)return null;
+
+    // generous hit radius for small hands
+    let best=null,bestD=Infinity;
+    for(const s of comp.spiders){
+      if(s.caught)continue;
+      const d=Math.hypot(c.x-s.x,c.y-s.y);
+      const radius=source==="hand"?78:60;
+      if(d<=radius&&d<bestD){best=s.id;bestD=d}
+    }
+    return best;
+  },
+
+  handleDown(input){
+    if(window.SpiderMode.mode!=="game")return;
+    const id=this.hitSpiderAt(input.x,input.y,input.source);
+    if(id===null)return;
+
+    if(input.nativeEvent)input.nativeEvent.preventDefault();
+
+    const comp=this.getCanvasComp();
+    const pt=this.screenToCanvas(input.x,input.y);
+    const s=comp?.getSpider(id);
+    if(!comp||!pt||!s)return;
+
+    this.dragState={
+      pointerId:input.pointerId,
+      id,
+      dx:s.x-pt.x,
+      dy:s.y-pt.y
+    };
+    s.dragging=true;
+    window.SpiderMode.setHint("抓住了！把它放进垃圾筐 🗑️");
+  },
+
+  handleMove(input){
+    if(!this.dragState||input.pointerId!==this.dragState.pointerId)return;
+    if(input.nativeEvent)input.nativeEvent.preventDefault();
+
+    const pt=this.screenToCanvas(input.x,input.y);
+    const comp=this.getCanvasComp();
+    if(!pt||!comp)return;
+
+    comp.setSpiderPosition(
+      this.dragState.id,
+      pt.x+this.dragState.dx,
+      pt.y+this.dragState.dy
+    );
+  },
+
+  handleUp(input){
+    if(!this.dragState||input.pointerId!==this.dragState.pointerId)return;
+
+    const comp=this.getCanvasComp();
+    comp?.releaseSpider(this.dragState.id);
+    this.dragState=null;
+  },
+
+  hideWorld(){
+    this.tracking=false;
+    this.holding=false;
+    this.dragState=null;
+    if(this.world)this.world.object3D.visible=false;
+  },
+
+  tick(){
+    if(!this.world||window.SpiderMode.mode==="waiting")return;
+
+    const now=performance.now();
+    const active=this.tracking||this.dragState;
+    const frameMs=active?33:67;
+    if(this._last&&now-this._last<frameMs)return;
+    this._last=now;
+
+    const obj=this.world.object3D;
+
+    if(this.tracking){
+      this.el.object3D.updateMatrixWorld(true);
+      const p=new THREE.Vector3(),q=new THREE.Quaternion(),sc=new THREE.Vector3();
+      this.el.object3D.matrixWorld.decompose(p,q,sc);
+
+      this.poseHistory.push({pos:p.clone(),scale:sc.clone(),time:now});
+      if(this.poseHistory.length>this.maxPoseHistory)this.poseHistory.shift();
+
+      this.basePos.copy(p);
+      this.baseScale.copy(sc);
+
+      obj.position.copy(p);
+      obj.quaternion.identity();
+      obj.scale.copy(sc);
+      obj.visible=true;
+      obj.updateMatrixWorld(true);
+    }else if(this.holding){
+      // Hold in a stable location after the recognition card is removed.
+      obj.position.copy(this.basePos);
+      obj.quaternion.identity();
+      obj.scale.copy(this.baseScale);
+      obj.visible=true;
+      obj.updateMatrixWorld(true);
+    }
+  }
+});
+
+document.addEventListener("DOMContentLoaded",()=>{
+  document.getElementById("fightBtn")
+    ?.addEventListener("click",()=>window.SpiderMode.enterGame());
+
+  document.getElementById("leaveBtn")
+    ?.addEventListener("click",()=>window.SpiderMode.leave());
+
+  document.getElementById("handBtn")
+    ?.addEventListener("click",()=>window.SpiderHandMode.toggle());
+
+  // Camera orientation control, same lightweight approach as the other scene pages.
+  const select=document.getElementById("cameraOrientationSelect");
+  let angle=Number(localStorage.getItem("spiderCameraAngle")||0);
+  select.value=String(angle);
+
+  const apply=()=>{
+    const video=document.querySelector("video");
+    if(!video){setTimeout(apply,120);return}
+    video.style.transformOrigin="50% 50%";
+    video.style.transform=`rotate(${angle}deg)`;
+
+    if(angle===90||angle===270){
+      const sc=Math.max(innerWidth/innerHeight,innerHeight/innerWidth);
+      video.style.transform=`rotate(${angle}deg) scale(${sc})`;
+    }
+  };
+
+  select.addEventListener("change",()=>{
+    angle=Number(select.value)||0;
+    localStorage.setItem("spiderCameraAngle",String(angle));
+    apply();
+  });
+
+  apply();
+});
+</script>
+
+<script type="module" src="../js/hand-tracking-performance.js"></script>
+</head>
+
+<body>
+<div id="cameraOrientationControl">
+  <span>📷 CAMERA</span>
+  <select id="cameraOrientationSelect" aria-label="Camera orientation">
+    <option value="0">0°</option>
+    <option value="90">90°</option>
+    <option value="180">180°</option>
+    <option value="270">270°</option>
+  </select>
+</div>
+
+<button id="handBtn" type="button">✨ INTERACT · OFF</button>
+<div id="handStatus">手势：已关闭</div>
+<div id="handCursor">✨</div>
+
+<div id="progress">🕷️ 0 / 4</div>
+
+<button id="fightBtn" type="button">⚔️ 消灭它</button>
+<button id="leaveBtn" type="button">✅ 离开</button>
+
+<div id="hint">请把镜头对准 SPIDER 卡</div>
+<canvas id="spiderCanvas" class="off" width="768" height="512"></canvas>
+
+<a-scene
+  mindar-image="imageTargetSrc: ../targets/spider.mind; autoStart: true; maxTrack: 1;"
+  color-space="sRGB"
+  renderer="colorManagement:true;physicallyCorrectLights:true;alpha:true;antialias:true"
+  vr-mode-ui="enabled:false"
+  device-orientation-permission-ui="enabled:false">
+
+  <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+
+  <a-entity
+    mindar-image-target="targetIndex:0"
+    spider-controller="world:#spiderWorld">
+  </a-entity>
+
+  <a-entity id="spiderWorld" visible="false">
+    <a-plane
+      id="spiderDisplay"
+      width="2.15"
+      height="2.15"
+      position="0 0.03 0.02"
+      material="shader:flat;src:#spiderCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
+      spider-canvas>
+    </a-plane>
+  </a-entity>
+</a-scene>
+</body>
+</html>
