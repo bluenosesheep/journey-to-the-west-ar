@@ -307,8 +307,11 @@ AFRAME.registerComponent("spider-canvas",{
   setSpiderPosition(id,x,y){
     const s=this.getSpider(id);
     if(!s||s.caught)return;
-    s.x=Math.max(70,Math.min(698,x));
-    s.y=Math.max(70,Math.min(400,y));
+    s.x=Math.max(55,Math.min(713,x));
+    // v7 moved the bin lower, so allow a dragged spider to travel deep enough
+    // into the bin. The previous max Y=400 made the front-rim threshold
+    // physically unreachable.
+    s.y=Math.max(45,Math.min(495,y));
     s.dragging=true;
     this._last=0;
   },
@@ -333,7 +336,7 @@ AFRAME.registerComponent("spider-canvas",{
       s.x>=binCX-binW*.44 && s.x<=binCX+binW*.44;
 
     const belowFrontRim =
-      s.y>=frontRimY;
+      s.y>=frontRimY-6;
 
     if(withinMouthX && belowFrontRim){
       s.caught=true;
