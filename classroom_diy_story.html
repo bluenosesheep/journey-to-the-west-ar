@@ -328,7 +328,7 @@ window.StandaloneHandMode={
 
     if(status){status.style.display="block";status.textContent="手势：启动中…";}
     await window.ClassroomHandTracking.start({
-      video,cursor,mirror:false,maxFps:18,smoothing:.38,
+      video,cursor,mirror:true,maxFps:18,smoothing:.38,
       pinchDownRatio:.34,pinchUpRatio:.44,reuseExistingVideo:true,
       viewport:()=>({width:innerWidth,height:innerHeight}),
       onStatus:(msg)=>{if(status)status.textContent="手势："+msg},
@@ -1215,7 +1215,7 @@ window.StandaloneMarketHandMode={
     await window.ClassroomHandTracking.start({
       video,
       cursor,
-      mirror:false,
+      mirror:true,
       maxFps:18,
       smoothing:.38,
       pinchDownRatio:.34,
@@ -1438,7 +1438,7 @@ window.StandaloneSpiderHandMode={
     await window.ClassroomHandTracking.start({
       video,
       cursor,
-      mirror:false,
+      mirror:true,
       maxFps:18,
       smoothing:.38,
       pinchDownRatio:.34,
