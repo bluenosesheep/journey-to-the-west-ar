@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Spider Magic AR</title>
+
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+<style>
+html,body{
+  margin:0;width:100%;height:100%;overflow:hidden;
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:transparent!important;
+}
+video{
+  position:fixed!important;inset:0!important;
+  width:100vw!important;height:100vh!important;
+  object-fit:cover!important;z-index:0!important;
+}
+a-scene{
+  position:fixed!important;inset:0!important;
+  width:100vw!important;height:100vh!important;
+  z-index:1!important;background:transparent!important;
+}
+canvas.a-canvas{background:transparent!important}
+.off{display:none}
+
+#hint{
+  position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);z-index:20;max-width:88vw;
+  padding:10px 14px;border-radius:999px;
+  background:rgba(255,255,255,.92);color:#222;
+  font:700 14px/1.4 system-ui;text-align:center;
+  box-shadow:0 6px 24px rgba(0,0,0,.16)
+}
+
+.mindar-ui-scanning,
+.mindar-ui-scanning .scanning,
+.mindar-ui-scanning .scanning-line,
+.mindar-ui-scanning .inner,
+.mindar-ui-scanning .scanline{
+  display:none!important;opacity:0!important;
+  visibility:hidden!important;pointer-events:none!important
+}
+</style>
+</head>
+
+<body>
+<div id="hint">请把镜头对准 SPIDER 卡</div>
+
+<canvas id="spiderCanvas" class="off" width="1024" height="1024"></canvas>
+
+<a-scene
+  mindar-image="imageTargetSrc: ../targets/spider.mind; autoStart: true;"
+  color-space="sRGB"
+  renderer="colorManagement:true;physicallyCorrectLights:true;alpha:true;antialias:true"
+  vr-mode-ui="enabled:false"
+  device-orientation-permission-ui="enabled:false">
+
+  <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+
+  <a-entity mindar-image-target="targetIndex:0" spider-events>
+    <a-plane
+      width="2.15"
+      height="2.15"
+      position="0 0.03 0.03"
+      material="shader:flat;src:#spiderCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
+      spider-magic-canvas>
+    </a-plane>
+  </a-entity>
+</a-scene>
+
+<script>
+AFRAME.registerComponent("spider-events",{
+  init:function(){
+    const hint=document.getElementById("hint");
+    this.el.addEventListener("targetFound",()=>{
+      hint.textContent="MAGIC 05 · GIANT SPIDER 🕷️";
+    });
+    this.el.addEventListener("targetLost",()=>{
+      hint.textContent="请把镜头对准 SPIDER 卡";
+    });
+  }
+});
+
+AFRAME.registerComponent("spider-magic-canvas",{
+  init:function(){
+    this.c=document.getElementById("spiderCanvas");
+    this.ctx=this.c.getContext("2d");
+
+    this.images={};
+    this.loaded=0;
+    this.startTime=performance.now();
+
+    const sources={
+      body:"../assets/spider/spider_body.png",
+      shadow:"../assets/spider/spider_shadow.png",
+      web:"../assets/spider/spider_web.png",
+      dust:"../assets/spider/spider_dust.png",
+      lines:"../assets/spider/spider_attack_lines.png"
+    };
+
+    const entries=Object.entries(sources);
+    this.total=entries.length;
+
+    entries.forEach(([key,src])=>{
+      const img=new Image();
+      img.crossOrigin="anonymous";
+      img.onload=()=>{
+        this.images[key]=img;
+        this.loaded++;
+      };
+      img.src=src;
+    });
+  },
+
+  drawCentered:function(img,cx,cy,w,h,r=0,a=1){
+    const ctx=this.ctx;
+    ctx.save();
+    ctx.globalAlpha=a;
+    ctx.translate(cx,cy);
+    ctx.rotate(r);
+    ctx.drawImage(img,-w/2,-h/2,w,h);
+    ctx.restore();
+  },
+
+  tick:function(){
+    if(this.loaded<this.total)return;
+
+    const c=this.c,ctx=this.ctx,w=c.width,h=c.height;
+    const elapsed=(performance.now()-this.startTime)/1000;
+    const LOOP=3.8;
+    const t=elapsed%LOOP;
+
+    ctx.clearRect(0,0,w,h);
+
+    // Base environment: web.
+    this.drawCentered(
+      this.images.web,
+      w*.50,h*.61,
+      w*.86,h*.49,
+      0,.46
+    );
+
+    let x=0,y=0,sx=1,sy=1,rot=0;
+    let shadowSx=1,shadowSy=.62,shadowA=.48;
+    let dustA=0,dustScale=.75,dustX=0;
+    let linesA=0,linesScale=.72;
+
+    if(t<1.45){
+      // Idle breathing.
+      const u=t/1.45;
+      const breathe=Math.sin(u*Math.PI*4);
+      y=breathe*5;
+      sx=1+breathe*.012;
+      sy=1-breathe*.018;
+      rot=Math.sin(u*Math.PI*2)*.7*Math.PI/180;
+      shadowSx=1-breathe*.018;
+      shadowSy=.62+breathe*.015;
+    }
+    else if(t<2.55){
+      // Slow crawling movement.
+      const u=(t-1.45)/1.10;
+      const e=u*u*(3-2*u);
+      y=-9*e+Math.sin(u*Math.PI*4)*4;
+      x=Math.sin(u*Math.PI*2)*8;
+      sx=1.015+.02*Math.sin(u*Math.PI*2);
+      sy=.985-.015*Math.sin(u*Math.PI*2);
+      rot=Math.sin(u*Math.PI*2)*1.2*Math.PI/180;
+
+      dustA=.18+.28*Math.sin(Math.PI*u);
+      dustScale=.72+.12*e;
+      dustX=-x*.7;
+      shadowSx=1.02;
+      shadowSy=.58;
+    }
+    else if(t<3.15){
+      // Prepare and lunge.
+      const u=(t-2.55)/.60;
+
+      if(u<.34){
+        const q=u/.34;
+        y=13*q;
+        sx=1.05-.04*q;
+        sy=.94+.03*q;
+        rot=Math.sin(q*Math.PI)*1.2*Math.PI/180;
+        shadowSx=.92;
+        shadowSy=.56;
+      }else{
+        const q=(u-.34)/.66;
+        const e=1-Math.pow(1-q,3);
+
+        y=13-62*e;
+        sx=1.01+.20*e;
+        sy=.97+.16*e;
+        rot=Math.sin(q*Math.PI)*1.8*Math.PI/180;
+
+        linesA=Math.sin(Math.PI*q)*.88;
+        linesScale=.70+.20*e;
+
+        dustA=.30+.45*Math.sin(Math.PI*q);
+        dustScale=.82+.18*e;
+
+        shadowSx=1.04+.10*e;
+        shadowSy=.55-.08*e;
+        shadowA=.48-.10*e;
+      }
+    }
+    else{
+      // Recover to idle.
+      const u=(t-3.15)/.65;
+      const e=u*u*(3-2*u);
+
+      y=-44*(1-e);
+      sx=1.18-.18*e;
+      sy=1.12-.12*e;
+      rot=Math.sin((1-u)*Math.PI)*.8*Math.PI/180;
+
+      linesA=(1-u)*.18;
+      dustA=(1-u)*.25;
+      dustScale=.95-.12*e;
+
+      shadowSx=1.12-.12*e;
+      shadowSy=.50+.12*e;
+      shadowA=.40+.08*e;
+    }
+
+    // Attack speed lines behind spider.
+    if(linesA>0){
+      this.drawCentered(
+        this.images.lines,
+        w*.50,h*.47,
+        w*.94*linesScale,
+        h*.94*linesScale,
+        0,
+        linesA
+      );
+    }
+
+    // Shadow.
+    this.drawCentered(
+      this.images.shadow,
+      w*.50,h*.70,
+      w*.49*shadowSx,
+      h*.18*shadowSy,
+      0,
+      shadowA
+    );
+
+    // Dust.
+    if(dustA>0){
+      this.drawCentered(
+        this.images.dust,
+        w*.50+dustX,h*.69,
+        w*.79*dustScale,
+        h*.40*dustScale,
+        0,
+        dustA
+      );
+    }
+
+    // Spider body.
+    ctx.save();
+    ctx.translate(w*.50+x,h*.47+y);
+    ctx.rotate(rot);
+    ctx.scale(sx,sy);
+
+    const body=this.images.body;
+    const ratio=body.naturalHeight/body.naturalWidth;
+    const bw=w*.58;
+    const bh=bw*ratio;
+    ctx.drawImage(body,-bw/2,-bh/2,bw,bh);
+    ctx.restore();
+
+    const mesh=this.el.getObject3D("mesh");
+    if(mesh&&mesh.material&&mesh.material.map){
+      mesh.material.map.needsUpdate=true;
+    }
+  }
+});
+</script>
+</body>
+</html>
