@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Spider Interactive AR · Layout v2</title>
+<title>Spider Interactive AR · Layout v3</title>
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <style>
@@ -62,10 +62,14 @@ AFRAME.registerComponent("spider-canvas",{
   // So every part needs its own position / scale around the body.
   layout:{
     body:  {x:.50,y:.52,s:.72,r:0},
-    left1: {x:.30,y:.28,s:.52,r:-.18},
-    left3: {x:.28,y:.62,s:.50,r:.10},
-    right2:{x:.72,y:.39,s:.50,r:.08},
-    right4:{x:.70,y:.70,s:.48,r:.18}
+
+    // v3: legs are smaller and pulled in toward the body.
+    // 1 = upper-left leg, 3 = lower-left leg,
+    // 2 = upper-right leg, 4 = lower-right leg.
+    left1: {x:.36,y:.34,s:.36,r:-.08},
+    left3: {x:.35,y:.61,s:.35,r:.04},
+    right2:{x:.64,y:.40,s:.36,r:.04},
+    right4:{x:.64,y:.66,s:.35,r:.08}
   },
 
   drawLayer(key,kind,alpha=1,dy=0,rot=0){
@@ -125,13 +129,13 @@ AFRAME.registerComponent("spider-persist",{
   updateHitPositions(){
     if(!this.world)return;const o=this.world.object3D;o.updateMatrixWorld(true);
     const pts={
-      left1:new THREE.Vector3(-.42,.46,.10),
-      left3:new THREE.Vector3(-.46,-.22,.10),
-      right2:new THREE.Vector3(.44,.22,.10),
-      right4:new THREE.Vector3(.40,-.48,.10)
+      left1:new THREE.Vector3(-.28,.34,.10),
+      left3:new THREE.Vector3(-.30,-.18,.10),
+      right2:new THREE.Vector3(.28,.18,.10),
+      right4:new THREE.Vector3(.28,-.30,.10)
     };
     const sizes={
-      left1:[.52,.46],left3:[.52,.46],right2:[.52,.46],right4:[.52,.46]
+      left1:[.38,.34],left3:[.38,.34],right2:[.38,.34],right4:[.38,.34]
     };
     const center=this.project(new THREE.Vector3(0,0,0).applyMatrix4(o.matrixWorld)),right=this.project(new THREE.Vector3(.5,0,0).applyMatrix4(o.matrixWorld)),up=this.project(new THREE.Vector3(0,.5,0).applyMatrix4(o.matrixWorld));if(!center||!right||!up)return;
     const pxX=Math.max(1,Math.abs(right.x-center.x)*2),pxY=Math.max(1,Math.abs(up.y-center.y)*2);
