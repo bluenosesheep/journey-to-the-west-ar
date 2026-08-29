@@ -309,16 +309,22 @@ AFRAME.registerComponent("spider-canvas",{
     if(!s||s.caught)return false;
     s.dragging=false;
 
-    const bin={x:384,y:416,w:220,h:130};
+    // IMPORTANT: use the exact same bin geometry as drawGame().
+    // In v5 the visual hide threshold and the drop-success threshold were
+    // different, so the spider could disappear visually but fail the drop.
+    const w=this.c.width,h=this.c.height;
+    const binW=220;
+    const binRatio=this.img.bin?.naturalHeight/Math.max(1,this.img.bin?.naturalWidth||1);
+    const binH=binW*binRatio;
+    const binCX=w*.50;
+    const binCY=h*.79;
+    const frontRimY=binCY-binH*.12;
 
-    // The spider only counts as captured after it has been dragged BELOW the
-    // visible front rim. This matches the visual: shrink at the opening,
-    // then disappear once it passes behind the front wall.
     const withinMouthX =
-      s.x>=bin.x-bin.w*.44 && s.x<=bin.x+bin.w*.44;
+      s.x>=binCX-binW*.44 && s.x<=binCX+binW*.44;
 
     const belowFrontRim =
-      s.y>=bin.y-bin.h*.02;
+      s.y>=frontRimY;
 
     if(withinMouthX && belowFrontRim){
       s.caught=true;
@@ -335,7 +341,7 @@ AFRAME.registerComponent("spider-canvas",{
       return true;
     }
 
-    window.SpiderMode.setHint("继续往垃圾桶里面放！");
+    window.SpiderMode.setHint("再往下放一点，越过桶口前沿就可以啦！");
     return false;
   },
 
