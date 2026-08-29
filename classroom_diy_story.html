@@ -662,7 +662,15 @@ AFRAME.registerComponent("park-drag-controller",{
     const dx=input.x-this.dragState.startScreenX,dy=input.y-this.dragState.startScreenY;
     const sx=(this.dragState.pxPerUnitX*this.planeWidth)/this.canvasW;
     const sy=(this.dragState.pxPerUnitY*this.planeHeight)/this.canvasH;
-    comp.setPosition(this.dragState.kind,this.dragState.startCanvasX+dx/Math.max(.001,sx),this.dragState.startCanvasY+dy/Math.max(.001,sy));
+
+    // The AR canvas is horizontally mirrored. Park dragging is delta-based,
+    // so its horizontal drag delta must be inverted as well:
+    // screen right -> visual object right.
+    comp.setPosition(
+      this.dragState.kind,
+      this.dragState.startCanvasX-dx/Math.max(.001,sx),
+      this.dragState.startCanvasY+dy/Math.max(.001,sy)
+    );
     this.updateHitPositions();
   },
   handleUp(input){
