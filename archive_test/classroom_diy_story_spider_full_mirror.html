@@ -213,51 +213,6 @@ body.diy-building #handCursor{display:none!important}
 </style>
 
 <script>
-/* ---------- Hand coordinate calibration for mirrored camera ---------- */
-window.DIYHandCalibration={
-  yScale:1.18,
-  yOffset:-10,
-  apply(input){
-    if(!input || input.source!=="hand")return input;
-    const cy=window.innerHeight*.5;
-    return {
-      ...input,
-      y:cy+(input.y-cy)*this.yScale+this.yOffset
-    };
-  }
-};
-
-/*
-  input-router.js creates CityInput before this script runs.
-  Wrap register() once so every existing and future Park / Market / Spider
-  hand handler receives the same corrected coordinates.
-*/
-if(window.CityInput && !window.CityInput.__diyHandCalibrationWrapped){
-  const originalRegister=window.CityInput.register.bind(window.CityInput);
-
-  window.CityInput.register=function(name,handlers){
-    const wrapped={};
-
-    ["down","move","up","cancel"].forEach(type=>{
-      if(typeof handlers?.[type]!=="function")return;
-      wrapped[type]=(input)=>{
-        handlers[type](window.DIYHandCalibration.apply(input));
-      };
-    });
-
-    // Preserve any extra handler properties the router may support.
-    Object.keys(handlers||{}).forEach(key=>{
-      if(!(key in wrapped))wrapped[key]=handlers[key];
-    });
-
-    return originalRegister(name,wrapped);
-  };
-
-  window.CityInput.__diyHandCalibrationWrapped=true;
-}
-</script>
-
-<script>
 
 function roundRect(ctx,x,y,w,h,r){
   ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);
