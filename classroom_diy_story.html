@@ -2069,7 +2069,11 @@ AFRAME.registerComponent("spider-controller",{
     const pxPerUnitX=Math.max(1,Math.abs(right.x-center.x)*2);
     const pxPerUnitY=Math.max(1,Math.abs(up.y-center.y)*2);
 
-    const localX=(x-center.x)/pxPerUnitX;
+    // AR canvas is horizontally mirrored. In Spider we convert screen
+    // coordinates back into canvas coordinates, so X must be inverted here.
+    // Park/Market don't use this screenToCanvas path, which is why they were
+    // already working while Spider mouse picking was not.
+    const localX=-(x-center.x)/pxPerUnitX;
     const localY=-(y-center.y)/pxPerUnitY;
 
     return{
