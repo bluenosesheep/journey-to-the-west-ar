@@ -621,7 +621,7 @@ AFRAME.registerComponent("park-drag-controller",{
   get dragging(){return !!this.dragState},
   getCanvasComp(){return document.getElementById("parkDisplay")?.components?.["park-canvas"]},
   getCamera(){if(!this.camera){const e=document.querySelector("a-camera");this.camera=e&&e.getObject3D("camera")}return this.camera},
-  projectWorld(v){const cam=this.getCamera();if(!cam)return null;const p=v.clone().project(cam);return{x:(p.x*.5+.5)*innerWidth,y:(-p.y*.5+.5)*innerHeight}},
+  projectWorld(v){const cam=this.getCamera();if(!cam)return null;const p=v.clone().project(cam);return{x:innerWidth-(p.x*.5+.5)*innerWidth,y:(-p.y*.5+.5)*innerHeight}},
   canvasToLocal(x,y){return new THREE.Vector3((x/this.canvasW-.5)*this.planeWidth,(.5-y/this.canvasH)*this.planeHeight,.10)},
   getScreenScale(){
     if(!this.world)return null;const obj=this.world.object3D;obj.updateMatrixWorld(true);
@@ -935,7 +935,7 @@ AFRAME.registerComponent("market-persist",{
     if(!cam)return null;
     const p=v.clone().project(cam);
     return {
-      x:(p.x*0.5+0.5)*window.innerWidth,
+      x:window.innerWidth-(p.x*0.5+0.5)*window.innerWidth,
       y:(-p.y*0.5+0.5)*window.innerHeight
     };
   },
@@ -2045,7 +2045,7 @@ AFRAME.registerComponent("spider-controller",{
     const cam=this.getCamera();
     if(!cam)return null;
     const p=v.clone().project(cam);
-    return{x:(p.x*.5+.5)*innerWidth,y:(-p.y*.5+.5)*innerHeight};
+    return{x:innerWidth-(p.x*.5+.5)*innerWidth,y:(-p.y*.5+.5)*innerHeight};
   },
 
   canvasToLocal(x,y){
