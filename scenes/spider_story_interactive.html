@@ -22,7 +22,7 @@ canvas.a-canvas{background:transparent!important}.off{display:none!important}
   font:700 15px/1.35 system-ui,sans-serif;box-shadow:0 6px 22px rgba(0,0,0,.16)
 }
 
-#fightBtn,#leaveBtn{
+#fightBtn,#leaveBtn,#retryBtn{
   position:fixed;left:50%;transform:translateX(-50%);z-index:85;display:none;border:0;border-radius:999px;
   padding:12px 19px;font:900 14px/1 system-ui;box-shadow:0 6px 20px rgba(0,0,0,.20);cursor:pointer
 }
@@ -33,6 +33,13 @@ canvas.a-canvas{background:transparent!important}.off{display:none!important}
 #leaveBtn{
   bottom:max(76px,calc(env(safe-area-inset-bottom) + 58px));
   background:rgba(255,248,220,.98);color:#56713b;border:2px solid #6f8e42
+}
+
+
+#retryBtn{
+  position:fixed;z-index:85;display:none;border:2px solid #6f8e42;border-radius:999px;
+  padding:12px 19px;background:rgba(255,248,220,.98);color:#56713b;
+  font:900 14px/1 system-ui;box-shadow:0 6px 20px rgba(0,0,0,.20);cursor:pointer
 }
 
 #progress{
@@ -88,6 +95,7 @@ window.SpiderMode={
 
     document.getElementById("fightBtn").style.display="block";
     document.getElementById("leaveBtn").style.display="none";
+    document.getElementById("retryBtn").style.display="none";
     document.getElementById("handBtn").style.display="none";
     document.getElementById("handStatus").style.display="none";
     document.getElementById("progress").style.display="none";
@@ -124,15 +132,55 @@ window.SpiderMode={
     document.getElementById("handStatus").style.display="none";
     document.getElementById("progress").style.display="none";
     document.getElementById("leaveBtn").style.display="block";
+    document.getElementById("retryBtn").style.display="block";
+    this.positionCompleteButtons();
 
     this.setHint("🎉 任务完成！4 只小蜘蛛都清理掉了！");
+  },
+
+  positionCompleteButtons(){
+    const retry=document.getElementById("retryBtn");
+    const leave=document.getElementById("leaveBtn");
+    if(!retry||!leave)return;
+
+    // Put the pair centered as one group: retry on the left, leave on the right.
+    retry.style.left="calc(50% - 72px)";
+    retry.style.bottom="max(76px,calc(env(safe-area-inset-bottom) + 58px))";
+    retry.style.transform="translateX(-50%)";
+
+    leave.style.left="calc(50% + 72px)";
+    leave.style.bottom="max(76px,calc(env(safe-area-inset-bottom) + 58px))";
+    leave.style.transform="translateX(-50%)";
+  },
+
+  retry(){
+    if(this.mode!=="complete")return;
+
+    window.SpiderHandMode?.sleep();
+    this.mode="game";
+
+    document.getElementById("retryBtn").style.display="none";
+    document.getElementById("leaveBtn").style.display="none";
+    document.getElementById("handBtn").style.display="block";
+    document.getElementById("handBtn").textContent="✨ INTERACT · OFF";
+    document.getElementById("handStatus").style.display="none";
+    document.getElementById("progress").style.display="block";
+
+    const comp=document.getElementById("spiderDisplay")?.components?.["spider-canvas"];
+    comp?.setMode("game");
+    comp?.resetGame();
+
+    const ctrl=document.querySelector("[spider-controller]")?.components?.["spider-controller"];
+    if(ctrl)ctrl.dragState=null;
+
+    this.setHint("再来一次！抓住 4 只小蜘蛛，把它们放进垃圾筐！🗑️");
   },
 
   leave(){
     window.SpiderHandMode?.sleep();
     this.mode="waiting";
 
-    ["fightBtn","leaveBtn","handBtn","handStatus","progress"].forEach(id=>{
+    ["fightBtn","leaveBtn","retryBtn","handBtn","handStatus","progress"].forEach(id=>{
       const el=document.getElementById(id);if(el)el.style.display="none";
     });
 
@@ -815,6 +863,9 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.getElementById("fightBtn")
     ?.addEventListener("click",()=>window.SpiderMode.enterGame());
 
+  document.getElementById("retryBtn")
+    ?.addEventListener("click",()=>window.SpiderMode.retry());
+
   document.getElementById("leaveBtn")
     ?.addEventListener("click",()=>window.SpiderMode.leave());
 
@@ -869,6 +920,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 <div id="progress">🕷️ 0 / 4</div>
 
 <button id="fightBtn" type="button">⚔️ 消灭它</button>
+<button id="retryBtn" type="button">↻ 再试一次</button>
 <button id="leaveBtn" type="button">✅ 离开</button>
 
 <div id="hint">请把镜头对准 SPIDER 卡</div>
