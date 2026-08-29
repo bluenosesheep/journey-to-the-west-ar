@@ -274,12 +274,21 @@ AFRAME.registerComponent("spider-canvas",{
 
   resetGame(){
     const specs=[
-      {x:175,y:175,vx:38,vy:26,phase:.2,scale:.13},
-      {x:590,y:165,vx:-34,vy:30,phase:1.4,scale:.12},
-      {x:215,y:330,vx:42,vy:-27,phase:2.7,scale:.13},
-      {x:555,y:320,vx:-39,vy:-24,phase:4.1,scale:.12}
+      {x:110,y:105,vx:44,vy:31,phase:.2,scale:.13},
+      {x:655,y:115,vx:-41,vy:34,phase:1.4,scale:.12},
+      {x:135,y:330,vx:47,vy:-35,phase:2.7,scale:.13},
+      {x:635,y:305,vx:-45,vy:-30,phase:4.1,scale:.12}
     ];
-    this.spiders=specs.map((s,i)=>({...s,id:i,caught:false,dragging:false}));
+    this.spiders=specs.map((s,i)=>({
+      ...s,
+      id:i,
+      caught:false,
+      dragging:false,
+      wanderPhase:Math.random()*Math.PI*2,
+      wanderSpeed:.55+Math.random()*.75,
+      turnBias:(Math.random()-.5)*.9,
+      nextTurn:performance.now()+700+Math.random()*1400
+    }));
     this.lastGameTime=performance.now();
     this.updateProgress();
     this._last=0;
@@ -317,7 +326,7 @@ AFRAME.registerComponent("spider-canvas",{
     const binRatio=this.img.bin?.naturalHeight/Math.max(1,this.img.bin?.naturalWidth||1);
     const binH=binW*binRatio;
     const binCX=w*.50;
-    const binCY=h*.79;
+    const binCY=h*.84;
     const frontRimY=binCY-binH*.12;
 
     const withinMouthX =
@@ -443,7 +452,7 @@ AFRAME.registerComponent("spider-canvas",{
     const binRatio=this.img.bin?.naturalHeight/Math.max(1,this.img.bin?.naturalWidth||1);
     const binH=binW*binRatio;
     const binCX=w*.50;
-    const binCY=h*.79;
+    const binCY=h*.84;
 
     // Approximate visible mouth / front-rim positions in canvas space.
     const mouthY=binCY-binH*.34;
@@ -455,13 +464,39 @@ AFRAME.registerComponent("spider-canvas",{
       if(s.caught)continue;
 
       if(!s.dragging){
-        s.x+=s.vx*dt;
-        s.y+=s.vy*dt;
+        // Organic roaming: mild sinusoidal drift plus occasional random turns.
+        const nowMs=now;
+        if(nowMs>=s.nextTurn){
+          const speed=Math.max(34,Math.min(58,Math.hypot(s.vx,s.vy)));
+          const angle=Math.atan2(s.vy,s.vx)+(Math.random()-.5)*1.25+s.turnBias*.18;
+          s.vx=Math.cos(angle)*speed;
+          s.vy=Math.sin(angle)*speed;
+          s.nextTurn=nowMs+650+Math.random()*1700;
+          s.turnBias=(Math.random()-.5)*.9;
+        }
 
-        if(s.x<85){s.x=85;s.vx=Math.abs(s.vx)}
-        if(s.x>w-85){s.x=w-85;s.vx=-Math.abs(s.vx)}
-        if(s.y<80){s.y=80;s.vy=Math.abs(s.vy)}
-        if(s.y>h-155){s.y=h-155;s.vy=-Math.abs(s.vy)}
+        const drift=Math.sin(nowMs*.001*s.wanderSpeed+s.wanderPhase);
+        s.x+=(s.vx+drift*5.5)*dt;
+        s.y+=(s.vy+Math.cos(nowMs*.0011*s.wanderSpeed+s.wanderPhase)*4.5)*dt;
+
+        // Use almost the full canvas so they don't bunch up.
+        if(s.x<55){s.x=55;s.vx=Math.abs(s.vx)*(0.92+Math.random()*.18)}
+        if(s.x>w-55){s.x=w-55;s.vx=-Math.abs(s.vx)*(0.92+Math.random()*.18)}
+        if(s.y<45){s.y=45;s.vy=Math.abs(s.vy)*(0.92+Math.random()*.18)}
+        if(s.y>h-95){s.y=h-95;s.vy=-Math.abs(s.vy)*(0.92+Math.random()*.18)}
+
+        // Keep a soft no-roam zone around the bin so play starts with some distance.
+        const bx=w*.50, by=h*.79;
+        const dx=s.x-bx, dy=s.y-by;
+        const d=Math.hypot(dx,dy);
+        const avoidR=155;
+        if(d<avoidR && d>0.001){
+          const push=(avoidR-d)/avoidR;
+          s.x+=(dx/d)*42*push*dt;
+          s.y+=(dy/d)*42*push*dt;
+          s.vx+=(dx/d)*18*push;
+          s.vy+=(dy/d)*18*push;
+        }
       }
 
       const wiggle=Math.sin(now*.006+s.phase);
