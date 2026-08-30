@@ -8,24 +8,35 @@
  *  - mounting A-Frame worlds before controllers
  *  - delaying target/controller creation one frame so scene components are ready
  */
+const DIY_ADAPTER_SCRIPT_URL=(()=>{
+  const scripts=[...document.scripts];
+  const own=scripts.find(el=>/\/js\/diy-scene-adapter\.js(?:\?|$)/.test(el.src));
+  return own?.src || document.currentScript?.src || window.location.href;
+})();
+
+const DIY_PROJECT_ROOT=new URL("../",DIY_ADAPTER_SCRIPT_URL);
+
+const diyProjectUrl=(relativePath)=>
+  new URL(relativePath.replace(/^\.\//,""),DIY_PROJECT_ROOT).href;
+
 window.DIYSceneRegistry={
   building:{
     targetIndex:0,
-    assetBase:"./assets/city/"
+    assetBase:diyProjectUrl("assets/city/")
   },
   park:{
     targetIndex:1,
-    assetBase:"./assets/park/",
-    storyImage:"./assets/city/park_scene.png"
+    assetBase:diyProjectUrl("assets/park/"),
+    storyImage:diyProjectUrl("assets/city/park_scene.png")
   },
   market:{
     targetIndex:2,
-    assetBase:"./assets/market/",
-    storyImage:"./assets/city/market_scene.png"
+    assetBase:diyProjectUrl("assets/market/"),
+    storyImage:diyProjectUrl("assets/city/market_scene.png")
   },
   spider:{
     targetIndex:7,
-    assetBase:"./assets/spider/"
+    assetBase:diyProjectUrl("assets/spider/")
   }
 };
 
@@ -196,14 +207,15 @@ window.DIYSceneAdapter={
     const cityWorld=document.createElement("a-entity");
     cityWorld.id="cityWorld";
     cityWorld.setAttribute("visible","false");
+    const cityAssets=window.DIYSceneRegistry.building.assetBase;
     cityWorld.innerHTML=`
-      <a-image id="cityBuilding" src="./assets/city/building_scene.png"
+      <a-image id="cityBuilding" src="${cityAssets}building_scene.png"
         width="1.25" height="1.88" position="0 0.34 0.02"
         material="transparent:true;opacity:1;depthWrite:false"></a-image>
-      <a-image id="cityPark" src="./assets/city/park_scene.png"
+      <a-image id="cityPark" src="${cityAssets}park_scene.png"
         width="1.55" height="1.04" position="-0.72 -0.42 0.03" scale=".78 .78 .78"
         material="transparent:true;opacity:1;depthWrite:false"></a-image>
-      <a-image id="cityMarket" src="./assets/city/market_scene.png"
+      <a-image id="cityMarket" src="${cityAssets}market_scene.png"
         width="1.55" height="1.04" position="0.72 -0.42 0.03" scale=".78 .78 .78"
         material="transparent:true;opacity:1;depthWrite:false"></a-image>
     `;
