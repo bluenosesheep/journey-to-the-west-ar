@@ -9,6 +9,10 @@
  *  - delaying target/controller creation one frame so scene components are ready
  */
 window.DIYSceneRegistry={
+  building:{
+    targetIndex:0,
+    assetBase:"./assets/city/"
+  },
   park:{
     targetIndex:1,
     assetBase:"./assets/park/",
@@ -39,6 +43,29 @@ window.DIYSceneAdapter={
 
   mountSceneUI(){
     const cfg=window.DIYSceneRegistry;
+
+    // BUILDING stable module owns its miniature City and far/near controls.
+    // Use the existing DIY shared hint/camera controls.
+    window.BuildingSceneModule?.configure?.({
+      assetBase:cfg.building.assetBase,
+      ids:{
+        mini:"storyCityMini",
+        switch:"buildingViewSwitch",
+        far:"buildingFarBtn",
+        near:"buildingNearBtn",
+        hint:"hint"
+      }
+    });
+    window.BuildingSceneModule?.mountUI?.({
+      assetBase:cfg.building.assetBase,
+      ids:{
+        mini:"storyCityMini",
+        switch:"buildingViewSwitch",
+        far:"buildingFarBtn",
+        near:"buildingNearBtn",
+        hint:"hint"
+      }
+    });
 
     // PARK stable module: configure paths + let it create only its scene UI.
     window.ParkSceneModule?.configure?.({
@@ -136,6 +163,8 @@ window.DIYSceneAdapter={
   },
 
   bindSceneButtons(){
+    window.BuildingSceneModule?.bindUI?.("[diy-building-target]");
+
     const bindOnce=(id,key,fn)=>{
       const el=document.getElementById(id);
       if(!el||el.dataset[key])return;
@@ -164,6 +193,22 @@ window.DIYSceneAdapter={
   },
 
   createWorlds(scene){
+    const cityWorld=document.createElement("a-entity");
+    cityWorld.id="cityWorld";
+    cityWorld.setAttribute("visible","false");
+    cityWorld.innerHTML=`
+      <a-image id="cityBuilding" src="./assets/city/building_scene.png"
+        width="1.25" height="1.88" position="0 0.34 0.02"
+        material="transparent:true;opacity:1;depthWrite:false"></a-image>
+      <a-image id="cityPark" src="./assets/city/park_scene.png"
+        width="1.55" height="1.04" position="-0.72 -0.42 0.03" scale=".78 .78 .78"
+        material="transparent:true;opacity:1;depthWrite:false"></a-image>
+      <a-image id="cityMarket" src="./assets/city/market_scene.png"
+        width="1.55" height="1.04" position="0.72 -0.42 0.03" scale=".78 .78 .78"
+        material="transparent:true;opacity:1;depthWrite:false"></a-image>
+    `;
+    scene.appendChild(cityWorld);
+
     const parkWorld=document.createElement("a-entity");
     parkWorld.id="parkWorld";
     parkWorld.setAttribute("visible","false");
@@ -234,6 +279,13 @@ window.DIYSceneAdapter={
 
   createTargets(scene){
     const cfg=window.DIYSceneRegistry;
+
+    const buildingTarget=document.createElement("a-entity");
+    buildingTarget.setAttribute("mindar-image-target",`targetIndex:${cfg.building.targetIndex}`);
+    buildingTarget.setAttribute("diy-building-target","");
+    buildingTarget.setAttribute("standalone-city","");
+    buildingTarget.setAttribute("diy-scene-trigger","kind:building");
+    scene.appendChild(buildingTarget);
 
     const parkTarget=document.createElement("a-entity");
     parkTarget.setAttribute("mindar-image-target",`targetIndex:${cfg.park.targetIndex}`);

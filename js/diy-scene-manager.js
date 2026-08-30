@@ -124,43 +124,18 @@ window.DIYSceneManager={
     const sw=document.getElementById("buildingViewSwitch");
     if(sw)sw.style.display="flex";
 
-    this.setBuildingFar();
+    const c=document.querySelector("[diy-building-target]")?.components?.["standalone-city"];
+    c?.enterFar();
   },
 
   setBuildingFar(){
     if(this.active!=="building")return;
-
-    const mini=document.getElementById("storyCityMini");
-    if(mini){
-      mini.hidden=false;
-      mini.style.display="block";
-      mini.style.opacity="";
-      mini.classList.add("show");
-      mini.classList.remove("near");
-    }
-
-    document.getElementById("buildingFarBtn")?.classList.add("active");
-    document.getElementById("buildingNearBtn")?.classList.remove("active");
-
-    this.setHint("CITY · 🌆 远景 · 用玩偶讲故事");
+    document.querySelector("[diy-building-target]")?.components?.["standalone-city"]?.enterFar();
   },
 
   setBuildingNear(){
     if(this.active!=="building")return;
-
-    const mini=document.getElementById("storyCityMini");
-    if(mini){
-      mini.hidden=false;
-      mini.style.display="block";
-      mini.style.opacity="";
-      mini.classList.add("show");
-      requestAnimationFrame(()=>mini.classList.add("near"));
-    }
-
-    document.getElementById("buildingFarBtn")?.classList.remove("active");
-    document.getElementById("buildingNearBtn")?.classList.add("active");
-
-    this.setHint("CITY · 🔎 近景 · 城市来到眼前");
+    document.querySelector("[diy-building-target]")?.components?.["standalone-city"]?.enterNear();
   },
 
   leaveCurrent(){

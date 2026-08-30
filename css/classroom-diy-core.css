@@ -98,17 +98,6 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent
   padding:9px 13px;background:rgba(255,255,255,.94);color:#4f633d;font:800 13px/1 system-ui;
   box-shadow:0 5px 18px rgba(0,0,0,.14);cursor:pointer
 }
-#buildingViewSwitch{
-  position:fixed;right:18px;top:68px;z-index:130;display:none;gap:7px;padding:6px;
-  border-radius:999px;background:rgba(255,255,255,.90);box-shadow:0 5px 18px rgba(0,0,0,.16)
-}
-#buildingViewSwitch button{
-  border:0;border-radius:999px;padding:9px 13px;background:transparent;color:#555;
-  font:800 12px/1 system-ui;cursor:pointer
-}
-#buildingViewSwitch button.active{
-  background:rgba(255,240,180,.96);color:#4e6537
-}
 #hint{
   position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);
   z-index:120;max-width:min(88vw,760px);padding:11px 17px;border-radius:999px;
@@ -127,29 +116,6 @@ body.diy-waiting #handCursor,
 body.diy-building #handBtn,
 body.diy-building #handStatus,
 body.diy-building #handCursor{display:none!important}
-
-/* Building is the exact later-City STORY idea: a fixed small city in the upper-left. */
-#storyCityMini{
-  position:fixed;left:5vw;top:10vh;width:min(27vw,330px);height:min(34vh,280px);
-  z-index:44;pointer-events:none;display:none;opacity:0;transform:scale(.86);
-  transform-origin:left top;
-  transition:left .65s ease,top .65s ease,width .65s ease,height .65s ease,opacity .3s ease,transform .65s ease
-}
-#storyCityMini.show{display:block;opacity:1;transform:scale(1)}
-#storyCityMini.near{
-  left:50%;
-  top:50%;
-  width:min(82vw,900px);
-  height:min(82vh,700px);
-  transform:translate(-50%,-50%) scale(1);
-  transform-origin:center center;
-}
-#storyCityMini img{
-  position:absolute;object-fit:contain;filter:drop-shadow(0 5px 9px rgba(0,0,0,.18))
-}
-#storyCityMini .mini-building{width:42%;height:72%;left:29%;top:0}
-#storyCityMini .mini-park{width:48%;height:40%;left:0;bottom:0}
-#storyCityMini .mini-market{width:48%;height:40%;right:0;bottom:0}
 
 /* Scene layers start fully dormant. */
 #parkStoryLayer,#marketStoryLayer,#fixParkBtn,#doneParkBtn,#shopBtn,#checkoutBtn{

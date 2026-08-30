@@ -12,6 +12,7 @@
 <script src="./js/diy-hand-calibration.js"></script>
 <script src="./js/diy-camera-orientation.js"></script>
 
+<script src="./scenes/building/building-scene.js"></script>
 <script src="./scenes/park/park-scene.js"></script>
 <script src="./scenes/market/market-scene.js"></script>
 <script src="./scenes/spider/spider-scene.js"></script>
@@ -20,6 +21,7 @@
 <script src="./js/diy-scene-manager.js"></script>
 
 <link rel="stylesheet" href="./css/classroom-diy-core.css">
+<link rel="stylesheet" href="./scenes/building/building-style.css">
 <link rel="stylesheet" href="./scenes/park/park-style.css">
 <link rel="stylesheet" href="./scenes/market/market-style.css">
 <link rel="stylesheet" href="./scenes/spider/spider-style.css">
@@ -42,11 +44,6 @@
 <button id="homeBtn" type="button">← HOME</button>
 <div id="modeLabel">✨ </div>
 <button id="leaveSceneBtn" type="button">← 离开场景</button>
-<div id="buildingViewSwitch">
-  <button id="buildingFarBtn" type="button" class="active">🌆 远景</button>
-  <button id="buildingNearBtn" type="button">🔎 近景</button>
-</div>
-
 <div id="cameraOrientationControl">
   <span>📷 CAMERA</span>
   <select id="cameraOrientationSelect" aria-label="Camera orientation">
@@ -61,13 +58,6 @@
 
 <div id="hint">✨ 扫描 BUILDING / PARK / MARKET / SPIDER 开始一个场景，也可以随时扫描 CLOUD / FIRE / RAIN / GROW</div>
 
-<!-- BUILDING: story-only miniature -->
-<div id="storyCityMini" aria-hidden="true">
-  <img class="mini-building" src="./assets/city/building_scene.png" alt="">
-  <img class="mini-park" src="./assets/city/park_scene.png" alt="">
-  <img class="mini-market" src="./assets/city/market_scene.png" alt="">
-</div>
-
 <a-scene
   diy-scene-adapter
   mindar-image="imageTargetSrc: ./targets/citywithmagic.mind; autoStart: true; maxTrack: 1;"
@@ -79,9 +69,7 @@
   <a-camera position="0 0 0" look-controls="enabled:false"
     cursor="fuse:false; rayOrigin:mouse"
     raycaster="objects:.clickable; far:10000"></a-camera>
-
-  <!-- Scene targets -->
-  <a-entity mindar-image-target="targetIndex:0" diy-scene-trigger="kind:building"></a-entity>
+  <!-- Scene targets are mounted by diy-scene-adapter.js -->
 <!-- Magic targets remain exactly Magic Only's mapping -->
   <a-entity mindar-image-target="targetIndex:3" magic-target="kind:cloud"></a-entity>
   <a-entity mindar-image-target="targetIndex:4" magic-target="kind:fire"></a-entity>
