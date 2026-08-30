@@ -1509,12 +1509,11 @@ window.SpiderMode={
   },
 
   leave(){
+    // Spider is part of the unified DIY scene manager. Leaving Spider must
+    // reset the shared scene state too; otherwise the shared INTERACT button
+    // can remain hidden when the next PARK / MARKET scene starts.
     window.StandaloneSpiderHandMode?.sleep();
     this.mode="waiting";
-
-    ["spiderFightBtn","spiderLeaveBtn","spiderRetryBtn","handBtn","handStatus","spiderProgress"].forEach(id=>{
-      const el=document.getElementById(id);if(el)el.style.display="none";
-    });
 
     const comp=document.getElementById("spiderDisplay")?.components?.["spider-canvas"];
     comp?.setMode("waiting");
@@ -1526,7 +1525,7 @@ window.SpiderMode={
       ctrl.hideWorld();
     }
 
-    this.setHint("请把镜头对准 SPIDER 卡");
+    window.DIYSceneManager?.leaveCurrent();
   }
 };
 
@@ -2282,6 +2281,26 @@ window.DIYSceneManager={
     if(window.SpiderMode)window.SpiderMode.mode="waiting";
   },
 
+  resetSharedHandUI(kind){
+    const btn=document.getElementById("handBtn");
+    const status=document.getElementById("handStatus");
+    const cursor=document.getElementById("handCursor");
+
+    // Always start a newly activated scene with hand inference OFF.
+    if(status){
+      status.style.display="none";
+      status.textContent="手势：已关闭";
+    }
+    if(cursor)cursor.style.display="none";
+
+    if(btn){
+      btn.textContent="✨ INTERACT · OFF";
+      // PARK/MARKET need the shared switch once they enter interactive mode.
+      // Their story CSS can still hide it with !important until that moment.
+      btn.style.display=(kind==="park"||kind==="market")?"block":"none";
+    }
+  },
+
   hideAll(){
     this.stopHands();
     this.hideBuilding();
@@ -2297,6 +2316,7 @@ window.DIYSceneManager={
     this.active=kind;
     document.body.classList.remove("diy-waiting","diy-building","diy-park","diy-market","diy-spider");
     document.body.classList.add("diy-"+kind);
+    this.resetSharedHandUI(kind);
 
     const leave=document.getElementById("leaveSceneBtn");
     if(leave){
@@ -2358,6 +2378,7 @@ window.DIYSceneManager={
     const leave=document.getElementById("leaveSceneBtn");
     if(leave)leave.style.display="none";
 
+    this.resetSharedHandUI(null);
     this.setHint("✨ 扫描 BUILDING / PARK / MARKET / SPIDER 开始一个场景，也可以随时扫描 CLOUD / FIRE / RAIN / GROW");
   },
 
