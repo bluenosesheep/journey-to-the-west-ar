@@ -1,0 +1,168 @@
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}
+video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}
+a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}
+canvas.a-canvas{background:transparent!important}
+canvas.a-canvas{transform:scaleX(-1)!important;transform-origin:50% 50%!important}.off{display:none}
+#hint{
+  position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);z-index:60;max-width:88vw;padding:10px 14px;
+  border-radius:999px;background:rgba(255,255,255,.92);color:#222;
+  font:700 14px/1.4 system-ui,sans-serif;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.16)
+}
+#dragLayer{position:fixed;inset:0;z-index:50;pointer-events:none}
+.drag-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}
+#dragReset{
+  z-index:58!important;border:2px solid #6f8e42!important;border-radius:999px!important;
+  background:rgba(255,248,220,.97)!important;color:#56713b!important;
+  font:700 14px/1 system-ui,sans-serif!important;box-shadow:0 5px 16px rgba(0,0,0,.18)!important;
+  cursor:pointer!important;pointer-events:auto!important;padding:0 12px!important
+}
+#handBtn{
+  position:fixed;right:18px;top:18px;z-index:90;border:0;border-radius:999px;padding:10px 14px;
+  background:rgba(255,248,220,.96);color:#56713b;font:800 13px/1 system-ui;box-shadow:0 5px 18px rgba(0,0,0,.16);cursor:pointer
+}
+#handCursor{
+  position:fixed;z-index:100;width:68px;height:68px;margin:-34px 0 0 -34px;border-radius:50%;
+  display:none;place-items:center;pointer-events:none;font-size:34px;background:rgba(255,255,255,.90);
+  box-shadow:0 6px 26px rgba(0,0,0,.26)
+}
+#handCursor.pinching{width:80px;height:80px;margin:-40px 0 0 -40px;background:rgba(255,238,165,.96)}
+#handStatus{
+  position:fixed;right:18px;top:62px;z-index:90;display:none;padding:8px 12px;border-radius:999px;
+  background:rgba(255,255,255,.90);color:#333;font:700 12px/1.2 system-ui;box-shadow:0 4px 16px rgba(0,0,0,.16)
+}
+#cameraOrientationControl{
+  position:fixed;left:18px;top:18px;z-index:90;display:flex;align-items:center;gap:7px;
+  padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.90);color:#444;
+  box-shadow:0 5px 18px rgba(0,0,0,.16);font:800 11px/1 system-ui
+}
+#cameraOrientationControl select{
+  border:0;outline:0;border-radius:999px;padding:5px 8px;background:rgba(255,240,180,.92);
+  color:#333;font:800 12px system-ui;cursor:pointer
+}
+.mindar-ui-scanning,
+.mindar-ui-scanning .scanning,
+.mindar-ui-scanning .scanning-line,
+.mindar-ui-scanning .inner,
+.mindar-ui-scanning .scanline{
+  display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important
+}
+
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}
+video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important}
+a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}
+canvas.a-canvas{background:transparent!important}.off{display:none}
+#hint{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;max-width:88vw;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.92);color:#222;font:14px/1.4 system-ui;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.16)}
+#holdHitLayer{position:fixed;inset:0;z-index:40;pointer-events:none}
+.hold-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+
+#cameraOrientationControl{position:fixed;left:18px;top:18px;z-index:90;display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.90);color:#444;box-shadow:0 5px 18px rgba(0,0,0,.16);font:800 11px/1 system-ui}
+#cameraOrientationControl select{border:0;outline:0;border-radius:999px;padding:5px 8px;background:rgba(255,240,180,.92);color:#333;font:800 12px system-ui}
+.mindar-ui-scanning,.mindar-ui-scanning .scanning,.mindar-ui-scanning .scanning-line,.mindar-ui-scanning .inner,.mindar-ui-scanning .scanline{display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+#holdReset{z-index:58!important;border:2px solid #6f8e42!important;border-radius:999px!important;background:rgba(255,248,220,.97)!important;color:#56713b!important;font:700 14px/1 system-ui!important;box-shadow:0 5px 16px rgba(0,0,0,.18)!important}
+
+#handBtn{
+  position:fixed;right:18px;top:18px;z-index:90;border:0;border-radius:999px;padding:10px 14px;
+  background:rgba(255,248,220,.96);color:#56713b;font:800 13px/1 system-ui;
+  box-shadow:0 5px 18px rgba(0,0,0,.16);cursor:pointer
+}
+#handCursor{
+  position:fixed;z-index:100;width:68px;height:68px;margin:-34px 0 0 -34px;border-radius:50%;
+  display:none;place-items:center;pointer-events:none;font-size:34px;background:rgba(255,255,255,.90);
+  box-shadow:0 6px 26px rgba(0,0,0,.26)
+}
+#handCursor.pinching{
+  width:80px;height:80px;margin:-40px 0 0 -40px;background:rgba(255,238,165,.96)
+}
+#handCursor.gesture-locked{opacity:.72;background:rgba(235,245,255,.92)}
+#handStatus{
+  position:fixed;right:18px;top:62px;z-index:90;display:none;padding:8px 12px;border-radius:999px;
+  background:rgba(255,255,255,.90);color:#333;font:700 12px/1.2 system-ui;
+  box-shadow:0 4px 16px rgba(0,0,0,.16)
+}
+
+
+/* ---------- DIY unified shell ---------- */
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}
+#homeBtn{
+  position:fixed;left:18px;top:18px;z-index:130;border:0;border-radius:999px;
+  padding:10px 15px;background:rgba(255,255,255,.94);color:#26332a;font-weight:800;
+  box-shadow:0 5px 18px rgba(0,0,0,.16);cursor:pointer
+}
+#modeLabel{
+  position:fixed;right:18px;top:18px;z-index:125;padding:9px 14px;border-radius:999px;
+  background:rgba(255,255,255,.90);font-weight:800;box-shadow:0 5px 18px rgba(0,0,0,.12)
+}
+#leaveSceneBtn{
+  position:fixed;left:18px;top:68px;z-index:130;display:none;border:0;border-radius:999px;
+  padding:9px 13px;background:rgba(255,255,255,.94);color:#4f633d;font:800 13px/1 system-ui;
+  box-shadow:0 5px 18px rgba(0,0,0,.14);cursor:pointer
+}
+#buildingViewSwitch{
+  position:fixed;right:18px;top:68px;z-index:130;display:none;gap:7px;padding:6px;
+  border-radius:999px;background:rgba(255,255,255,.90);box-shadow:0 5px 18px rgba(0,0,0,.16)
+}
+#buildingViewSwitch button{
+  border:0;border-radius:999px;padding:9px 13px;background:transparent;color:#555;
+  font:800 12px/1 system-ui;cursor:pointer
+}
+#buildingViewSwitch button.active{
+  background:rgba(255,240,180,.96);color:#4e6537
+}
+#hint{
+  position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);
+  z-index:120;max-width:min(88vw,760px);padding:11px 17px;border-radius:999px;
+  background:rgba(255,255,255,.94);color:#27322b;text-align:center;
+  font:700 15px/1.35 system-ui,sans-serif;box-shadow:0 6px 22px rgba(0,0,0,.16)
+}
+#cameraOrientationControl{z-index:125!important}
+#handBtn{z-index:125!important}
+#handStatus{z-index:125!important}
+#handCursor{z-index:140!important}
+
+/* Waiting / Building never runs hand inference. */
+body.diy-waiting #handBtn,
+body.diy-waiting #handStatus,
+body.diy-waiting #handCursor,
+body.diy-building #handBtn,
+body.diy-building #handStatus,
+body.diy-building #handCursor{display:none!important}
+
+/* Building is the exact later-City STORY idea: a fixed small city in the upper-left. */
+#storyCityMini{
+  position:fixed;left:5vw;top:10vh;width:min(27vw,330px);height:min(34vh,280px);
+  z-index:44;pointer-events:none;display:none;opacity:0;transform:scale(.86);
+  transform-origin:left top;
+  transition:left .65s ease,top .65s ease,width .65s ease,height .65s ease,opacity .3s ease,transform .65s ease
+}
+#storyCityMini.show{display:block;opacity:1;transform:scale(1)}
+#storyCityMini.near{
+  left:50%;
+  top:50%;
+  width:min(82vw,900px);
+  height:min(82vh,700px);
+  transform:translate(-50%,-50%) scale(1);
+  transform-origin:center center;
+}
+#storyCityMini img{
+  position:absolute;object-fit:contain;filter:drop-shadow(0 5px 9px rgba(0,0,0,.18))
+}
+#storyCityMini .mini-building{width:42%;height:72%;left:29%;top:0}
+#storyCityMini .mini-park{width:48%;height:40%;left:0;bottom:0}
+#storyCityMini .mini-market{width:48%;height:40%;right:0;bottom:0}
+
+/* Scene layers start fully dormant. */
+#parkStoryLayer,#marketStoryLayer,#fixParkBtn,#doneParkBtn,#shopBtn,#checkoutBtn{
+  display:none
+}
+/* Do NOT globally hide #dragLayer / #holdHitLayer.
+   Their standalone scene CSS already hides them in story mode and reveals them in interaction mode. */
+
+/* Hide MindAR scanner; recognition remains active. */
+.mindar-ui-scanning,
+.mindar-ui-scanning .scanning,
+.mindar-ui-scanning .scanning-line,
+.mindar-ui-scanning .inner,
+.mindar-ui-scanning .scanline{
+  display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important
+}

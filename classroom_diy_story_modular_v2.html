@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Journey to the West AR · DIY Story</title>
+<!-- PERFORMANCE TUNING: Hand 15 FPS, 3s auto-sleep, Spider/Park active loops ~24 FPS -->
+
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+<script src="./js/input-router.js"></script>
+<script src="./js/diy-hand-calibration.js"></script>
+<script src="./js/diy-camera-orientation.js"></script>
+
+<script src="./scenes/park/park-scene.js"></script>
+<script src="./scenes/market/market-scene.js"></script>
+<script src="./scenes/spider/spider-scene.js"></script>
+
+<script src="./js/diy-scene-adapter.js"></script>
+<script src="./js/diy-scene-manager.js"></script>
+
+<link rel="stylesheet" href="./css/classroom-diy-core.css">
+<link rel="stylesheet" href="./scenes/park/park-style.css">
+<link rel="stylesheet" href="./scenes/market/market-style.css">
+<link rel="stylesheet" href="./scenes/spider/spider-style.css">
+
+
+
+
+
+
+
+
+
+
+
+<script src="./js/magic-only-manager.js?v=1"></script>
+<script type="module" src="./js/hand-tracking-performance.js"></script>
+</head>
+
+<body class="diy-waiting">
+<button id="homeBtn" type="button">← HOME</button>
+<div id="modeLabel">✨ </div>
+<button id="leaveSceneBtn" type="button">← 离开场景</button>
+<div id="buildingViewSwitch">
+  <button id="buildingFarBtn" type="button" class="active">🌆 远景</button>
+  <button id="buildingNearBtn" type="button">🔎 近景</button>
+</div>
+
+<div id="cameraOrientationControl">
+  <span>📷 CAMERA</span>
+  <select id="cameraOrientationSelect" aria-label="Camera orientation">
+    <option value="0">0°</option><option value="90">90°</option>
+    <option value="180">180°</option><option value="270">270°</option>
+  </select>
+</div>
+
+<button id="handBtn" type="button">✨ INTERACT · OFF</button>
+<div id="handStatus">手势：已关闭</div>
+<div id="handCursor">✨</div>
+
+<div id="hint">✨ 扫描 BUILDING / PARK / MARKET / SPIDER 开始一个场景，也可以随时扫描 CLOUD / FIRE / RAIN / GROW</div>
+
+<!-- BUILDING: story-only miniature -->
+<div id="storyCityMini" aria-hidden="true">
+  <img class="mini-building" src="./assets/city/building_scene.png" alt="">
+  <img class="mini-park" src="./assets/city/park_scene.png" alt="">
+  <img class="mini-market" src="./assets/city/market_scene.png" alt="">
+</div>
+
+<a-scene
+  diy-scene-adapter
+  mindar-image="imageTargetSrc: ./targets/citywithmagic.mind; autoStart: true; maxTrack: 1;"
+  color-space="sRGB"
+  renderer="colorManagement:true;physicallyCorrectLights:true;alpha:true;antialias:true"
+  vr-mode-ui="enabled:false"
+  device-orientation-permission-ui="enabled:false">
+
+  <a-camera position="0 0 0" look-controls="enabled:false"
+    cursor="fuse:false; rayOrigin:mouse"
+    raycaster="objects:.clickable; far:10000"></a-camera>
+
+  <!-- Scene targets -->
+  <a-entity mindar-image-target="targetIndex:0" diy-scene-trigger="kind:building"></a-entity>
+<!-- Magic targets remain exactly Magic Only's mapping -->
+  <a-entity mindar-image-target="targetIndex:3" magic-target="kind:cloud"></a-entity>
+  <a-entity mindar-image-target="targetIndex:4" magic-target="kind:fire"></a-entity>
+  <a-entity mindar-image-target="targetIndex:5" magic-target="kind:rain"></a-entity>
+  <a-entity mindar-image-target="targetIndex:6" magic-target="kind:grow"></a-entity>
+</a-scene>
+
+</body>
+</html>
