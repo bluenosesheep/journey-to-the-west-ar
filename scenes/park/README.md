@@ -1,21 +1,14 @@
-# Park module v1
+# Park module v3
 
-Full Park flow extracted from the current stable DIY build.
+Standalone rule:
+- uses `../../targets/park.mind`
+- because park.mind contains only Park, targetIndex is `0`
+- target entity and parkWorld are declared directly in the standalone HTML
+- no dynamic creation of the MindAR target
 
-Standalone:
-- `park_interactive_standalone.html`
-- scans `../../targets/park.mind`
-- story view first
-- button: `一起整理公园吧`
-- interactive tree / flower / bench / fountain
-- Reset + `整理好啦`
-- mouse/touch and shared Hand Tracking
+Integrated rule (later):
+- uses `./targets/citywithmagic.mind`
+- Park targetIndex is `1`
+- same park-scene.js is reused
 
-Core:
-- `park-scene.js`
-- `park-style.css`
-
-Integrated later:
-- use the same `park-scene.js`
-- `targetIndex:1` with `citywithmagic.mind`
-- host supplies onActivate/onLeave callbacks
+This keeps standalone and integrated target mapping separate and predictable.
