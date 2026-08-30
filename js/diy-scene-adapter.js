@@ -84,6 +84,57 @@ window.DIYSceneAdapter={
     window.SpiderSceneModule?.bindUI?.();
   },
 
+  patchIntegratedSceneLayers(){
+    /*
+      DIYSceneManager.hidePark()/hideMarket() deliberately sets the WHOLE
+      interaction layer to display:none when leaving a scene.
+
+      The stable standalone scene modules only re-show their CHILD hit buttons
+      (showHits/showHoldHits), because standalone never hides the parent layer.
+      In the unified host this left the parent hidden:
+        Park   -> #dragLayer display:none
+        Market -> #holdHitLayer display:none
+
+      Result:
+        - Park child hit buttons said "block" but could not receive mouse events.
+        - Market child hit boxes had zero/invalid client rects, so hand picking
+          did not line up with peach/cabbage/egg.
+
+      Fix this only in the adapter. Stable scene files remain untouched.
+    */
+    if(window.StandaloneParkMode && !window.StandaloneParkMode.__diyLayerPatched){
+      const originalEnterFix=window.StandaloneParkMode.enterFix.bind(window.StandaloneParkMode);
+      window.StandaloneParkMode.enterFix=function(){
+        const layer=document.getElementById("dragLayer");
+        if(layer)layer.style.display="block";
+        const result=originalEnterFix();
+        requestAnimationFrame(()=>{
+          const c=document.querySelector("[park-drag-controller]")?.components?.["park-drag-controller"];
+          c?.showHits?.();
+          c?.updateHitPositions?.();
+        });
+        return result;
+      };
+      window.StandaloneParkMode.__diyLayerPatched=true;
+    }
+
+    if(window.StandaloneMarketMode && !window.StandaloneMarketMode.__diyLayerPatched){
+      const originalEnterShop=window.StandaloneMarketMode.enterShop.bind(window.StandaloneMarketMode);
+      window.StandaloneMarketMode.enterShop=function(){
+        const layer=document.getElementById("holdHitLayer");
+        if(layer)layer.style.display="block";
+        const result=originalEnterShop();
+        requestAnimationFrame(()=>{
+          const c=document.querySelector("[market-persist]")?.components?.["market-persist"];
+          c?.showHoldHits?.();
+          c?.updateHoldHits?.();
+        });
+        return result;
+      };
+      window.StandaloneMarketMode.__diyLayerPatched=true;
+    }
+  },
+
   bindSceneButtons(){
     const bindOnce=(id,key,fn)=>{
       const el=document.getElementById(id);
@@ -230,6 +281,7 @@ window.DIYSceneAdapter={
     this.mounted=true;
 
     this.mountSceneUI();
+    this.patchIntegratedSceneLayers();
     this.bindSceneButtons();
     this.createWorlds(scene);
 
