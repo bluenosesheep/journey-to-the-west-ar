@@ -61,9 +61,9 @@ window.DIYSceneAdapter={
       assetBase:cfg.building.assetBase,
       ids:{
         mini:"storyCityMini",
-        switch:"buildingViewSwitch",
-        far:"buildingFarBtn",
-        near:"buildingNearBtn",
+        switch:"modeSwitch",
+        far:"farBtn",
+        near:"nearBtn",
         hint:"hint"
       }
     });
@@ -71,9 +71,9 @@ window.DIYSceneAdapter={
       assetBase:cfg.building.assetBase,
       ids:{
         mini:"storyCityMini",
-        switch:"buildingViewSwitch",
-        far:"buildingFarBtn",
-        near:"buildingNearBtn",
+        switch:"modeSwitch",
+        far:"farBtn",
+        near:"nearBtn",
         hint:"hint"
       }
     });

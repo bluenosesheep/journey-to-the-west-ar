@@ -23,11 +23,11 @@ window.DIYSceneManager={
       mini.style.opacity="0";
     }
 
-    const sw=document.getElementById("buildingViewSwitch");
+    const sw=document.getElementById("modeSwitch");
     if(sw)sw.style.display="none";
 
-    document.getElementById("buildingFarBtn")?.classList.add("active");
-    document.getElementById("buildingNearBtn")?.classList.remove("active");
+    document.getElementById("farBtn")?.classList.add("active");
+    document.getElementById("nearBtn")?.classList.remove("active");
   },
 
   hidePark(){
@@ -121,7 +121,7 @@ window.DIYSceneManager={
   showBuilding(){
     this.activate("building");
 
-    const sw=document.getElementById("buildingViewSwitch");
+    const sw=document.getElementById("modeSwitch");
     if(sw)sw.style.display="flex";
 
     const c=document.querySelector("[diy-building-target]")?.components?.["standalone-city"];
@@ -177,10 +177,10 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.getElementById("leaveSceneBtn")
     ?.addEventListener("click",()=>window.DIYSceneManager.leaveCurrent());
 
-  document.getElementById("buildingFarBtn")
+  document.getElementById("farBtn")
     ?.addEventListener("click",()=>window.DIYSceneManager.setBuildingFar());
 
-  document.getElementById("buildingNearBtn")
+  document.getElementById("nearBtn")
     ?.addEventListener("click",()=>window.DIYSceneManager.setBuildingNear());
 
   // One shared INTERACT control; dispatch only to the active scene.
