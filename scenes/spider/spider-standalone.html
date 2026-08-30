@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Spider Scene · Standalone Module</title>
+
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+<script src="../../js/input-router.js"></script>
+
+<link rel="stylesheet" href="./spider-style.css">
+
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important;font-family:system-ui,sans-serif}
+video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important;transform:scaleX(-1);transform-origin:50% 50%}
+a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}
+canvas.a-canvas{background:transparent!important;transform:scaleX(-1)!important;transform-origin:50% 50%!important}
+.off{display:none!important}
+#hint{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:120;max-width:88vw;padding:11px 17px;border-radius:999px;background:rgba(255,255,255,.94);color:#27322b;text-align:center;font:700 15px/1.35 system-ui;box-shadow:0 6px 22px rgba(0,0,0,.16)}
+.mindar-ui-scanning,.mindar-ui-scanning .scanning,.mindar-ui-scanning .scanning-line,.mindar-ui-scanning .inner,.mindar-ui-scanning .scanline{display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+</style>
+
+<script src="./spider-scene.js"></script>
+<script type="module" src="../../js/hand-tracking-performance.js"></script>
+</head>
+
+<body>
+<div id="hint">请把镜头对准 SPIDER 卡</div>
+
+<a-scene
+  mindar-image="imageTargetSrc: ../../targets/spider.mind; autoStart: true; maxTrack: 1;"
+  color-space="sRGB"
+  renderer="colorManagement:true;physicallyCorrectLights:true;alpha:true;antialias:true"
+  vr-mode-ui="enabled:false"
+  device-orientation-permission-ui="enabled:false">
+  <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+</a-scene>
+
+<script>
+document.addEventListener("DOMContentLoaded",()=>{
+  SpiderSceneModule.install({
+    integrated:false,
+    targetIndex:0,
+    assetBase:"../../assets/spider/",
+    mirrorAR:true,
+    mirrorHand:true,
+    handFps:15,
+    sleepMs:3000
+  });
+});
+</script>
+</body>
+</html>
