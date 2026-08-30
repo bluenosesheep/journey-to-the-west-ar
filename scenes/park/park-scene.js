@@ -1,12 +1,66 @@
+
 /*
- * PARK MODULE v4
- * Complete Park logic extracted from the current stable DIY build.
- * This file intentionally keeps the tested Park components unchanged:
- * - StandaloneParkMode
- * - StandaloneHandMode
- * - park-canvas
- * - park-drag-controller
+ * Park Scene Module v5
+ * Source of truth: uploaded working park_story_interactive.html.
+ * UI + Park behavior live here; standalone HTML is only a host.
  */
+window.ParkSceneModule = window.ParkSceneModule || {
+  assetBase:"../../assets/park/",
+  storyImage:"../../assets/city/park_scene.png",
+
+  configure(options={}){
+    if(options.assetBase!==undefined)this.assetBase=options.assetBase;
+    if(options.storyImage!==undefined)this.storyImage=options.storyImage;
+    if(!this.assetBase.endsWith("/"))this.assetBase+="/";
+    return this;
+  },
+
+  mountUI(options={}){
+    this.configure(options);
+    if(document.getElementById("parkStoryLayer"))return;
+
+    const host=document.createElement("div");
+    host.id="parkModuleUI";
+    host.innerHTML=`
+      <div id="parkStoryLayer">
+        <div id="parkStoryCard">
+          <img src="${this.storyImage}" alt="">
+        </div>
+      </div>
+
+      <button id="fixParkBtn" type="button">🌳 一起整理公园吧</button>
+      <button id="doneParkBtn" type="button">✅ 整理好啦</button>
+
+      <div id="cameraOrientationControl">
+        <span>📷 CAMERA</span>
+        <select id="cameraOrientationSelect" aria-label="Camera orientation">
+          <option value="0">0°</option>
+          <option value="90">90°</option>
+          <option value="180">180°</option>
+          <option value="270">270°</option>
+        </select>
+      </div>
+
+      <button id="handBtn" type="button">✨ INTERACT · OFF</button>
+      <div id="handStatus">手势：已关闭</div>
+      <div id="handCursor">✨</div>
+      <div id="hint">请把镜头对准 Park 识别图</div>
+
+      <div id="dragLayer">
+        <button id="dragTree" class="drag-hit" aria-label="Tree"></button>
+        <button id="dragFlower" class="drag-hit" aria-label="Flower"></button>
+        <button id="dragBench" class="drag-hit" aria-label="Bench"></button>
+        <button id="dragFountain" class="drag-hit" aria-label="Fountain"></button>
+        <button id="dragReset" class="drag-hit" aria-label="Reset"></button>
+      </div>
+
+      <canvas id="parkCanvas" class="off" width="768" height="512"></canvas>
+    `;
+    document.body.appendChild(host);
+    document.body.classList.add("park-story");
+  }
+};
+
 function roundRect(ctx,x,y,w,h,r){
   ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);
   ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
@@ -32,10 +86,10 @@ window.ParkCameraOrientation={
     if(!video){setTimeout(()=>this.apply(),120);return}
     const a=this.angle;
     video.style.transformOrigin="50% 50%";
-    video.style.transform=`rotate(${a}deg) scaleX(-1)`;
+    video.style.transform=`rotate(${a}deg)`;
     if(a===90||a===270){
       const scale=Math.max(innerWidth/innerHeight,innerHeight/innerWidth);
-      video.style.transform=`rotate(${a}deg) scale(${scale}) scaleX(-1)`;
+      video.style.transform=`rotate(${a}deg) scale(${scale})`;
     }
   },
   mapPoint(x,y,width,height){
@@ -57,7 +111,6 @@ window.StandaloneParkMode={
     document.getElementById("parkStoryLayer").style.display="block";
     document.getElementById("fixParkBtn").style.display="block";
     document.getElementById("doneParkBtn").style.display="none";
-    document.getElementById("dragLayer").style.display="none";
 
     const c=document.querySelector('[park-drag-controller]')?.components?.["park-drag-controller"];
     if(c){
@@ -80,7 +133,6 @@ window.StandaloneParkMode={
     document.getElementById("parkStoryLayer").style.display="none";
     document.getElementById("fixParkBtn").style.display="none";
     document.getElementById("doneParkBtn").style.display="block";
-    document.getElementById("dragLayer").style.display="block";
     const c=document.querySelector('[park-drag-controller]')?.components?.["park-drag-controller"];
     const w=document.getElementById("parkWorld");
     if(c&&w){
@@ -98,7 +150,7 @@ window.StandaloneParkMode={
     if(c){c.tracking=false;c.holding=false;c.dragState=null;c.hideHits()}
     const w=document.getElementById("parkWorld");if(w)w.object3D.visible=false;
     this.showStory();
-    document.getElementById("hint").textContent="PARK · 公园整理好啦，太棒了 🌿";
+    document.getElementById("hint").textContent="PARK · 公园整理好啦，继续讲故事吧 🌿";
   }
 };
 
@@ -106,7 +158,7 @@ window.StandaloneHandMode={
   running:false,
   sleeping:false,
   timer:null,
-  sleepMs:3000,
+  sleepMs:5000,
   clearTimer(){if(this.timer){clearTimeout(this.timer);this.timer=null}},
   noteInteraction(){
     if(!this.running)return;
@@ -122,7 +174,7 @@ window.StandaloneHandMode={
 
     if(status){status.style.display="block";status.textContent="手势：启动中…";}
     await window.ClassroomHandTracking.start({
-      video,cursor,mirror:true,maxFps:15,smoothing:.38,
+      video,cursor,mirror:false,maxFps:18,smoothing:.38,
       pinchDownRatio:.34,pinchUpRatio:.44,reuseExistingVideo:true,
       viewport:()=>({width:innerWidth,height:innerHeight}),
       onStatus:(msg)=>{if(status)status.textContent="手势："+msg},
@@ -153,8 +205,10 @@ window.StandaloneHandMode={
 };
 
 document.addEventListener("DOMContentLoaded",()=>{
+  window.ParkCameraOrientation.init();
   document.getElementById("fixParkBtn")?.addEventListener("click",()=>window.StandaloneParkMode.enterFix());
   document.getElementById("doneParkBtn")?.addEventListener("click",()=>window.StandaloneParkMode.finishFix());
+  document.getElementById("handBtn").addEventListener("click",()=>window.StandaloneHandMode.toggle());
   window.CityInput.register("hand-auto-sleep",{
     down:(input)=>{if(input.source==="hand")window.StandaloneHandMode.noteInteraction()},
     up:(input)=>{if(input.source==="hand")window.StandaloneHandMode.noteInteraction()}
@@ -166,7 +220,7 @@ AFRAME.registerComponent("park-canvas",{
     this.c=document.getElementById("parkCanvas");this.ctx=this.c.getContext("2d");
     this.images={};
     ["tree","flower","bench","fountain"].forEach(kind=>{
-      const img=new Image();img.src=`${window.PARK_ASSET_BASE||"./assets/park/"}${kind}.png?v=1`;this.images[kind]=img;
+      const img=new Image();img.src=`${window.ParkSceneModule.assetBase}${kind}.png?v=1`;this.images[kind]=img;
     });
 
     this.initial={
@@ -292,7 +346,7 @@ AFRAME.registerComponent("park-drag-controller",{
       if(window.StandaloneParkMode?.mode==="story"){
         this.holding=false;this.hideHits();
         if(this.world)this.world.object3D.visible=false;
-        // Keep the current Park story hint unchanged after targetLost.
+        document.getElementById("hint").textContent="PARK · 继续用玩偶讲故事吧 🌿";
       }else{
         this.showHits();this.updateHitPositions();
         document.getElementById("hint").textContent="PARK · 可以继续拖动，或用玩偶讲故事 🌿";
@@ -302,7 +356,7 @@ AFRAME.registerComponent("park-drag-controller",{
   get dragging(){return !!this.dragState},
   getCanvasComp(){return document.getElementById("parkDisplay")?.components?.["park-canvas"]},
   getCamera(){if(!this.camera){const e=document.querySelector("a-camera");this.camera=e&&e.getObject3D("camera")}return this.camera},
-  projectWorld(v){const cam=this.getCamera();if(!cam)return null;const p=v.clone().project(cam);return{x:innerWidth-(p.x*.5+.5)*innerWidth,y:(-p.y*.5+.5)*innerHeight}},
+  projectWorld(v){const cam=this.getCamera();if(!cam)return null;const p=v.clone().project(cam);return{x:(p.x*.5+.5)*innerWidth,y:(-p.y*.5+.5)*innerHeight}},
   canvasToLocal(x,y){return new THREE.Vector3((x/this.canvasW-.5)*this.planeWidth,(.5-y/this.canvasH)*this.planeHeight,.10)},
   getScreenScale(){
     if(!this.world)return null;const obj=this.world.object3D;obj.updateMatrixWorld(true);
@@ -343,15 +397,7 @@ AFRAME.registerComponent("park-drag-controller",{
     const dx=input.x-this.dragState.startScreenX,dy=input.y-this.dragState.startScreenY;
     const sx=(this.dragState.pxPerUnitX*this.planeWidth)/this.canvasW;
     const sy=(this.dragState.pxPerUnitY*this.planeHeight)/this.canvasH;
-
-    // The AR canvas is horizontally mirrored. Park dragging is delta-based,
-    // so its horizontal drag delta must be inverted as well:
-    // screen right -> visual object right.
-    comp.setPosition(
-      this.dragState.kind,
-      this.dragState.startCanvasX-dx/Math.max(.001,sx),
-      this.dragState.startCanvasY+dy/Math.max(.001,sy)
-    );
+    comp.setPosition(this.dragState.kind,this.dragState.startCanvasX+dx/Math.max(.001,sx),this.dragState.startCanvasY+dy/Math.max(.001,sy));
     this.updateHitPositions();
   },
   handleUp(input){
@@ -386,7 +432,7 @@ AFRAME.registerComponent("park-drag-controller",{
   tick(){
     if(!this.world)return;
     if(window.StandaloneParkMode?.mode==="story"&&!this.tracking)return;
-    const now=performance.now(),active=this.tracking||this.dragState,frameMs=active?42:67;
+    const now=performance.now(),active=this.tracking||this.dragState,frameMs=active?33:67;
     if(this._lastTick&&now-this._lastTick<frameMs)return;this._lastTick=now;
     const obj=this.world.object3D;
     if(this.tracking){

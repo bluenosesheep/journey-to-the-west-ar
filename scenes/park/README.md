@@ -1,19 +1,30 @@
-# Park module v4
+# Park module v5
 
-This rebuild fixes the previous module extraction.
+Source of truth: the uploaded working `park_story_interactive.html`.
 
-The key difference:
-- `park-scene.js` now contains the COMPLETE Park script from the stable DIY build:
-  - StandaloneParkMode
-  - StandaloneHandMode
-  - park-canvas
-  - park-drag-controller
-- Standalone declares its MindAR target directly in HTML.
-- Standalone uses `../../targets/park.mind`
-- Standalone Park targetIndex = 0
-- Park assets use `../../assets/park/`
+Standalone placement:
+```
+scenes/
+  park/
+    park-scene.js
+    park-style.css
+    park_interactive_standalone.html
+```
 
-Integrated later:
-- reuse the same Park logic
-- host uses `citywithmagic.mind`
-- Park targetIndex = 1
+Standalone dependencies:
+- `../../targets/park.mind`
+- `../../assets/park/`
+- `../../assets/city/park_scene.png`
+- `../../js/input-router.js`
+- `../../js/hand-tracking-performance.js`
+
+Important architecture:
+- Park UI is NOT handwritten in the standalone page.
+- `ParkSceneModule.mountUI()` owns the Story buttons, Hand UI, drag hit layer, and Park canvas.
+- The standalone HTML only owns the MindAR/A-Frame host.
+- `park.mind` is standalone-only and uses `targetIndex:0`.
+
+Later integrated DIY:
+- same Park module
+- unified host uses `citywithmagic.mind`
+- Park maps to `targetIndex:1`
