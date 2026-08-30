@@ -86,10 +86,10 @@ window.ParkCameraOrientation={
     if(!video){setTimeout(()=>this.apply(),120);return}
     const a=this.angle;
     video.style.transformOrigin="50% 50%";
-    video.style.transform=`rotate(${a}deg)`;
+    video.style.transform=`rotate(${a}deg) scaleX(-1)`;
     if(a===90||a===270){
       const scale=Math.max(innerWidth/innerHeight,innerHeight/innerWidth);
-      video.style.transform=`rotate(${a}deg) scale(${scale})`;
+      video.style.transform=`rotate(${a}deg) scale(${scale}) scaleX(-1)`;
     }
   },
   mapPoint(x,y,width,height){
@@ -158,7 +158,7 @@ window.StandaloneHandMode={
   running:false,
   sleeping:false,
   timer:null,
-  sleepMs:5000,
+  sleepMs:3000,
   clearTimer(){if(this.timer){clearTimeout(this.timer);this.timer=null}},
   noteInteraction(){
     if(!this.running)return;
@@ -174,7 +174,7 @@ window.StandaloneHandMode={
 
     if(status){status.style.display="block";status.textContent="手势：启动中…";}
     await window.ClassroomHandTracking.start({
-      video,cursor,mirror:false,maxFps:18,smoothing:.38,
+      video,cursor,mirror:true,maxFps:15,smoothing:.38,
       pinchDownRatio:.34,pinchUpRatio:.44,reuseExistingVideo:true,
       viewport:()=>({width:innerWidth,height:innerHeight}),
       onStatus:(msg)=>{if(status)status.textContent="手势："+msg},
@@ -356,7 +356,7 @@ AFRAME.registerComponent("park-drag-controller",{
   get dragging(){return !!this.dragState},
   getCanvasComp(){return document.getElementById("parkDisplay")?.components?.["park-canvas"]},
   getCamera(){if(!this.camera){const e=document.querySelector("a-camera");this.camera=e&&e.getObject3D("camera")}return this.camera},
-  projectWorld(v){const cam=this.getCamera();if(!cam)return null;const p=v.clone().project(cam);return{x:(p.x*.5+.5)*innerWidth,y:(-p.y*.5+.5)*innerHeight}},
+  projectWorld(v){const cam=this.getCamera();if(!cam)return null;const p=v.clone().project(cam);return{x:innerWidth-(p.x*.5+.5)*innerWidth,y:(-p.y*.5+.5)*innerHeight}},
   canvasToLocal(x,y){return new THREE.Vector3((x/this.canvasW-.5)*this.planeWidth,(.5-y/this.canvasH)*this.planeHeight,.10)},
   getScreenScale(){
     if(!this.world)return null;const obj=this.world.object3D;obj.updateMatrixWorld(true);
@@ -397,7 +397,11 @@ AFRAME.registerComponent("park-drag-controller",{
     const dx=input.x-this.dragState.startScreenX,dy=input.y-this.dragState.startScreenY;
     const sx=(this.dragState.pxPerUnitX*this.planeWidth)/this.canvasW;
     const sy=(this.dragState.pxPerUnitY*this.planeHeight)/this.canvasH;
-    comp.setPosition(this.dragState.kind,this.dragState.startCanvasX+dx/Math.max(.001,sx),this.dragState.startCanvasY+dy/Math.max(.001,sy));
+    comp.setPosition(
+      this.dragState.kind,
+      this.dragState.startCanvasX-dx/Math.max(.001,sx),
+      this.dragState.startCanvasY+dy/Math.max(.001,sy)
+    );
     this.updateHitPositions();
   },
   handleUp(input){

@@ -1,30 +1,16 @@
-# Park module v5
+# Park module v6 mirror
 
-Source of truth: the uploaded working `park_story_interactive.html`.
+Based on the working Park module v5.
 
-Standalone placement:
-```
-scenes/
-  park/
-    park-scene.js
-    park-style.css
-    park_interactive_standalone.html
-```
+Inherited from the current stable DIY version:
+- camera video mirror
+- AR canvas mirror
+- Hand Tracking mirror:true
+- mirrored Park DOM hit projection
+- corrected mirrored Park drag direction
+- Hand maxFps 15
+- Hand auto-sleep 3 seconds
 
-Standalone dependencies:
-- `../../targets/park.mind`
-- `../../assets/park/`
-- `../../assets/city/park_scene.png`
-- `../../js/input-router.js`
-- `../../js/hand-tracking-performance.js`
-
-Important architecture:
-- Park UI is NOT handwritten in the standalone page.
-- `ParkSceneModule.mountUI()` owns the Story buttons, Hand UI, drag hit layer, and Park canvas.
-- The standalone HTML only owns the MindAR/A-Frame host.
-- `park.mind` is standalone-only and uses `targetIndex:0`.
-
-Later integrated DIY:
-- same Park module
-- unified host uses `citywithmagic.mind`
-- Park maps to `targetIndex:1`
+Standalone still uses:
+- ../../targets/park.mind
+- targetIndex:0
