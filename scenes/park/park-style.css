@@ -1,0 +1,42 @@
+#dragLayer{position:fixed;inset:0;z-index:50;pointer-events:none}
+.drag-hit{position:fixed;display:none;border:0;background:transparent;pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent}
+#dragReset{
+  z-index:58!important;border:2px solid #6f8e42!important;border-radius:999px!important;
+  background:rgba(255,248,220,.97)!important;color:#56713b!important;
+  font:700 14px/1 system-ui,sans-serif!important;box-shadow:0 5px 16px rgba(0,0,0,.18)!important;
+  cursor:pointer!important;pointer-events:auto!important;padding:0 12px!important
+}
+#handBtn{
+  position:fixed;right:18px;top:18px;z-index:90;border:0;border-radius:999px;padding:10px 14px;
+  background:rgba(255,248,220,.96);color:#56713b;font:800 13px/1 system-ui;box-shadow:0 5px 18px rgba(0,0,0,.16);cursor:pointer
+}
+#handCursor{
+  position:fixed;z-index:100;width:68px;height:68px;margin:-34px 0 0 -34px;border-radius:50%;
+  display:none;place-items:center;pointer-events:none;font-size:34px;background:rgba(255,255,255,.90);
+  box-shadow:0 6px 26px rgba(0,0,0,.26)
+}
+#handCursor.pinching{width:80px;height:80px;margin:-40px 0 0 -40px;background:rgba(255,238,165,.96)}
+#handStatus{
+  position:fixed;right:18px;top:62px;z-index:90;display:none;padding:8px 12px;border-radius:999px;
+  background:rgba(255,255,255,.90);color:#333;font:700 12px/1.2 system-ui;box-shadow:0 4px 16px rgba(0,0,0,.16)
+}
+#cameraOrientationControl{
+  position:fixed;left:18px;top:18px;z-index:90;display:flex;align-items:center;gap:7px;
+  padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.90);color:#444;
+  box-shadow:0 5px 18px rgba(0,0,0,.16);font:800 11px/1 system-ui
+}
+#cameraOrientationControl select{
+  border:0;outline:0;border-radius:999px;padding:5px 8px;background:rgba(255,240,180,.92);
+  color:#333;font:800 12px system-ui;cursor:pointer
+}
+
+#parkStoryLayer{position:fixed;inset:0;z-index:42;pointer-events:none;display:none}
+#parkStoryCard{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(58vw,640px);height:min(60vh,440px);display:grid;place-items:center}
+#parkStoryCard img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 8px 16px rgba(0,0,0,.20))}
+#fixParkBtn{position:fixed;left:50%;bottom:max(76px,calc(env(safe-area-inset-bottom) + 58px));transform:translateX(-50%);z-index:75;display:none;border:0;border-radius:999px;padding:11px 18px;background:rgba(255,248,220,.97);color:#56713b;font:800 14px/1 system-ui;box-shadow:0 6px 20px rgba(0,0,0,.18);cursor:pointer}
+#doneParkBtn{position:fixed;z-index:76;display:none;border:2px solid #6f8e42;border-radius:999px;padding:0 14px;background:rgba(255,248,220,.97);color:#56713b;font:800 14px/1 system-ui;box-shadow:0 5px 16px rgba(0,0,0,.18);cursor:pointer}
+body.park-story #handBtn,body.park-story #handStatus,body.park-story #handCursor,body.park-story #dragLayer{display:none!important}
+/* Park module standalone/integrated fallbacks */
+#parkModuleRoot{position:fixed;inset:0;z-index:0;pointer-events:none}
+#parkModuleRoot button,.drag-hit{pointer-events:auto}
+
