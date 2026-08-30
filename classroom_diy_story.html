@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Journey to the West AR · DIY Story</title>
+<!-- PERFORMANCE TUNING: Hand 15 FPS, 3s auto-sleep, Spider/Park active loops ~24 FPS -->
 
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -425,7 +426,7 @@ window.StandaloneHandMode={
   running:false,
   sleeping:false,
   timer:null,
-  sleepMs:5000,
+  sleepMs:3000,
   clearTimer(){if(this.timer){clearTimeout(this.timer);this.timer=null}},
   noteInteraction(){
     if(!this.running)return;
@@ -441,7 +442,7 @@ window.StandaloneHandMode={
 
     if(status){status.style.display="block";status.textContent="手势：启动中…";}
     await window.ClassroomHandTracking.start({
-      video,cursor,mirror:true,maxFps:18,smoothing:.38,
+      video,cursor,mirror:true,maxFps:15,smoothing:.38,
       pinchDownRatio:.34,pinchUpRatio:.44,reuseExistingVideo:true,
       viewport:()=>({width:innerWidth,height:innerHeight}),
       onStatus:(msg)=>{if(status)status.textContent="手势："+msg},
@@ -705,7 +706,7 @@ AFRAME.registerComponent("park-drag-controller",{
   tick(){
     if(!this.world)return;
     if(window.StandaloneParkMode?.mode==="story"&&!this.tracking)return;
-    const now=performance.now(),active=this.tracking||this.dragState,frameMs=active?33:67;
+    const now=performance.now(),active=this.tracking||this.dragState,frameMs=active?42:67;
     if(this._lastTick&&now-this._lastTick<frameMs)return;this._lastTick=now;
     const obj=this.world.object3D;
     if(this.tracking){
@@ -1307,7 +1308,7 @@ window.StandaloneMarketHandMode={
   running:false,
   sleeping:false,
   timer:null,
-  sleepMs:5000,
+  sleepMs:3000,
 
   clearTimer(){
     if(this.timer){clearTimeout(this.timer);this.timer=null}
@@ -1337,7 +1338,7 @@ window.StandaloneMarketHandMode={
       video,
       cursor,
       mirror:true,
-      maxFps:18,
+      maxFps:15,
       smoothing:.38,
       pinchDownRatio:.34,
       pinchUpRatio:.44,
@@ -1533,7 +1534,7 @@ window.StandaloneSpiderHandMode={
   running:false,
   sleeping:false,
   timer:null,
-  sleepMs:5000,
+  sleepMs:3000,
 
   clearTimer(){
     if(this.timer){clearTimeout(this.timer);this.timer=null}
@@ -1560,7 +1561,7 @@ window.StandaloneSpiderHandMode={
       video,
       cursor,
       mirror:true,
-      maxFps:18,
+      maxFps:15,
       smoothing:.38,
       pinchDownRatio:.34,
       pinchUpRatio:.44,
@@ -1937,7 +1938,7 @@ AFRAME.registerComponent("spider-canvas",{
     if(this.loaded<this.total)return;
 
     const now=performance.now();
-    const frameMs=this.mode==="game"?33:50;
+    const frameMs=this.mode==="game"?42:50;
     if(this._last&&now-this._last<frameMs)return;
     this._last=now;
 
