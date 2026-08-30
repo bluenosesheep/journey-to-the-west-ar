@@ -1,25 +1,17 @@
 /*
- * Spider Scene Module
- * Extracted from the current stable DIY Spider implementation.
- * Dependencies supplied by host:
- *   - AFRAME / THREE / MindAR scene
- *   - window.CityInput
- *   - window.ClassroomHandTracking (only needed when INTERACT is enabled)
- *
- * The same module can be used:
- *   1) standalone with spider.mind, targetIndex 0
- *   2) inside classroom_diy_story with citywithmagic.mind, targetIndex 7
+ * Spider Scene Module v2
+ * Full Spider story + small-spider interaction extracted from the stable DIY build.
  */
 window.SpiderSceneModule = window.SpiderSceneModule || {
-  installed:false,
   config:{
-    assetBase:"./assets/spider/",
-    targetIndex:7,
+    assetBase:"../../assets/spider/",
+    targetIndex:0,
     mirrorAR:true,
     mirrorHand:true,
     handFps:15,
+    sleepMs:3000,
+    integrated:false,
     sceneSelector:"a-scene",
-    integrated:true,
     onActivate:null,
     onLeave:null
   },
@@ -27,74 +19,59 @@ window.SpiderSceneModule = window.SpiderSceneModule || {
   configure(options={}){
     Object.assign(this.config,options);
     if(!this.config.assetBase.endsWith("/"))this.config.assetBase+="/";
-    if(window.StandaloneSpiderHandMode){
-      window.StandaloneSpiderHandMode.sleepMs=Number(options.sleepMs||3000);
-    }
     return this;
   },
 
   asset(name){ return this.config.assetBase + name; },
 
   activateHost(){
-    if(typeof this.config.onActivate==="function"){
-      this.config.onActivate("spider");
-    }else if(window.DIYSceneManager?.activate){
-      window.DIYSceneManager.activate("spider");
-    }
+    if(typeof this.config.onActivate==="function") this.config.onActivate("spider");
   },
 
   leaveHost(){
     if(typeof this.config.onLeave==="function"){
       this.config.onLeave("spider");
-    }else if(window.DIYSceneManager?.leaveCurrent){
-      window.DIYSceneManager.leaveCurrent();
-    }else{
-      // Standalone fallback: reset Spider but keep page/camera alive.
-      this.resetToWaiting();
+      return;
     }
-  },
-
-  ensureSharedHandUI(){
-    const body=document.body;
-    if(!document.getElementById("handBtn")){
-      const b=document.createElement("button");
-      b.id="handBtn"; b.type="button"; b.textContent="✨ INTERACT · OFF";
-      b.style.cssText="position:fixed;right:18px;top:18px;z-index:130;border:0;border-radius:999px;padding:10px 14px;background:rgba(255,248,220,.96);color:#56713b;font:800 13px/1 system-ui;box-shadow:0 5px 18px rgba(0,0,0,.16);cursor:pointer;display:none";
-      body.appendChild(b);
-    }
-    if(!document.getElementById("handStatus")){
-      const d=document.createElement("div");
-      d.id="handStatus"; d.textContent="手势：已关闭";
-      d.style.cssText="position:fixed;right:18px;top:62px;z-index:130;display:none;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.90);color:#333;font:700 12px/1.2 system-ui;box-shadow:0 4px 16px rgba(0,0,0,.16)";
-      body.appendChild(d);
-    }
-    if(!document.getElementById("handCursor")){
-      const d=document.createElement("div");
-      d.id="handCursor"; d.textContent="✨";
-      d.style.cssText="position:fixed;z-index:140;width:68px;height:68px;margin:-34px 0 0 -34px;border-radius:50%;display:none;place-items:center;pointer-events:none;font-size:34px;background:rgba(255,255,255,.90);box-shadow:0 6px 26px rgba(0,0,0,.26)";
-      body.appendChild(d);
-    }
+    this.resetStandalone();
   },
 
   ensureUI(){
-    this.ensureSharedHandUI();
-    if(document.getElementById("spiderCanvas"))return;
+    const body=document.body;
+    const make=(html)=>{
+      const wrap=document.createElement("div");
+      wrap.innerHTML=html.trim();
+      const el=wrap.firstElementChild;
+      body.appendChild(el);
+      return el;
+    };
 
-    const root=document.createElement("div");
-    root.id="spiderModuleRoot";
-    root.innerHTML=`
-      <button id="spiderFightBtn" type="button">⚔️ 消灭它</button>
-      <button id="spiderRetryBtn" type="button">↻ 再试一次</button>
-      <button id="spiderLeaveBtn" type="button">✅ 离开</button>
-      <div id="spiderProgress">🕷️ 0 / 4</div>
-      <canvas id="spiderCanvas" class="off" width="768" height="512"></canvas>
-    `;
-    document.body.appendChild(root);
+    if(!document.getElementById("handBtn")){
+      const b=make('<button id="handBtn" type="button">✨ INTERACT · OFF</button>');
+      b.style.cssText="position:fixed;right:18px;top:18px;z-index:130;border:0;border-radius:999px;padding:10px 14px;background:rgba(255,248,220,.96);color:#56713b;font:800 13px/1 system-ui;box-shadow:0 5px 18px rgba(0,0,0,.16);cursor:pointer;display:none";
+    }
+    if(!document.getElementById("handStatus")){
+      const d=make('<div id="handStatus">手势：已关闭</div>');
+      d.style.cssText="position:fixed;right:18px;top:62px;z-index:130;display:none;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.90);color:#333;font:700 12px/1.2 system-ui;box-shadow:0 4px 16px rgba(0,0,0,.16)";
+    }
+    if(!document.getElementById("handCursor")){
+      const d=make('<div id="handCursor">✨</div>');
+      d.style.cssText="position:fixed;z-index:140;width:68px;height:68px;margin:-34px 0 0 -34px;border-radius:50%;display:none;place-items:center;pointer-events:none;font-size:34px;background:rgba(255,255,255,.90);box-shadow:0 6px 26px rgba(0,0,0,.26)";
+    }
+
+    if(!document.getElementById("spiderFightBtn")){
+      make('<button id="spiderFightBtn" type="button">⚔️ 消灭它</button>');
+      make('<button id="spiderRetryBtn" type="button">↻ 再试一次</button>');
+      make('<button id="spiderLeaveBtn" type="button">✅ 离开</button>');
+      make('<div id="spiderProgress">🕷️ 0 / 4</div>');
+      const c=make('<canvas id="spiderCanvas" class="off" width="768" height="512"></canvas>');
+      c.style.display="none";
+    }
   },
 
   ensureAREntities(){
     const scene=document.querySelector(this.config.sceneSelector);
-    if(!scene)throw new Error("SpiderSceneModule: A-Frame scene not found");
+    if(!scene) throw new Error("SpiderSceneModule: a-scene not found");
 
     if(!document.getElementById("spiderWorld")){
       const world=document.createElement("a-entity");
@@ -126,23 +103,20 @@ window.SpiderSceneModule = window.SpiderSceneModule || {
     const leave=document.getElementById("spiderLeaveBtn");
     const hand=document.getElementById("handBtn");
 
-    if(fight&&!fight.dataset.spiderBound){
-      fight.dataset.spiderBound="1";
+    if(fight&&!fight.dataset.bound){
+      fight.dataset.bound="1";
       fight.addEventListener("click",()=>window.SpiderMode.enterGame());
     }
-    if(retry&&!retry.dataset.spiderBound){
-      retry.dataset.spiderBound="1";
+    if(retry&&!retry.dataset.bound){
+      retry.dataset.bound="1";
       retry.addEventListener("click",()=>window.SpiderMode.retry());
     }
-    if(leave&&!leave.dataset.spiderBound){
-      leave.dataset.spiderBound="1";
+    if(leave&&!leave.dataset.bound){
+      leave.dataset.bound="1";
       leave.addEventListener("click",()=>window.SpiderMode.leave());
     }
-
-    // Standalone owns the shared INTERACT button. In integrated DIY,
-    // the host's DIYSceneManager already dispatches this button.
-    if(!this.config.integrated && hand && !hand.dataset.spiderBound){
-      hand.dataset.spiderBound="1";
+    if(!this.config.integrated && hand && !hand.dataset.bound){
+      hand.dataset.bound="1";
       hand.addEventListener("click",()=>window.StandaloneSpiderHandMode.toggle());
     }
   },
@@ -152,22 +126,25 @@ window.SpiderSceneModule = window.SpiderSceneModule || {
     this.ensureUI();
     this.ensureAREntities();
     this.bindUI();
-    this.installed=true;
-    return this;
+    if(window.StandaloneSpiderHandMode){
+      window.StandaloneSpiderHandMode.sleepMs=this.config.sleepMs;
+    }
   },
 
-  resetToWaiting(){
+  resetStandalone(){
     window.StandaloneSpiderHandMode?.sleep();
     if(window.SpiderMode)window.SpiderMode.mode="waiting";
     ["spiderFightBtn","spiderRetryBtn","spiderLeaveBtn","spiderProgress","handStatus"].forEach(id=>{
-      const el=document.getElementById(id); if(el)el.style.display="none";
+      const el=document.getElementById(id);
+      if(el)el.style.display="none";
     });
     const hand=document.getElementById("handBtn");
     if(hand){hand.style.display="none";hand.textContent="✨ INTERACT · OFF";}
     const ctrl=document.querySelector("[spider-controller]")?.components?.["spider-controller"];
     ctrl?.hideWorld?.();
     const comp=document.getElementById("spiderDisplay")?.components?.["spider-canvas"];
-    comp?.setMode("waiting"); comp?.resetGame();
+    comp?.setMode("waiting");
+    comp?.resetGame();
     const hint=document.getElementById("hint");
     if(hint)hint.textContent="请把镜头对准 SPIDER 卡";
   }
@@ -958,6 +935,3 @@ AFRAME.registerComponent("spider-controller",{
     }
   }
 });
-
-// Standalone hosts can call SpiderSceneModule.install(...) after DOMContentLoaded.
-// Integrated DIY hosts should call the same install() with targetIndex:7 and callbacks.
