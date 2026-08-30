@@ -3,8 +3,15 @@
  * Source of truth: uploaded working building(2).html.
  * Owns Building UI and far/near behavior.
  */
+const BUILDING_MODULE_SCRIPT_URL=(()=>{
+  const scripts=[...document.scripts];
+  const own=scripts.find(el=>/\/scenes\/building\/building-scene\.js(?:\?|$)/.test(el.src));
+  return own?.src || document.currentScript?.src || window.location.href;
+})();
+const BUILDING_PROJECT_ROOT=new URL("../../",BUILDING_MODULE_SCRIPT_URL);
+
 window.BuildingSceneModule = window.BuildingSceneModule || {
-  assetBase:"../../assets/city/",
+  assetBase:new URL("assets/city/",BUILDING_PROJECT_ROOT).href,
   ids:{
     mini:"storyCityMini",
     switch:"modeSwitch",

@@ -22,7 +22,7 @@ const diyProjectUrl=(relativePath)=>
 window.DIYSceneRegistry={
   building:{
     targetIndex:0,
-    assetBase:diyProjectUrl("assets/city/")
+    assetBase:window.BuildingSceneModule.assetBase
   },
   park:{
     targetIndex:1,
