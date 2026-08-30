@@ -37,6 +37,12 @@ window.DIYSceneRegistry={
   spider:{
     targetIndex:7,
     assetBase:diyProjectUrl("assets/spider/")
+  },
+  magic:{
+    cloud:{targetIndex:3},
+    fire:{targetIndex:4},
+    rain:{targetIndex:5},
+    grow:{targetIndex:6}
   }
 };
 
@@ -315,6 +321,15 @@ window.DIYSceneAdapter={
     spiderTarget.setAttribute("mindar-image-target",`targetIndex:${cfg.spider.targetIndex}`);
     spiderTarget.setAttribute("spider-controller","world:#spiderWorld");
     scene.appendChild(spiderTarget);
+
+    // Pure, non-interactive Magic reuses the SAME magic-only-manager.js
+    // used by the standalone Magic Only entry. Only target mapping lives here.
+    Object.entries(cfg.magic).forEach(([kind,magicCfg])=>{
+      const target=document.createElement("a-entity");
+      target.setAttribute("mindar-image-target",`targetIndex:${magicCfg.targetIndex}`);
+      target.setAttribute("magic-target",`kind:${kind}`);
+      scene.appendChild(target);
+    });
   },
 
   sanitizeSharedInteractAfterDOMContentLoaded(){
