@@ -30,7 +30,7 @@ canvas.a-canvas{background:transparent!important;transform:scaleX(-1)!important;
 <div id="hint">请把镜头对准 PARK 卡</div>
 
 <a-scene
-  mindar-image="imageTargetSrc: ../../targets/park.mind; autoStart: true; maxTrack: 1;"
+  mindar-image="imageTargetSrc: ../../targets/citywithmagic.mind; autoStart: true; maxTrack: 1;"
   color-space="sRGB"
   renderer="colorManagement:true;physicallyCorrectLights:true;alpha:true;antialias:true"
   vr-mode-ui="enabled:false"
@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   const installPark=()=>{
     ParkSceneModule.install({
       integrated:false,
-      targetIndex:0,
+      targetIndex:1,
       assetBase:"../../assets/park/",
       mirrorAR:true,
       mirrorHand:true,
