@@ -20,6 +20,26 @@ canvas.a-canvas{background:transparent!important;transform:scaleX(-1)!important;
 #hint{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:120;max-width:88vw;padding:11px 17px;border-radius:999px;background:rgba(255,255,255,.94);color:#27322b;text-align:center;font:700 15px/1.35 system-ui;box-shadow:0 6px 22px rgba(0,0,0,.16)}
 .mindar-ui-scanning,.mindar-ui-scanning .scanning,.mindar-ui-scanning .scanning-line,.mindar-ui-scanning .inner,.mindar-ui-scanning .scanline{display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}
 #handCursor.pinching{width:80px;height:80px;margin:-40px 0 0 -40px;background:rgba(255,238,165,.96)}
+
+/* Standalone explicit UI */
+#spiderFightBtn{z-index:160!important}
+#spiderRetryBtn,#spiderLeaveBtn,#spiderProgress{z-index:160!important}
+#handBtn{
+  position:fixed;right:18px;top:18px;z-index:160;display:none;border:0;border-radius:999px;
+  padding:10px 14px;background:rgba(255,248,220,.96);color:#56713b;
+  font:800 13px/1 system-ui;box-shadow:0 5px 18px rgba(0,0,0,.16);cursor:pointer
+}
+#handStatus{
+  position:fixed;right:18px;top:62px;z-index:160;display:none;padding:8px 12px;border-radius:999px;
+  background:rgba(255,255,255,.90);color:#333;font:700 12px/1.2 system-ui;
+  box-shadow:0 4px 16px rgba(0,0,0,.16)
+}
+#handCursor{
+  position:fixed;z-index:170;width:68px;height:68px;margin:-34px 0 0 -34px;border-radius:50%;
+  display:none;place-items:center;pointer-events:none;font-size:34px;background:rgba(255,255,255,.90);
+  box-shadow:0 6px 26px rgba(0,0,0,.26)
+}
+
 </style>
 
 <script src="./spider-scene.js"></script>
@@ -28,6 +48,17 @@ canvas.a-canvas{background:transparent!important;transform:scaleX(-1)!important;
 
 <body>
 <div id="hint">请把镜头对准 SPIDER 卡</div>
+
+<!-- Spider UI is explicit in standalone so the Story button always exists. -->
+<button id="spiderFightBtn" type="button">⚔️ 消灭它</button>
+<button id="spiderRetryBtn" type="button">↻ 再试一次</button>
+<button id="spiderLeaveBtn" type="button">✅ 离开</button>
+<div id="spiderProgress">🕷️ 0 / 4</div>
+<canvas id="spiderCanvas" class="off" width="768" height="512"></canvas>
+
+<button id="handBtn" type="button">✨ INTERACT · OFF</button>
+<div id="handStatus">手势：已关闭</div>
+<div id="handCursor">✨</div>
 
 <a-scene
   mindar-image="imageTargetSrc: ../../targets/spider.mind; autoStart: true; maxTrack: 1;"
@@ -40,15 +71,20 @@ canvas.a-canvas{background:transparent!important;transform:scaleX(-1)!important;
 
 <script>
 document.addEventListener("DOMContentLoaded",()=>{
-  SpiderSceneModule.install({
-    integrated:false,
-    targetIndex:0,
-    assetBase:"../../assets/spider/",
-    mirrorAR:true,
-    mirrorHand:true,
-    handFps:15,
-    sleepMs:3000
-  });
+  const scene=document.querySelector("a-scene");
+  const installSpider=()=>{
+    SpiderSceneModule.install({
+      integrated:false,
+      targetIndex:0,
+      assetBase:"../../assets/spider/",
+      mirrorAR:true,
+      mirrorHand:true,
+      handFps:15,
+      sleepMs:3000
+    });
+  };
+  if(scene?.hasLoaded)installSpider();
+  else scene?.addEventListener("loaded",installSpider,{once:true});
 });
 </script>
 </body>
