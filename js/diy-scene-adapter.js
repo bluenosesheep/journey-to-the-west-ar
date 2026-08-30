@@ -1,9 +1,13 @@
 /*
- * DIY Scene Adapter v2
- * Keeps stable Park/Market/Spider modules untouched and bridges them into the
- * unified DIY host.
+ * DIY Scene Adapter v2.1
+ *
+ * Stable Park / Market / Spider module files are NOT modified.
+ * This adapter fixes integrated-host conflicts by:
+ *  - keeping only ONE shared CAMERA / INTERACT / cursor / hint UI
+ *  - preventing Park standalone listeners from owning the shared INTERACT button
+ *  - mounting A-Frame worlds before controllers
+ *  - delaying target/controller creation one frame so scene components are ready
  */
-
 window.DIYSceneRegistry={
   park:{
     targetIndex:1,
@@ -24,11 +28,19 @@ window.DIYSceneRegistry={
 window.DIYSceneAdapter={
   mounted:false,
 
-  mountSharedSceneUI(){
+  removeModuleSharedDuplicates(moduleRootId){
+    const root=document.getElementById(moduleRootId);
+    if(!root)return;
+    ["cameraOrientationControl","handBtn","handStatus","handCursor","hint"].forEach(id=>{
+      const el=root.querySelector(`#${id}`);
+      if(el)el.remove();
+    });
+  },
+
+  mountSceneUI(){
     const cfg=window.DIYSceneRegistry;
 
-    // Stable modules expose their own UI mount APIs.
-    // We configure only paths here; module source files remain unchanged.
+    // PARK stable module: configure paths + let it create only its scene UI.
     window.ParkSceneModule?.configure?.({
       assetBase:cfg.park.assetBase,
       storyImage:cfg.park.storyImage
@@ -37,7 +49,9 @@ window.DIYSceneAdapter={
       assetBase:cfg.park.assetBase,
       storyImage:cfg.park.storyImage
     });
+    this.removeModuleSharedDuplicates("parkModuleUI");
 
+    // MARKET stable module.
     window.MarketSceneModule?.configure?.({
       assetBase:cfg.market.assetBase,
       storyImage:cfg.market.storyImage,
@@ -48,7 +62,9 @@ window.DIYSceneAdapter={
       storyImage:cfg.market.storyImage,
       integrated:true
     });
+    this.removeModuleSharedDuplicates("marketModuleUI");
 
+    // SPIDER stable module already checks for existing shared controls.
     window.SpiderSceneModule?.configure?.({
       integrated:true,
       targetIndex:cfg.spider.targetIndex,
@@ -65,50 +81,23 @@ window.DIYSceneAdapter={
       }
     });
     window.SpiderSceneModule?.ensureUI?.();
-
-    // Remove duplicate standalone-only controls created by stable scene modules.
-    // Shared host controls remain the single source of truth.
-    const duplicateIds=[
-      "cameraOrientationControl",
-      "handBtn",
-      "handStatus",
-      "handCursor",
-      "hint"
-    ];
-
-    // Park/Market mountUI can create duplicates only if host controls are absent.
-    // Host controls already exist, so these IDs are normally preserved.
-    // No-op by design.
+    window.SpiderSceneModule?.bindUI?.();
   },
 
-  bindSceneUI(){
-    // Park stable module originally binds itself on DOMContentLoaded.
-    // The adapter binds explicitly because its UI is mounted dynamically.
-    const fix=document.getElementById("fixParkBtn");
-    const done=document.getElementById("doneParkBtn");
-    if(fix&&!fix.dataset.adapterBound){
-      fix.dataset.adapterBound="1";
-      fix.addEventListener("click",()=>window.StandaloneParkMode?.enterFix());
-    }
-    if(done&&!done.dataset.adapterBound){
-      done.dataset.adapterBound="1";
-      done.addEventListener("click",()=>window.StandaloneParkMode?.finishFix());
-    }
+  bindSceneButtons(){
+    const bindOnce=(id,key,fn)=>{
+      const el=document.getElementById(id);
+      if(!el||el.dataset[key])return;
+      el.dataset[key]="1";
+      el.addEventListener("click",fn);
+    };
 
-    const shop=document.getElementById("shopBtn");
-    const checkout=document.getElementById("checkoutBtn");
-    if(shop&&!shop.dataset.adapterBound){
-      shop.dataset.adapterBound="1";
-      shop.addEventListener("click",()=>window.StandaloneMarketMode?.enterShop());
-    }
-    if(checkout&&!checkout.dataset.adapterBound){
-      checkout.dataset.adapterBound="1";
-      checkout.addEventListener("click",()=>window.StandaloneMarketMode?.checkout());
-    }
+    bindOnce("fixParkBtn","diyAdapter",()=>window.StandaloneParkMode?.enterFix());
+    bindOnce("doneParkBtn","diyAdapter",()=>window.StandaloneParkMode?.finishFix());
+    bindOnce("shopBtn","diyAdapter",()=>window.StandaloneMarketMode?.enterShop());
+    bindOnce("checkoutBtn","diyAdapter",()=>window.StandaloneMarketMode?.checkout());
 
-    window.SpiderSceneModule?.bindUI?.();
-
-    if(window.CityInput && !window.CityInput.__diyAdapterSleepBound){
+    if(window.CityInput&&!window.CityInput.__diyAdapterSleepBound){
       window.CityInput.__diyAdapterSleepBound=true;
 
       window.CityInput.register("diy-park-hand-auto-sleep",{
@@ -123,56 +112,77 @@ window.DIYSceneAdapter={
     }
   },
 
-  buildSceneEntities(scene){
-    const cfg=window.DIYSceneRegistry;
-
-    // Worlds first so selector schemas resolve reliably.
+  createWorlds(scene){
     const parkWorld=document.createElement("a-entity");
     parkWorld.id="parkWorld";
     parkWorld.setAttribute("visible","false");
-    parkWorld.innerHTML=`
-      <a-plane id="parkDisplay"
-        width="2.15" height="1.43" position="0 0.03 0.02"
-        material="shader:flat;src:#parkCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
-        park-canvas></a-plane>
-    `;
     scene.appendChild(parkWorld);
+
+    const parkDisplay=document.createElement("a-plane");
+    parkDisplay.id="parkDisplay";
+    parkDisplay.setAttribute("width","2.15");
+    parkDisplay.setAttribute("height","1.43");
+    parkDisplay.setAttribute("position","0 0.03 0.02");
+    parkDisplay.setAttribute("material","shader:flat;src:#parkCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double");
+    parkDisplay.setAttribute("park-canvas","");
+    parkWorld.appendChild(parkDisplay);
 
     const marketWorld=document.createElement("a-entity");
     marketWorld.id="marketWorld";
     marketWorld.setAttribute("visible","false");
-    marketWorld.innerHTML=`
-      <a-plane id="marketDisplay"
-        width="2.15" height="1.43" position="0 0.03 0.02"
-        material="shader:flat;src:#marketCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
-        market-canvas></a-plane>
-
-      <a-plane class="clickable" pick-item="kind:peach"
-        position="-0.38 0.35 0.10" width="0.58" height="0.58"
-        material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
-      <a-plane class="clickable" pick-item="kind:cabbage"
-        position="0 0.38 0.10" width="0.58" height="0.58"
-        material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
-      <a-plane class="clickable" pick-item="kind:egg"
-        position="0.38 0.35 0.10" width="0.58" height="0.58"
-        material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"></a-plane>
-      <a-plane class="clickable" position="0 -0.62 0.14"
-        width="0.74" height="0.30"
-        material="color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double"
-        reset-market></a-plane>
-    `;
     scene.appendChild(marketWorld);
+
+    const marketDisplay=document.createElement("a-plane");
+    marketDisplay.id="marketDisplay";
+    marketDisplay.setAttribute("width","2.15");
+    marketDisplay.setAttribute("height","1.43");
+    marketDisplay.setAttribute("position","0 0.03 0.02");
+    marketDisplay.setAttribute("material","shader:flat;src:#marketCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double");
+    marketDisplay.setAttribute("market-canvas","");
+    marketWorld.appendChild(marketDisplay);
+
+    const marketParts=[
+      ["peach","-0.38 0.35 0.10","0.58","0.58"],
+      ["cabbage","0 0.38 0.10","0.58","0.58"],
+      ["egg","0.38 0.35 0.10","0.58","0.58"]
+    ];
+    marketParts.forEach(([kind,pos,w,h])=>{
+      const el=document.createElement("a-plane");
+      el.classList.add("clickable");
+      el.setAttribute("pick-item",`kind:${kind}`);
+      el.setAttribute("position",pos);
+      el.setAttribute("width",w);
+      el.setAttribute("height",h);
+      el.setAttribute("material","color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double");
+      marketWorld.appendChild(el);
+    });
+
+    const reset=document.createElement("a-plane");
+    reset.classList.add("clickable");
+    reset.setAttribute("position","0 -0.62 0.14");
+    reset.setAttribute("width","0.74");
+    reset.setAttribute("height","0.30");
+    reset.setAttribute("material","color:#fff;opacity:0.01;transparent:true;depthWrite:false;side:double");
+    reset.setAttribute("reset-market","");
+    marketWorld.appendChild(reset);
 
     const spiderWorld=document.createElement("a-entity");
     spiderWorld.id="spiderWorld";
     spiderWorld.setAttribute("visible","false");
-    spiderWorld.innerHTML=`
-      <a-plane id="spiderDisplay"
-        width="2.15" height="2.15" position="0 0.03 0.02"
-        material="shader:flat;src:#spiderCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
-        spider-canvas></a-plane>
-    `;
     scene.appendChild(spiderWorld);
+
+    const spiderDisplay=document.createElement("a-plane");
+    spiderDisplay.id="spiderDisplay";
+    spiderDisplay.setAttribute("width","2.15");
+    spiderDisplay.setAttribute("height","2.15");
+    spiderDisplay.setAttribute("position","0 0.03 0.02");
+    spiderDisplay.setAttribute("material","shader:flat;src:#spiderCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double");
+    spiderDisplay.setAttribute("spider-canvas","");
+    spiderWorld.appendChild(spiderDisplay);
+  },
+
+  createTargets(scene){
+    const cfg=window.DIYSceneRegistry;
 
     const parkTarget=document.createElement("a-entity");
     parkTarget.setAttribute("mindar-image-target",`targetIndex:${cfg.park.targetIndex}`);
@@ -192,13 +202,51 @@ window.DIYSceneAdapter={
     scene.appendChild(spiderTarget);
   },
 
+  sanitizeSharedInteractAfterDOMContentLoaded(){
+    /*
+      Park stable standalone registers a DOMContentLoaded handler that attaches
+      StandaloneHandMode.toggle() directly to #handBtn. In integrated DIY that
+      would fight DIYSceneManager.handToggle() and can start two hand modes.
+
+      We cannot edit the stable Park file, so after all DOMContentLoaded handlers
+      have run, replace the shared button with a clean clone and bind ONLY the
+      unified DIY dispatcher.
+    */
+    setTimeout(()=>{
+      const old=document.getElementById("handBtn");
+      if(!old)return;
+
+      const clean=old.cloneNode(true);
+      clean.removeAttribute("data-park-bound");
+      clean.removeAttribute("data-adapter-bound");
+      old.replaceWith(clean);
+
+      clean.addEventListener("click",()=>window.DIYSceneManager?.handToggle());
+    },0);
+  },
+
   mount(scene){
     if(this.mounted)return;
     this.mounted=true;
 
-    this.mountSharedSceneUI();
-    this.bindSceneUI();
-    this.buildSceneEntities(scene);
+    this.mountSceneUI();
+    this.bindSceneButtons();
+    this.createWorlds(scene);
+
+    // Give A-Frame one frame to initialize park-canvas/market-canvas/spider-canvas
+    // before selector-based controllers are attached.
+    requestAnimationFrame(()=>{
+      this.createTargets(scene);
+    });
+
+    if(document.readyState==="loading"){
+      document.addEventListener("DOMContentLoaded",
+        ()=>this.sanitizeSharedInteractAfterDOMContentLoaded(),
+        {once:true}
+      );
+    }else{
+      this.sanitizeSharedInteractAfterDOMContentLoaded();
+    }
   }
 };
 
