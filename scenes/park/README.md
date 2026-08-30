@@ -1,14 +1,19 @@
-# Park module v3
+# Park module v4
 
-Standalone rule:
-- uses `../../targets/park.mind`
-- because park.mind contains only Park, targetIndex is `0`
-- target entity and parkWorld are declared directly in the standalone HTML
-- no dynamic creation of the MindAR target
+This rebuild fixes the previous module extraction.
 
-Integrated rule (later):
-- uses `./targets/citywithmagic.mind`
-- Park targetIndex is `1`
-- same park-scene.js is reused
+The key difference:
+- `park-scene.js` now contains the COMPLETE Park script from the stable DIY build:
+  - StandaloneParkMode
+  - StandaloneHandMode
+  - park-canvas
+  - park-drag-controller
+- Standalone declares its MindAR target directly in HTML.
+- Standalone uses `../../targets/park.mind`
+- Standalone Park targetIndex = 0
+- Park assets use `../../assets/park/`
 
-This keeps standalone and integrated target mapping separate and predictable.
+Integrated later:
+- reuse the same Park logic
+- host uses `citywithmagic.mind`
+- Park targetIndex = 1

@@ -3,12 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Park Story Interactive · Standalone</title>
+<title>Park Story Interactive · Standalone v4</title>
 
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="../../js/input-router.js"></script>
-
 <link rel="stylesheet" href="./park-style.css">
 
 <style>
@@ -17,16 +16,37 @@ video{position:fixed!important;inset:0!important;width:100vw!important;height:10
 a-scene{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1!important;background:transparent!important}
 canvas.a-canvas{background:transparent!important;transform:scaleX(-1)!important;transform-origin:50% 50%!important}
 .off{display:none!important}
-#hint{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:120;max-width:88vw;padding:11px 17px;border-radius:999px;background:rgba(255,255,255,.94);color:#27322b;text-align:center;font:700 15px/1.35 system-ui;box-shadow:0 6px 22px rgba(0,0,0,.16)}
+
+#hint{
+  position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:150;
+  max-width:88vw;padding:11px 17px;border-radius:999px;background:rgba(255,255,255,.94);
+  color:#27322b;text-align:center;font:700 15px/1.35 system-ui;box-shadow:0 6px 22px rgba(0,0,0,.16)
+}
+#handBtn{
+  position:fixed;right:18px;top:18px;z-index:160;display:none;border:0;border-radius:999px;
+  padding:10px 14px;background:rgba(255,248,220,.96);color:#56713b;
+  font:800 13px/1 system-ui;box-shadow:0 5px 18px rgba(0,0,0,.16);cursor:pointer
+}
+#handStatus{
+  position:fixed;right:18px;top:62px;z-index:160;display:none;padding:8px 12px;border-radius:999px;
+  background:rgba(255,255,255,.90);color:#333;font:700 12px/1.2 system-ui;
+  box-shadow:0 4px 16px rgba(0,0,0,.16)
+}
+#handCursor{
+  position:fixed;z-index:170;width:68px;height:68px;margin:-34px 0 0 -34px;border-radius:50%;
+  display:none;place-items:center;pointer-events:none;font-size:34px;background:rgba(255,255,255,.90);
+  box-shadow:0 6px 26px rgba(0,0,0,.26)
+}
 #handCursor.pinching{width:80px;height:80px;margin:-40px 0 0 -40px;background:rgba(255,238,165,.96)}
-.mindar-ui-scanning,.mindar-ui-scanning .scanning,.mindar-ui-scanning .scanning-line,.mindar-ui-scanning .inner,.mindar-ui-scanning .scanline{display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}
-
-#handBtn{position:fixed;right:18px;top:18px;z-index:160;display:none;border:0;border-radius:999px;padding:10px 14px;background:rgba(255,248,220,.96);color:#56713b;font:800 13px/1 system-ui;box-shadow:0 5px 18px rgba(0,0,0,.16);cursor:pointer}
-#handStatus{position:fixed;right:18px;top:62px;z-index:160;display:none;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.90);color:#333;font:700 12px/1.2 system-ui;box-shadow:0 4px 16px rgba(0,0,0,.16)}
-#handCursor{position:fixed;z-index:170;width:68px;height:68px;margin:-34px 0 0 -34px;border-radius:50%;display:none;place-items:center;pointer-events:none;font-size:34px;background:rgba(255,255,255,.90);box-shadow:0 6px 26px rgba(0,0,0,.26)}
-
+.mindar-ui-scanning,.mindar-ui-scanning .scanning,.mindar-ui-scanning .scanning-line,
+.mindar-ui-scanning .inner,.mindar-ui-scanning .scanline{
+  display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important
+}
 </style>
 
+<script>
+window.PARK_ASSET_BASE="../../assets/park/";
+</script>
 <script src="./park-scene.js"></script>
 <script type="module" src="../../js/hand-tracking-performance.js"></script>
 </head>
@@ -34,13 +54,16 @@ canvas.a-canvas{background:transparent!important;transform:scaleX(-1)!important;
 <body>
 <div id="hint">请把镜头对准 PARK 卡</div>
 
-<!-- Explicit standalone Park UI -->
+<!-- PARK story UI -->
 <div id="parkStoryLayer">
-  <div id="parkStoryCard"><img src="../../assets/city/park_scene.png" alt=""></div>
+  <div id="parkStoryCard">
+    <img src="../../assets/city/park_scene.png" alt="">
+  </div>
 </div>
 <button id="fixParkBtn" type="button">🌳 一起整理公园吧</button>
 <button id="doneParkBtn" type="button">✅ 整理好啦</button>
 
+<!-- PARK interactive DOM hit layer -->
 <div id="dragLayer">
   <button id="dragTree" class="drag-hit" aria-label="Tree"></button>
   <button id="dragFlower" class="drag-hit" aria-label="Flower"></button>
@@ -48,6 +71,7 @@ canvas.a-canvas{background:transparent!important;transform:scaleX(-1)!important;
   <button id="dragFountain" class="drag-hit" aria-label="Fountain"></button>
   <button id="dragReset" class="drag-hit" aria-label="Reset">再试一次</button>
 </div>
+
 <canvas id="parkCanvas" class="off" width="768" height="512"></canvas>
 
 <button id="handBtn" type="button">✨ INTERACT · OFF</button>
@@ -60,9 +84,10 @@ canvas.a-canvas{background:transparent!important;transform:scaleX(-1)!important;
   renderer="colorManagement:true;physicallyCorrectLights:true;alpha:true;antialias:true"
   vr-mode-ui="enabled:false"
   device-orientation-permission-ui="enabled:false">
+
   <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
-  <!-- Standalone Park uses its own park.mind, therefore targetIndex is always 0. -->
+  <!-- park.mind contains only PARK, so standalone targetIndex is 0 -->
   <a-entity
     mindar-image-target="targetIndex:0"
     park-drag-controller="world:#parkWorld">
@@ -79,20 +104,8 @@ canvas.a-canvas{background:transparent!important;transform:scaleX(-1)!important;
 
 <script>
 document.addEventListener("DOMContentLoaded",()=>{
-  const scene=document.querySelector("a-scene");
-  const installPark=()=>{
-    ParkSceneModule.install({
-      integrated:false,
-      targetIndex:0,
-      assetBase:"../../assets/park/",
-      mirrorAR:true,
-      mirrorHand:true,
-      handFps:15,
-      sleepMs:3000
-    });
-  };
-  if(scene?.hasLoaded)installPark();
-  else scene?.addEventListener("loaded",installPark,{once:true});
+  document.getElementById("handBtn")
+    ?.addEventListener("click",()=>window.StandaloneHandMode?.toggle());
 });
 </script>
 </body>
