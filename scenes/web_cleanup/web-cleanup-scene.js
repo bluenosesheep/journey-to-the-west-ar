@@ -100,7 +100,29 @@ window.WebCleanupMode={
     },650);
     this.hint("✨ 蜘蛛网全部收进篮子啦！");
   },
-  retry(){StandaloneWebHandMode.sleep();this.mode="story";this.comp()?.reset();this.showStory()},
+  retry(){
+    StandaloneWebHandMode.sleep();
+    this.mode="game";
+    this.comp()?.startGame();
+
+    const start=document.getElementById("webStartBtn");
+    const retry=document.getElementById("webRetryBtn");
+    const leave=document.getElementById("webLeaveBtn");
+    const hand=document.getElementById("handBtn");
+    const status=document.getElementById("handStatus");
+
+    if(start)start.style.display="none";
+    if(retry)retry.style.display="none";
+    if(leave)leave.style.display="none";
+    if(hand){
+      hand.style.display="block";
+      hand.textContent="✨ INTERACT · OFF";
+    }
+    if(status)status.style.display="none";
+
+    this.progress(0,5);
+    this.hint("");
+  },
   leave(){StandaloneWebHandMode.sleep();WebCleanupSceneModule.leave()}
 };
 
