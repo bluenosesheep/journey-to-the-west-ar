@@ -77,7 +77,7 @@ window.WebCleanupMode={
     if(b)b.style.display="none";
     if(h){h.style.display="block";h.textContent="✨ INTERACT · OFF"}
     ["webRetryBtn","webLeaveBtn"].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display="none"});
-    this.progress(0,5);this.hint("把光标对准蜘蛛网，捏一下就能收走它 ✨");
+    this.progress(0,5);this.hint("");
   },
   progress(n,total){
     const p=document.getElementById("webProgress");
