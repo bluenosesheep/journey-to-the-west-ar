@@ -133,16 +133,16 @@ window.StandaloneWebHandMode={
 AFRAME.registerComponent("web-cleanup-canvas",{
   init(){
     this.canvas=document.getElementById("webCanvas");this.ctx=this.canvas.getContext("2d");
-    this.mode="waiting";this.webs=[];this.done=0;this.sparkleAt=0;this.last=0;
+    this.mode="waiting";this.webs=[];this.done=0;this.last=0;
     this.images={};
-    ["web_large.png","web_small.png","web_basket.png","web_clean_sparkle.png"].forEach(n=>{
+    ["web_large.png","web_small.png","web_basket.png"].forEach(n=>{
       const i=new Image();i.src=WebCleanupSceneModule.asset(n);this.images[n]=i;
     });
   },
-  reset(){this.mode="waiting";this.webs=[];this.done=0;this.sparkleAt=0},
+  reset(){this.mode="waiting";this.webs=[];this.done=0},
   showStory(){this.mode="story";this.webs=[];this.done=0},
   startGame(){
-    this.mode="game";this.done=0;this.sparkleAt=0;
+    this.mode="game";this.done=0;
     // Five webs use noticeably different sizes and angles so they do not
     // look like cloned copies. A small amount of jitter is added each round.
     const seeds=[
@@ -196,7 +196,7 @@ AFRAME.registerComponent("web-cleanup-canvas",{
     w.state="flying";w.flyStart=performance.now();w.fromX=w.x;w.fromY=w.y;
     return true;
   },
-  complete(){this.mode="complete";this.sparkleAt=performance.now()},
+  complete(){this.mode="complete"},
   drawImg(img,x,y,w,h,a=1,rot=0,scale=1){
     if(!img?.complete||!img.naturalWidth)return;
     const c=this.ctx;c.save();c.globalAlpha=a;c.translate(x,y);c.rotate(rot);c.scale(scale,scale);
@@ -293,12 +293,6 @@ AFRAME.registerComponent("web-cleanup-canvas",{
         if(this.done===this.webs.length)setTimeout(()=>WebCleanupMode.complete(),260);
       }
     });
-
-    if(this.mode==="complete"){
-      const e=now-this.sparkleAt;
-      const alpha=e<1500?Math.max(.22,1-e/1900):.22;
-      this.drawImg(this.image("web_clean_sparkle.png"),384,350,450,450,alpha,0,1+Math.sin(t*4)*.05);
-    }
   },
   tick(){
     if(this.mode==="waiting")return;
