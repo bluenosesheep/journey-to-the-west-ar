@@ -149,19 +149,23 @@ AFRAME.registerComponent("web-cleanup-canvas",{
     ];
     this.webs=seeds.map((v,i)=>({
       id:i,x:v[0],y:v[1],scale:v[2],rot:v[3],phase:i*1.29,
-      state:"idle",flyStart:0,fromX:0,fromY:0,flyDuration:620,
-      pileX:0,pileY:0,pileScale:.42,pileRot:0
+      state:"idle",flyStart:0,fromX:0,fromY:0,flyDuration:560,
+      sinkStart:0,sinkDuration:360,
+      mouthX:585,mouthY:548,
+      pileX:0,pileY:0,pileScale:.26,pileRot:0
     }));
   },
   image(n){return this.images[n]},
   basket(){return{x:585,y:560,w:210,h:210}},
   pileSlot(index){
+    // Final positions are deliberately deeper and smaller so the webs
+    // look like they have fallen to the bottom of the collection hole.
     const slots=[
-      [0,2,.46,-.10],
-      [-20,-10,.42,.18],
-      [22,8,.44,-.22],
-      [-10,22,.40,.28],
-      [15,-24,.41,-.30]
+      [0,58,.28,-.10],
+      [-16,66,.25,.18],
+      [18,62,.27,-.22],
+      [-10,73,.23,.28],
+      [12,78,.24,-.30]
     ];
     const s=slots[index%slots.length];
     return{x:585+s[0],y:560+s[1],scale:s[2],rot:s[3]};
@@ -172,6 +176,7 @@ AFRAME.registerComponent("web-cleanup-canvas",{
     const w=this.getWeb(id);if(!w||w.state!=="idle"||this.mode!=="game")return false;
     const slot=this.pileSlot(w.id);
     w.pileX=slot.x;w.pileY=slot.y;w.pileScale=slot.scale;w.pileRot=slot.rot;
+    w.mouthX=585;w.mouthY=548;
     w.state="flying";w.flyStart=performance.now();w.fromX=w.x;w.fromY=w.y;
     return true;
   },
@@ -203,36 +208,64 @@ AFRAME.registerComponent("web-cleanup-canvas",{
     // building up into a little pile at the hole instead of disappearing.
     this.drawImg(this.image("web_basket.png"),b.x,b.y,b.w,b.h,1);
 
-    // Webs already collected stay at the hole and accumulate.
+    // Webs already collected stay deeper inside the hole.
+    // Smaller size + lower alpha makes them read as being at the bottom,
+    // not floating on the rim.
     this.webs.forEach(w=>{
       if(w.state!=="piled")return;
       this.drawImg(
         this.image("web_small.png"),
         w.pileX,w.pileY,
         150*w.scale,150*w.scale,
-        1,
+        .72,
         w.pileRot,
         w.pileScale
       );
     });
 
-    // Selected web flies all the way to its pile position at the hole,
-    // shrinking but never fading out.
+    // Stage 1: fly to the mouth of the hole.
     this.webs.forEach(w=>{
       if(w.state!=="flying")return;
       const p=Math.min(1,(now-w.flyStart)/w.flyDuration),e=this.ease(p);
-      const arc=Math.sin(Math.PI*p)*-70;
-      const x=w.fromX+(w.pileX-w.fromX)*e;
-      const y=w.fromY+(w.pileY-w.fromY)*e+arc;
-      const finalScale=w.pileScale;
-      const sc=1-(1-finalScale)*e;
-      const rot=w.rot+(w.pileRot-w.rot)*e+p*.25;
+      const arc=Math.sin(Math.PI*p)*-64;
+      const x=w.fromX+(w.mouthX-w.fromX)*e;
+      const y=w.fromY+(w.mouthY-w.fromY)*e+arc;
+      const mouthScale=.50;
+      const sc=1-(1-mouthScale)*e;
+      const rot=w.rot+(w.pileRot-w.rot)*e*.45+p*.20;
 
       this.drawImg(
         this.image("web_small.png"),
         x,y,
         150*w.scale,150*w.scale,
         1,
+        rot,
+        sc
+      );
+
+      if(p>=1){
+        w.state="sinking";
+        w.sinkStart=now;
+      }
+    });
+
+    // Stage 2: after reaching the mouth, drop visibly down toward the bottom.
+    this.webs.forEach(w=>{
+      if(w.state!=="sinking")return;
+      const p=Math.min(1,(now-w.sinkStart)/w.sinkDuration);
+      // ease-in makes the last part feel like gravity pulling it downward.
+      const e=p*p;
+      const x=w.mouthX+(w.pileX-w.mouthX)*e;
+      const y=w.mouthY+(w.pileY-w.mouthY)*e;
+      const sc=.50+(.0 + w.pileScale-.50)*e;
+      const alpha=1-.28*e;
+      const rot=w.pileRot*.45+w.pileRot*.55*e;
+
+      this.drawImg(
+        this.image("web_small.png"),
+        x,y,
+        150*w.scale,150*w.scale,
+        alpha,
         rot,
         sc
       );

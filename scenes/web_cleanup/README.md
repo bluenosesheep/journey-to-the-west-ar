@@ -27,3 +27,12 @@ js/hand-tracking-performance.js
 - It shrinks while flying but does NOT fade out.
 - After arrival it remains visible at the hole.
 - Each collected web gets a slightly different offset/rotation/scale, so 5 webs visibly pile up around the hole.
+
+
+## v2.3 sink-to-bottom effect
+
+- Hole remains 210x210.
+- Web now uses a two-stage animation:
+  1. fly to the hole mouth;
+  2. visibly sink downward to the bottom.
+- Final web pile is lower, smaller and slightly dimmer to create depth.
