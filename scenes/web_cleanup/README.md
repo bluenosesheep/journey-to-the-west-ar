@@ -18,3 +18,12 @@ assets/web_cleanup/web_clean_sparkle.png
 Uses existing:
 js/input-router.js
 js/hand-tracking-performance.js
+
+
+## v2.2 pile-at-hole behavior
+
+- Collection hole remains the original 210x210 size.
+- A selected web now flies to the actual hole center area.
+- It shrinks while flying but does NOT fade out.
+- After arrival it remains visible at the hole.
+- Each collected web gets a slightly different offset/rotation/scale, so 5 webs visibly pile up around the hole.

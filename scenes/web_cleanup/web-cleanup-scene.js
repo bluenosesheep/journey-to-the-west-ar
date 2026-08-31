@@ -149,15 +149,29 @@ AFRAME.registerComponent("web-cleanup-canvas",{
     ];
     this.webs=seeds.map((v,i)=>({
       id:i,x:v[0],y:v[1],scale:v[2],rot:v[3],phase:i*1.29,
-      state:"idle",flyStart:0,fromX:0,fromY:0,flyDuration:620
+      state:"idle",flyStart:0,fromX:0,fromY:0,flyDuration:620,
+      pileX:0,pileY:0,pileScale:.42,pileRot:0
     }));
   },
   image(n){return this.images[n]},
   basket(){return{x:585,y:560,w:210,h:210}},
+  pileSlot(index){
+    const slots=[
+      [0,2,.46,-.10],
+      [-20,-10,.42,.18],
+      [22,8,.44,-.22],
+      [-10,22,.40,.28],
+      [15,-24,.41,-.30]
+    ];
+    const s=slots[index%slots.length];
+    return{x:585+s[0],y:560+s[1],scale:s[2],rot:s[3]};
+  },
   getWeb(id){return this.webs.find(w=>w.id===id)},
   selectable(){return this.webs.filter(w=>w.state==="idle")},
   collect(id){
     const w=this.getWeb(id);if(!w||w.state!=="idle"||this.mode!=="game")return false;
+    const slot=this.pileSlot(w.id);
+    w.pileX=slot.x;w.pileY=slot.y;w.pileScale=slot.scale;w.pileRot=slot.rot;
     w.state="flying";w.flyStart=performance.now();w.fromX=w.x;w.fromY=w.y;
     return true;
   },
@@ -185,24 +199,51 @@ AFRAME.registerComponent("web-cleanup-canvas",{
       this.drawImg(this.image("web_small.png"),w.x,w.y+bob,150*w.scale,150*w.scale,1,w.rot+Math.sin(t+w.phase)*.025);
     });
 
-    // flying webs go behind the basket as they arrive
+    // Draw the collection hole first. Collected webs will remain visible on top,
+    // building up into a little pile at the hole instead of disappearing.
+    this.drawImg(this.image("web_basket.png"),b.x,b.y,b.w,b.h,1);
+
+    // Webs already collected stay at the hole and accumulate.
+    this.webs.forEach(w=>{
+      if(w.state!=="piled")return;
+      this.drawImg(
+        this.image("web_small.png"),
+        w.pileX,w.pileY,
+        150*w.scale,150*w.scale,
+        1,
+        w.pileRot,
+        w.pileScale
+      );
+    });
+
+    // Selected web flies all the way to its pile position at the hole,
+    // shrinking but never fading out.
     this.webs.forEach(w=>{
       if(w.state!=="flying")return;
       const p=Math.min(1,(now-w.flyStart)/w.flyDuration),e=this.ease(p);
       const arc=Math.sin(Math.PI*p)*-70;
-      const x=w.fromX+(b.x-w.fromX)*e;
-      const y=w.fromY+(b.y-28-w.fromY)*e+arc;
-      const sc=1-e*.78,alpha=1-Math.max(0,(p-.78)/.22);
-      this.drawImg(this.image("web_small.png"),x,y,150*w.scale,150*w.scale,alpha,w.rot+p*.8,sc);
+      const x=w.fromX+(w.pileX-w.fromX)*e;
+      const y=w.fromY+(w.pileY-w.fromY)*e+arc;
+      const finalScale=w.pileScale;
+      const sc=1-(1-finalScale)*e;
+      const rot=w.rot+(w.pileRot-w.rot)*e+p*.25;
+
+      this.drawImg(
+        this.image("web_small.png"),
+        x,y,
+        150*w.scale,150*w.scale,
+        1,
+        rot,
+        sc
+      );
+
       if(p>=1){
-        w.state="collected";this.done++;
+        w.state="piled";
+        this.done++;
         WebCleanupMode.progress(this.done,this.webs.length);
         if(this.done===this.webs.length)setTimeout(()=>WebCleanupMode.complete(),260);
       }
     });
-
-    // Basket in front makes the final flight look like it enters the basket.
-    this.drawImg(this.image("web_basket.png"),b.x,b.y,b.w,b.h,1);
 
     if(this.mode==="complete"){
       const e=now-this.sparkleAt;
