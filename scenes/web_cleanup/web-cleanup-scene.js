@@ -59,7 +59,12 @@ window.WebCleanupSceneModule={
 window.WebCleanupMode={
   mode:"waiting",
   comp(){return document.getElementById("webDisplay")?.components?.["web-cleanup-canvas"]},
-  hint(t){const e=document.getElementById("hint");if(e)e.textContent=t},
+  hint(t){
+    const e=document.getElementById("hint");
+    if(!e)return;
+    e.textContent=t||"";
+    e.style.display=t?"block":"none";
+  },
   showStory(){
     this.mode="story";StandaloneWebHandMode.sleep();this.comp()?.showStory();
     const b=document.getElementById("webStartBtn"),p=document.getElementById("webProgress");
