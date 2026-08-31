@@ -1,0 +1,111 @@
+/* Egg Interactive Magic Scene */
+
+#eggHatchBtn,
+#eggRetryBtn,
+#eggLeaveBtn{
+  position:fixed;
+  z-index:150;
+  display:none;
+  border:2px solid rgba(128,74,24,.62);
+  border-radius:999px;
+  padding:12px 22px;
+  background:rgba(255,244,205,.96);
+  color:#6f3515;
+  font:800 15px/1 system-ui,-apple-system,"Segoe UI",sans-serif;
+  box-shadow:0 7px 24px rgba(0,0,0,.19);
+  cursor:pointer;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+
+#eggHatchBtn{
+  left:50%;
+  bottom:82px;
+  transform:translateX(-50%);
+  min-width:190px;
+  background:linear-gradient(#fff3c7,#f6d77b);
+}
+
+#eggRetryBtn{
+  left:calc(50% - 108px);
+  bottom:82px;
+  transform:translateX(-50%);
+  min-width:190px;
+}
+
+#eggLeaveBtn{
+  left:calc(50% + 108px);
+  bottom:82px;
+  transform:translateX(-50%);
+  min-width:190px;
+}
+
+#eggProgress{
+  position:fixed;
+  left:50%;
+  bottom:28px;
+  transform:translateX(-50%);
+  z-index:145;
+  display:none;
+  max-width:min(88vw,620px);
+  padding:10px 16px;
+  border-radius:999px;
+  background:rgba(255,255,255,.94);
+  color:#653d28;
+  text-align:center;
+  font:800 14px/1.25 system-ui,-apple-system,"Segoe UI",sans-serif;
+  box-shadow:0 5px 18px rgba(0,0,0,.16);
+  pointer-events:none;
+}
+
+#handBtn.egg-shared-hand{
+  position:fixed;
+  right:18px;
+  top:18px;
+  z-index:160;
+  display:none;
+  border:0;
+  border-radius:999px;
+  padding:10px 14px;
+  background:rgba(255,248,220,.96);
+  color:#725018;
+  font:800 13px/1 system-ui;
+  box-shadow:0 5px 18px rgba(0,0,0,.16);
+  cursor:pointer;
+}
+
+#handStatus.egg-shared-hand{
+  position:fixed;
+  right:18px;
+  top:62px;
+  z-index:160;
+  display:none;
+  padding:8px 12px;
+  border-radius:999px;
+  background:rgba(255,255,255,.92);
+  color:#333;
+  font:700 12px/1.2 system-ui;
+  box-shadow:0 4px 16px rgba(0,0,0,.16);
+}
+
+#handCursor.egg-shared-hand{
+  position:fixed;
+  z-index:170;
+  width:58px;
+  height:58px;
+  margin:-29px 0 0 -29px;
+  border-radius:50%;
+  display:none;
+  place-items:center;
+  pointer-events:none;
+  font-size:30px;
+  background:rgba(255,248,204,.92);
+  box-shadow:0 6px 26px rgba(0,0,0,.24);
+}
+
+#eggCanvas.off{display:none!important}
+
+@media (max-width:560px){
+  #eggRetryBtn{left:28%;min-width:150px;padding:11px 14px}
+  #eggLeaveBtn{left:72%;min-width:150px;padding:11px 14px}
+}

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Magic 06 · Egg Interactive</title>
+
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+<script src="../../js/input-router.js"></script>
+
+<link rel="stylesheet" href="./egg-style.css">
+<script src="./egg-scene.js"></script>
+<script type="module" src="../../js/hand-tracking-performance.js"></script>
+
+<style>
+html,body{
+  margin:0;width:100%;height:100%;overflow:hidden;
+  background:transparent!important;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif
+}
+video{
+  position:fixed!important;inset:0!important;
+  width:100vw!important;height:100vh!important;
+  object-fit:cover!important;z-index:0!important;
+  transform:scaleX(-1);transform-origin:50% 50%
+}
+a-scene{
+  position:fixed!important;inset:0!important;
+  width:100vw!important;height:100vh!important;
+  z-index:1!important;background:transparent!important
+}
+canvas.a-canvas{
+  background:transparent!important;
+  transform:scaleX(-1)!important;
+  transform-origin:50% 50%!important
+}
+#hint{
+  position:fixed;left:50%;bottom:142px;transform:translateX(-50%);
+  z-index:140;max-width:88vw;padding:10px 16px;border-radius:999px;
+  background:rgba(255,255,255,.94);color:#342d29;text-align:center;
+  font:800 14px/1.3 system-ui;box-shadow:0 6px 22px rgba(0,0,0,.16);
+  pointer-events:none
+}
+#cameraOrientationControl{
+  position:fixed;left:18px;top:18px;z-index:160;
+  display:flex;gap:7px;align-items:center;
+  padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.92);
+  font:800 11px system-ui;box-shadow:0 4px 16px rgba(0,0,0,.13)
+}
+#cameraOrientationControl select{
+  border:0;border-radius:999px;padding:5px 8px;
+  background:rgba(255,240,180,.92);font:800 12px system-ui
+}
+.mindar-ui-scanning,
+.mindar-ui-scanning .scanning,
+.mindar-ui-scanning .scanning-line,
+.mindar-ui-scanning .inner,
+.mindar-ui-scanning .scanline{
+  display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important
+}
+</style>
+</head>
+
+<body>
+<div id="cameraOrientationControl">
+  <span>📷 CAMERA</span>
+  <select id="cameraOrientationSelect">
+    <option value="0">0°</option>
+    <option value="90">90°</option>
+    <option value="180">180°</option>
+    <option value="270">270°</option>
+  </select>
+</div>
+
+<div id="hint">请把镜头对准 EGG 卡</div>
+
+<script>
+EggSceneModule.install({
+  integrated:false,
+  assetBase:"../../assets/egg/",
+  targetIndex:0,
+  mirrorAR:true,
+  mirrorHand:true,
+  handFps:15,
+  sleepMs:3000
+});
+</script>
+
+<a-scene
+  mindar-image="imageTargetSrc: ../../targets/egg.mind; autoStart:true; maxTrack:1;"
+  color-space="sRGB"
+  renderer="colorManagement:true;physicallyCorrectLights:true;alpha:true;antialias:true"
+  vr-mode-ui="enabled:false"
+  device-orientation-permission-ui="enabled:false">
+
+  <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+
+  <a-entity
+    mindar-image-target="targetIndex:0"
+    egg-controller="world:#eggWorld">
+  </a-entity>
+
+  <a-entity id="eggWorld" visible="false">
+    <a-plane
+      id="eggDisplay"
+      width="2.15"
+      height="2.15"
+      position="0 0.03 0.02"
+      material="shader:flat;src:#eggCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
+      egg-canvas>
+    </a-plane>
+  </a-entity>
+</a-scene>
+
+<script>
+document.addEventListener("DOMContentLoaded",()=>{
+  const sel=document.getElementById("cameraOrientationSelect");
+  let angle=Number(localStorage.getItem("eggCameraAngle")||0);
+  sel.value=String(angle);
+
+  const apply=()=>{
+    const video=document.querySelector("video");
+    if(!video){setTimeout(apply,120);return}
+    video.style.transformOrigin="50% 50%";
+
+    if(angle===90||angle===270){
+      const scale=Math.max(innerWidth/innerHeight,innerHeight/innerWidth);
+      video.style.transform=`rotate(${angle}deg) scale(${scale}) scaleX(-1)`;
+    }else{
+      video.style.transform=`rotate(${angle}deg) scaleX(-1)`;
+    }
+  };
+
+  sel.addEventListener("change",()=>{
+    angle=Number(sel.value)||0;
+    localStorage.setItem("eggCameraAngle",String(angle));
+    apply();
+  });
+
+  apply();
+});
+</script>
+</body>
+</html>
