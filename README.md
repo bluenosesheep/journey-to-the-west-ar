@@ -1,46 +1,23 @@
 # Journey to the West WebAR
 ## System Structure
-#### 1. 逻辑定义
-```text
-UNIFORM ENTRY
+#### 1. User Map
+<img width="972" height="446" alt="image" src="https://github.com/user-attachments/assets/6a10f1f3-30c8-4e6f-9d2d-81a56abdcecf" />
 
-index.html
-│
-├── 🏞️ AR STORY WORLD
-│      ↓
-│   classroom_city_story_actor_magic_demo.html
-│   （currently only City scene）
-│
-└── ✨ MY OWN STORY
-       ↓
-    classroom_magic_only.html
-       │
-       ├── ☁️ Cloud
-       ├── 🔥 Fire
-       ├── 🌧️ Rain
-       └── 🌱 Grow
-```
 ```text
-CITY SCENE WORKFLOW
 
-CITY / PARK / MARKET
-        │
-孩子继续讲故事
+孩子讲故事
+
+搭建场景或用扫描AR提供的场景（CITY / PARK / MARKET）
         │
 需要魔法
         ↓
 扫描魔法卡
-☁️ CLOUD / 🔥 FIRE / 🌧️ RAIN / 🌱 GROW
+☁️ CLOUD / 🔥 FIRE / 🌧️ RAIN / 🌱 GROW / SPIDER
         ↓
-魔法立即出现
+魔法立即出现，持续约 12–15 秒， 故事讲完 → 自动消失，还需要 → 再扫一次同一张卡 → 重新计时
         ↓
-持续约 12–15 秒
-        │
-        ├─ 故事讲完 → 自动消失
-        │
-        └─ 还需要 → 再扫一次同一张卡
-                    ↓
-                 重新计时
+执行任务，完成任务，继续讲故事
+       
 ```
 #### 2. 项目结构
 ```text
