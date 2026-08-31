@@ -98,7 +98,7 @@ window.WebCleanupMode={
       const r=document.getElementById("webRetryBtn"),l=document.getElementById("webLeaveBtn");
       if(r)r.style.display="block";if(l)l.style.display="block";
     },650);
-    this.hint("✨ 蜘蛛网全部收进篮子啦！");
+    this.hint("");
   },
   retry(){
     StandaloneWebHandMode.sleep();
