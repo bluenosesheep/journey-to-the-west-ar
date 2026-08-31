@@ -36,3 +36,12 @@ js/hand-tracking-performance.js
   1. fly to the hole mouth;
   2. visibly sink downward to the bottom.
 - Final web pile is lower, smaller and slightly dimmer to create depth.
+
+
+## v2.5 varied web appearance
+
+- The 5 small webs now have clearly different visual scales.
+- Each web has a different rotation, including stronger tilts.
+- Every new round adds a little random position/scale/rotation jitter.
+- Small webs keep a forgiving minimum hit area so hand pinch remains easy.
+- Sink-to-bottom and 210x210 hole behavior from v2.4 are unchanged.

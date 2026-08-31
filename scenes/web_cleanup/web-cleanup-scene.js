@@ -143,17 +143,33 @@ AFRAME.registerComponent("web-cleanup-canvas",{
   showStory(){this.mode="story";this.webs=[];this.done=0},
   startGame(){
     this.mode="game";this.done=0;this.sparkleAt=0;
+    // Five webs use noticeably different sizes and angles so they do not
+    // look like cloned copies. A small amount of jitter is added each round.
     const seeds=[
-      [145,165,.88,-.22],[385,145,.76,.16],[620,190,.84,-.12],
-      [175,420,.78,.15],[475,405,.90,-.18]
+      [145,165,1.00,-.42],   // large, tilted left
+      [385,145,.68,.36],     // small, tilted right
+      [620,190,.86,-.12],    // medium-large, almost upright
+      [175,420,.74,.58],     // medium-small, strongly tilted right
+      [475,405,.92,-.55]     // large, strongly tilted left
     ];
-    this.webs=seeds.map((v,i)=>({
-      id:i,x:v[0],y:v[1],scale:v[2],rot:v[3],phase:i*1.29,
-      state:"idle",flyStart:0,fromX:0,fromY:0,flyDuration:560,
-      sinkStart:0,sinkDuration:360,
-      mouthX:585,mouthY:542,
-      pileX:0,pileY:0,pileScale:.26,pileRot:0
-    }));
+    this.webs=seeds.map((v,i)=>{
+      const jitterX=(Math.random()-.5)*18;
+      const jitterY=(Math.random()-.5)*14;
+      const scaleJitter=(Math.random()-.5)*.08;
+      const rotJitter=(Math.random()-.5)*.12;
+      return{
+        id:i,
+        x:v[0]+jitterX,
+        y:v[1]+jitterY,
+        scale:Math.max(.62,Math.min(1.04,v[2]+scaleJitter)),
+        rot:v[3]+rotJitter,
+        phase:i*1.29,
+        state:"idle",flyStart:0,fromX:0,fromY:0,flyDuration:560,
+        sinkStart:0,sinkDuration:360,
+        mouthX:585,mouthY:542,
+        pileX:0,pileY:0,pileScale:.26,pileRot:0
+      };
+    });
   },
   image(n){return this.images[n]},
   basket(){return{x:585,y:560,w:210,h:210}},
@@ -336,8 +352,10 @@ AFRAME.registerComponent("web-cleanup-controller",{
     let best=null,bd=1e9;
     comp.selectable().forEach(w=>{
       const d=Math.hypot(c.x-w.x,c.y-w.y);
-      // Hand gets a slightly larger forgiving target than mouse.
-      const r=(source==="hand"?92:78)*w.scale;
+      // Keep small-looking webs easy to select: their visual size varies,
+      // but the hit area has a sensible minimum.
+      const visualR=(source==="hand"?92:78)*w.scale;
+      const r=Math.max(source==="hand"?76:64,visualR);
       if(d<r&&d<bd){best=w;bd=d}
     });
     return best;
