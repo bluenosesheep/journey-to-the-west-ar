@@ -151,7 +151,7 @@ AFRAME.registerComponent("web-cleanup-canvas",{
       id:i,x:v[0],y:v[1],scale:v[2],rot:v[3],phase:i*1.29,
       state:"idle",flyStart:0,fromX:0,fromY:0,flyDuration:560,
       sinkStart:0,sinkDuration:360,
-      mouthX:585,mouthY:548,
+      mouthX:585,mouthY:542,
       pileX:0,pileY:0,pileScale:.26,pileRot:0
     }));
   },
@@ -161,11 +161,11 @@ AFRAME.registerComponent("web-cleanup-canvas",{
     // Final positions are deliberately deeper and smaller so the webs
     // look like they have fallen to the bottom of the collection hole.
     const slots=[
-      [0,58,.28,-.10],
-      [-16,66,.25,.18],
-      [18,62,.27,-.22],
-      [-10,73,.23,.28],
-      [12,78,.24,-.30]
+      [0,28,.28,-.10],
+      [-14,34,.25,.18],
+      [15,31,.27,-.22],
+      [-8,38,.23,.28],
+      [10,41,.24,-.30]
     ];
     const s=slots[index%slots.length];
     return{x:585+s[0],y:560+s[1],scale:s[2],rot:s[3]};
@@ -176,7 +176,7 @@ AFRAME.registerComponent("web-cleanup-canvas",{
     const w=this.getWeb(id);if(!w||w.state!=="idle"||this.mode!=="game")return false;
     const slot=this.pileSlot(w.id);
     w.pileX=slot.x;w.pileY=slot.y;w.pileScale=slot.scale;w.pileRot=slot.rot;
-    w.mouthX=585;w.mouthY=548;
+    w.mouthX=585;w.mouthY=542;
     w.state="flying";w.flyStart=performance.now();w.fromX=w.x;w.fromY=w.y;
     return true;
   },
