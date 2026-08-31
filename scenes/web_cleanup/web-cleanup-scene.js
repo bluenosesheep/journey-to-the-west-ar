@@ -153,7 +153,7 @@ AFRAME.registerComponent("web-cleanup-canvas",{
     }));
   },
   image(n){return this.images[n]},
-  basket(){return{x:585,y:555,w:300,h:300}},
+  basket(){return{x:585,y:560,w:210,h:210}},
   getWeb(id){return this.webs.find(w=>w.id===id)},
   selectable(){return this.webs.filter(w=>w.state==="idle")},
   collect(id){
