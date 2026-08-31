@@ -49,28 +49,30 @@ journey-to-the-west-webar/
 │   ├── story-actor-demo.css       ← currently available for any demo entry
 |
 ├──js/
-│   ├── park.js                    ← V21 Stable，冻结，不动
-│   ├── market.js                  ← V21 Stable，冻结，不动
-│
+|   ** classroom_city_story_scene_demo   使用                 
 │   ├── park-formal.js             ← Magic Demo 正式图片 + Performance 优化版
 │   ├── market-formal.js           ← Magic Demo 正式图片 + Performance 优化版
-│
-│   ├── city-world.js              ← 原 Stable
 │   ├── city-world-performance.js  ← Performance Demo 使用
-│
-│   ├── magic-manager.js           ← Performance Demo + 提供AR场景使用 
+│   ├── magic-manager.js           ← Performance Demo + 提供AR场景使用
+|   ** classroom_diy_story   使用 
+│   ├── diy-hand-calibration.js
+│   ├── diy-camera-orientation.js
+│   ├── diy-scene-adapter.js       
+│   ├── diy-scene-manager.js
+|   ** classroom_magic_only   使用 
 │   ├── magic-only-manager.js      ← Performance Demo + 不提供AR场景使用
-│
-│   ├── hand-tracking.js                        ← 原 Stable
+|   ** 统一入口后，选项设置使用
+|   ├── input-router.js
+│   ** 手势识别   使用 
 │   └── hand-tracking-performance.js            ← Performance Demo 使用
-|
+| 
 ├──targets/
-│   ├── citywithmagic.mind                       ← Magic Demo 识别target + Performance 优化版
-│   └── city_world.mind                          ← 原 Stable 使用 without magic
+│   └── citywithmagic.mind                       ← Magic Demo 识别target + Performance 优化版
 |
 ├── index.html                                   ← 统一入口 使用citywithmagic.mind
-├── classroom_city_story_scene_demo.html         ← 由统一入口进入到city场景 使用citywithmagic.mind
+├── classroom_city_story_scene_demo.html         ← 由统一入口进入AR预定义故事场景 使用citywithmagic.mind
 ├── classroom_magic_only.html                    ← 由统一入口进入到只是用magic 使用citywithmagic.mind
+└── classroom_diy_story.html                     ← 由统一入口进入到DIY故事 使用citywithmagic.mind
 |
 ├──preview/                                      ← preview AR animate， don't need AR scan
 ├── assets/                                      ← 所有AR资源文件
@@ -79,7 +81,7 @@ journey-to-the-west-webar/
 │   ├── market_interactive.html                  ← marketAR交互
 │   ├── market.html                              ← market完整大场景
 │   ├── cloud.html                               ← 提示页面，进行preload
-│   ├── cloud_ar.html                            ← cloud magic AR识别
+│   ├── cloud_ar.html                            ← cloud magic AR识别，可二维码扫码识别
 └── target-images/
 
 ```
