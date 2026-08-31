@@ -208,7 +208,7 @@ AFRAME.registerComponent("web-cleanup-canvas",{
   draw(now){
     const c=this.ctx;c.clearRect(0,0,768,768);const t=now/1000;
     if(this.mode==="story"){
-      this.drawImg(this.image("web_large.png"),384,355+Math.sin(t*1.4)*5,610,440,1,Math.sin(t*1.7)*.025,1+Math.sin(t*2)*.015);
+      this.drawImg(this.image("web_large.png"),384,350+Math.sin(t*1.4)*5,750,540,1,Math.sin(t*1.7)*.025,1+Math.sin(t*2)*.015);
       return;
     }
     if(this.mode!=="game"&&this.mode!=="complete")return;
