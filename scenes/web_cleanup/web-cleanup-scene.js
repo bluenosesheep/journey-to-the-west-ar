@@ -64,9 +64,11 @@ window.WebCleanupMode={
     this.mode="story";StandaloneWebHandMode.sleep();this.comp()?.showStory();
     const b=document.getElementById("webStartBtn"),p=document.getElementById("webProgress");
     if(b)b.style.display="block";
-    if(p){p.style.display="block";p.textContent="大蜘蛛走了，可城市里还挂满了蜘蛛网……"}
+    // Story text now uses the upper hint position, directly above "开始清理".
+    // Keep progress hidden until the cleanup game actually starts.
+    if(p)p.style.display="none";
     ["webRetryBtn","webLeaveBtn","handBtn","handStatus"].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display="none"});
-    this.hint("MAGIC 07 · 帮师徒四人把蜘蛛网收干净");
+    this.hint("大蜘蛛被消灭了，可城市里还挂满了蜘蛛网……");
   },
   enterGame(){
     if(this.mode!=="story"&&this.mode!=="complete")return;

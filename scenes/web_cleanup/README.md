@@ -45,3 +45,12 @@ js/hand-tracking-performance.js
 - Every new round adds a little random position/scale/rotation jitter.
 - Small webs keep a forgiving minimum hit area so hand pinch remains easy.
 - Sink-to-bottom and 210x210 hole behavior from v2.4 are unchanged.
+
+
+## v2.7 story text placement
+
+When the large web is first recognized:
+- Removed `MAGIC 07 · 帮师徒四人把蜘蛛网收干净`.
+- The hint above `🧹 开始清理` now reads:
+  `大蜘蛛被消灭了，可城市里还挂满了蜘蛛网……`
+- The cleanup progress pill stays hidden until the game begins.
