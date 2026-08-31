@@ -1,12 +1,7 @@
 /*
- * Magic 07 · Web Cleanup v1
- * Standalone:
- *   ../../targets/web_cleanup.mind
- *   targetIndex:0
- *   ../../assets/web_cleanup/
- *
- * Reuses project CityInput + ClassroomHandTracking.
- * Mouse/touch and hand pinch share the same drag state.
+ * Magic 07 · Web Cleanup v2
+ * Market-style interaction: point at a web + pinch once -> web automatically flies into basket.
+ * No dragging.
  */
 window.WebCleanupSceneModule={
   config:{
@@ -30,8 +25,7 @@ window.WebCleanupSceneModule={
     if(!document.getElementById("webLeaveBtn"))add('<button id="webLeaveBtn">✅ 离开</button>');
     if(!document.getElementById("webProgress"))add('<div id="webProgress">蜘蛛网到处都是……</div>');
     if(!document.getElementById("webCanvas")){
-      const c=add('<canvas id="webCanvas" width="768" height="768"></canvas>');
-      c.style.display="none";
+      const c=add('<canvas id="webCanvas" width="768" height="768"></canvas>');c.style.display="none";
     }
     if(!document.getElementById("handBtn"))add('<button id="handBtn" class="web-shared">✨ INTERACT · OFF</button>');
     if(!document.getElementById("handStatus"))add('<div id="handStatus" class="web-shared">手势：已关闭</div>');
@@ -53,10 +47,8 @@ window.WebCleanupSceneModule={
   },
   leave(){
     if(typeof this.config.onLeave==="function")return this.config.onLeave("web_cleanup");
-    StandaloneWebHandMode.sleep();
-    WebCleanupMode.mode="waiting";
-    const c=document.querySelector("[web-cleanup-controller]")?.components?.["web-cleanup-controller"];
-    c?.hideWorld();
+    StandaloneWebHandMode.sleep();WebCleanupMode.mode="waiting";
+    document.querySelector("[web-cleanup-controller]")?.components?.["web-cleanup-controller"]?.hideWorld();
     ["webStartBtn","webRetryBtn","webLeaveBtn","webProgress","handBtn","handStatus"].forEach(id=>{
       const e=document.getElementById(id);if(e)e.style.display="none";
     });
@@ -66,48 +58,42 @@ window.WebCleanupSceneModule={
 
 window.WebCleanupMode={
   mode:"waiting",
-  setHint(t){const e=document.getElementById("hint");if(e)e.textContent=t},
   comp(){return document.getElementById("webDisplay")?.components?.["web-cleanup-canvas"]},
+  hint(t){const e=document.getElementById("hint");if(e)e.textContent=t},
   showStory(){
-    this.mode="story";StandaloneWebHandMode.sleep();
-    this.comp()?.showStory();
-    const start=document.getElementById("webStartBtn"),p=document.getElementById("webProgress");
-    if(start)start.style.display="block";
-    if(p){p.style.display="block";p.textContent="大蜘蛛虽然走了，城市里还挂满了蜘蛛网……";}
+    this.mode="story";StandaloneWebHandMode.sleep();this.comp()?.showStory();
+    const b=document.getElementById("webStartBtn"),p=document.getElementById("webProgress");
+    if(b)b.style.display="block";
+    if(p){p.style.display="block";p.textContent="大蜘蛛走了，可城市里还挂满了蜘蛛网……"}
     ["webRetryBtn","webLeaveBtn","handBtn","handStatus"].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display="none"});
-    this.setHint("MAGIC 07 · 帮师徒四人清理蜘蛛网");
+    this.hint("MAGIC 07 · 帮师徒四人把蜘蛛网收干净");
   },
   enterGame(){
     if(this.mode!=="story"&&this.mode!=="complete")return;
-    this.mode="game";
-    this.comp()?.startGame();
-    const start=document.getElementById("webStartBtn"),hand=document.getElementById("handBtn");
-    if(start)start.style.display="none";
-    if(hand){hand.style.display="block";hand.textContent="✨ INTERACT · OFF"}
+    this.mode="game";this.comp()?.startGame();
+    const b=document.getElementById("webStartBtn"),h=document.getElementById("handBtn");
+    if(b)b.style.display="none";
+    if(h){h.style.display="block";h.textContent="✨ INTERACT · OFF"}
     ["webRetryBtn","webLeaveBtn"].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display="none"});
-    this.updateProgress(0,5);
-    this.setHint("捏住蜘蛛网，把它们放进篮子里 🧺");
+    this.progress(0,5);this.hint("把光标对准蜘蛛网，捏一下就能收走它 ✨");
   },
-  updateProgress(done,total){
+  progress(n,total){
     const p=document.getElementById("webProgress");
-    if(p){p.style.display="block";p.textContent=`🕸️ 已清理 ${done} / ${total}`}
+    if(p){p.style.display="block";p.textContent=`🕸️ 已清理 ${n} / ${total}`}
   },
   complete(){
     if(this.mode==="complete")return;
-    this.mode="complete";StandaloneWebHandMode.sleep();
-    this.comp()?.complete();
+    this.mode="complete";StandaloneWebHandMode.sleep();this.comp()?.complete();
     const p=document.getElementById("webProgress");if(p)p.textContent="✨ 城市干净啦！";
     const hb=document.getElementById("handBtn"),hs=document.getElementById("handStatus");
     if(hb)hb.style.display="none";if(hs)hs.style.display="none";
     setTimeout(()=>{
       const r=document.getElementById("webRetryBtn"),l=document.getElementById("webLeaveBtn");
       if(r)r.style.display="block";if(l)l.style.display="block";
-    },550);
-    this.setHint("✨ 蜘蛛网全部收好啦！");
+    },650);
+    this.hint("✨ 蜘蛛网全部收进篮子啦！");
   },
-  retry(){
-    StandaloneWebHandMode.sleep();this.mode="story";this.comp()?.reset();this.showStory();
-  },
+  retry(){StandaloneWebHandMode.sleep();this.mode="story";this.comp()?.reset();this.showStory()},
   leave(){StandaloneWebHandMode.sleep();WebCleanupSceneModule.leave()}
 };
 
@@ -125,7 +111,7 @@ window.StandaloneWebHandMode={
       maxFps:WebCleanupSceneModule.config.handFps,smoothing:.38,reuseExistingVideo:true,
       viewport:()=>({width:innerWidth,height:innerHeight}),
       onStatus:m=>{if(status)status.textContent="手势："+m},
-      onMetrics:d=>{if(status)status.textContent=d.handVisible?"手势：捏住蜘蛛网拖进篮子":"手势：请伸出一只手"}
+      onMetrics:d=>{if(status)status.textContent=d.handVisible?"手势：对准蜘蛛网，捏一下":"手势：请伸出一只手"}
     });
     this.running=true;this.note();
     const b=document.getElementById("handBtn");if(b)b.textContent="✨ INTERACT · ON";
@@ -157,74 +143,71 @@ AFRAME.registerComponent("web-cleanup-canvas",{
   showStory(){this.mode="story";this.webs=[];this.done=0},
   startGame(){
     this.mode="game";this.done=0;this.sparkleAt=0;
-    // Deliberately spread across a large play area, away from the basket.
     const seeds=[
-      [145,170,.84,-.25],[382,145,.72,.18],[620,190,.82,-.12],
-      [190,420,.76,.13],[500,390,.88,-.20]
+      [145,165,.88,-.22],[385,145,.76,.16],[620,190,.84,-.12],
+      [175,420,.78,.15],[475,405,.90,-.18]
     ];
     this.webs=seeds.map((v,i)=>({
-      id:i,x:v[0],y:v[1],homeX:v[0],homeY:v[1],scale:v[2],rot:v[3],
-      collected:false,dragging:false,dropScale:1,phase:i*1.37
+      id:i,x:v[0],y:v[1],scale:v[2],rot:v[3],phase:i*1.29,
+      state:"idle",flyStart:0,fromX:0,fromY:0,flyDuration:620
     }));
   },
-  complete(){this.mode="complete";this.sparkleAt=performance.now()},
   image(n){return this.images[n]},
+  basket(){return{x:585,y:560,w:210,h:210}},
+  getWeb(id){return this.webs.find(w=>w.id===id)},
+  selectable(){return this.webs.filter(w=>w.state==="idle")},
+  collect(id){
+    const w=this.getWeb(id);if(!w||w.state!=="idle"||this.mode!=="game")return false;
+    w.state="flying";w.flyStart=performance.now();w.fromX=w.x;w.fromY=w.y;
+    return true;
+  },
+  complete(){this.mode="complete";this.sparkleAt=performance.now()},
   drawImg(img,x,y,w,h,a=1,rot=0,scale=1){
     if(!img?.complete||!img.naturalWidth)return;
     const c=this.ctx;c.save();c.globalAlpha=a;c.translate(x,y);c.rotate(rot);c.scale(scale,scale);
     c.drawImage(img,-w/2,-h/2,w,h);c.restore();
   },
-  basketRect(){return{x:548,y:500,w:185,h:185,rimY:455,deepY:525}},
-  getWeb(id){return this.webs.find(w=>w.id===id)},
-  setWebPos(id,x,y){const w=this.getWeb(id);if(w&&!w.collected){w.x=x;w.y=y}},
-  setDragging(id,v){const w=this.getWeb(id);if(w)w.dragging=v},
-  tryDrop(id){
-    const w=this.getWeb(id);if(!w||w.collected)return false;
-    const b=this.basketRect();
-    // forgiving basket mouth
-    const inMouth=w.x>b.x-b.w*.58&&w.x<b.x+b.w*.58&&w.y>b.rimY-45&&w.y<b.deepY+42;
-    if(!inMouth)return false;
-    w.collected=true;w.dragging=false;this.done++;
-    WebCleanupMode.updateProgress(this.done,this.webs.length);
-    if(this.done===this.webs.length)setTimeout(()=>WebCleanupMode.complete(),260);
-    return true;
-  },
+  ease(t){return 1-Math.pow(1-t,3)},
   draw(now){
-    const c=this.ctx;c.clearRect(0,0,768,768);
-    const t=now/1000;
+    const c=this.ctx;c.clearRect(0,0,768,768);const t=now/1000;
     if(this.mode==="story"){
-      const sway=Math.sin(t*1.7)*.025,bob=Math.sin(t*1.3)*5,pulse=1+Math.sin(t*2.1)*.018;
-      this.drawImg(this.image("web_large.png"),384,360+bob,600,430,1,sway,pulse);
+      this.drawImg(this.image("web_large.png"),384,355+Math.sin(t*1.4)*5,610,440,1,Math.sin(t*1.7)*.025,1+Math.sin(t*2)*.015);
       return;
     }
-    if(this.mode==="game"||this.mode==="complete"){
-      const b=this.basketRect();
+    if(this.mode!=="game"&&this.mode!=="complete")return;
 
-      // Draw non-dragged webs first.
-      this.webs.forEach(w=>{
-        if(w.collected||w.dragging)return;
-        const bob=Math.sin(t*1.8+w.phase)*4;
-        this.drawImg(this.image("web_small.png"),w.x,w.y+bob,145*w.scale,145*w.scale,1,w.rot+Math.sin(t+w.phase)*.025,1);
-      });
+    const b=this.basket();
 
-      // Basket is above ordinary webs so objects entering it look partially occluded.
-      this.drawImg(this.image("web_basket.png"),b.x,b.y,220,220,1,0,1);
+    // idle webs
+    this.webs.forEach(w=>{
+      if(w.state!=="idle")return;
+      const bob=Math.sin(t*1.75+w.phase)*4;
+      this.drawImg(this.image("web_small.png"),w.x,w.y+bob,150*w.scale,150*w.scale,1,w.rot+Math.sin(t+w.phase)*.025);
+    });
 
-      // Dragged web: shrink as it approaches/enters the mouth.
-      this.webs.forEach(w=>{
-        if(w.collected||!w.dragging)return;
-        const dx=(w.x-b.x)/(b.w*.65),dy=(w.y-b.rimY)/115;
-        const near=Math.max(0,1-Math.min(1,Math.sqrt(dx*dx+dy*dy)));
-        const sc=1-near*.52;
-        this.drawImg(this.image("web_small.png"),w.x,w.y,145*w.scale,145*w.scale,1,w.rot,sc);
-      });
-
-      if(this.mode==="complete"){
-        const e=now-this.sparkleAt;
-        const alpha=e<1400?Math.max(.2,1-e/1800):.22;
-        const sc=1+Math.sin(t*4)*.05;
-        this.drawImg(this.image("web_clean_sparkle.png"),384,340,430,430,alpha,0,sc);
+    // flying webs go behind the basket as they arrive
+    this.webs.forEach(w=>{
+      if(w.state!=="flying")return;
+      const p=Math.min(1,(now-w.flyStart)/w.flyDuration),e=this.ease(p);
+      const arc=Math.sin(Math.PI*p)*-70;
+      const x=w.fromX+(b.x-w.fromX)*e;
+      const y=w.fromY+(b.y-28-w.fromY)*e+arc;
+      const sc=1-e*.78,alpha=1-Math.max(0,(p-.78)/.22);
+      this.drawImg(this.image("web_small.png"),x,y,150*w.scale,150*w.scale,alpha,w.rot+p*.8,sc);
+      if(p>=1){
+        w.state="collected";this.done++;
+        WebCleanupMode.progress(this.done,this.webs.length);
+        if(this.done===this.webs.length)setTimeout(()=>WebCleanupMode.complete(),260);
       }
+    });
+
+    // Basket in front makes the final flight look like it enters the basket.
+    this.drawImg(this.image("web_basket.png"),b.x,b.y,b.w,b.h,1);
+
+    if(this.mode==="complete"){
+      const e=now-this.sparkleAt;
+      const alpha=e<1500?Math.max(.22,1-e/1900):.22;
+      this.drawImg(this.image("web_clean_sparkle.png"),384,350,450,450,alpha,0,1+Math.sin(t*4)*.05);
     }
   },
   tick(){
@@ -238,12 +221,13 @@ AFRAME.registerComponent("web-cleanup-canvas",{
 AFRAME.registerComponent("web-cleanup-controller",{
   schema:{world:{type:"selector"}},
   init(){
-    this.world=this.data.world;this.tracking=false;this.holding=false;this.hist=[];this.drag=null;
+    this.world=this.data.world;this.tracking=false;this.holding=false;this.hist=[];
     this.basePos=new THREE.Vector3();this.baseScale=new THREE.Vector3(1,1,1);
     if(this.world)this.world.object3D.visible=false;
 
-    if(window.CityInput)CityInput.register("web-cleanup-drag",{
-      down:i=>this.onDown(i),move:i=>this.onMove(i),up:i=>this.onUp(i)
+    // Market-style: a click or a hand pinch DOWN selects one web. No drag/move/up logic.
+    if(window.CityInput)CityInput.register("web-cleanup-pick",{
+      down:i=>this.pick(i)
     });
 
     this.el.addEventListener("targetFound",()=>{
@@ -255,7 +239,7 @@ AFRAME.registerComponent("web-cleanup-controller",{
     });
     this.el.addEventListener("targetLost",()=>this.holdLastPose());
   },
-  canvasComp(){return document.getElementById("webDisplay")?.components?.["web-cleanup-canvas"]},
+  comp(){return document.getElementById("webDisplay")?.components?.["web-cleanup-canvas"]},
   camera(){return document.querySelector("a-camera")?.getObject3D("camera")||document.querySelector("[camera]")?.getObject3D("camera")},
   project(v){
     const cam=this.camera();if(!cam)return null;const p=v.clone().project(cam);
@@ -273,45 +257,25 @@ AFRAME.registerComponent("web-cleanup-controller",{
     const ly=-(y-cen.y)/sy;
     return{x:(lx/2.15+.5)*768,y:(.5-ly/2.15)*768};
   },
-  nearestWeb(c){
-    const comp=this.canvasComp();if(!comp)return null;
+  nearest(c,source){
+    const comp=this.comp();if(!comp)return null;
     let best=null,bd=1e9;
-    comp.webs.forEach(w=>{
-      if(w.collected)return;
+    comp.selectable().forEach(w=>{
       const d=Math.hypot(c.x-w.x,c.y-w.y);
-      const radius=72*w.scale;
-      if(d<radius&&d<bd){best=w;bd=d}
+      // Hand gets a slightly larger forgiving target than mouse.
+      const r=(source==="hand"?92:78)*w.scale;
+      if(d<r&&d<bd){best=w;bd=d}
     });
     return best;
   },
-  onDown(i){
+  pick(i){
     if(WebCleanupMode.mode!=="game")return;
     const c=this.screenToCanvas(i.x,i.y);if(!c)return;
-    const w=this.nearestWeb(c);if(!w)return;
-    this.drag={id:w.id,offX:c.x-w.x,offY:c.y-w.y,source:i.source||"pointer"};
-    this.canvasComp()?.setDragging(w.id,true);
-    if(i.source==="hand")StandaloneWebHandMode.note();
-    i.nativeEvent?.preventDefault?.();
-  },
-  onMove(i){
-    if(!this.drag||WebCleanupMode.mode!=="game")return;
-    const c=this.screenToCanvas(i.x,i.y);if(!c)return;
-    const x=Math.max(70,Math.min(698,c.x-this.drag.offX));
-    const y=Math.max(70,Math.min(690,c.y-this.drag.offY));
-    this.canvasComp()?.setWebPos(this.drag.id,x,y);
-    if(i.source==="hand")StandaloneWebHandMode.note();
-    i.nativeEvent?.preventDefault?.();
-  },
-  onUp(i){
-    if(!this.drag)return;
-    const id=this.drag.id;this.drag=null;
-    const comp=this.canvasComp();comp?.setDragging(id,false);
-    if(!comp?.tryDrop(id)){
-      const w=comp?.getWeb(id);
-      if(w){w.x=w.x;w.y=w.y} // stays where released; encourages free play
+    const w=this.nearest(c,i.source);if(!w)return;
+    if(this.comp()?.collect(w.id)){
+      if(i.source==="hand")StandaloneWebHandMode.note();
+      i.nativeEvent?.preventDefault?.();
     }
-    if(i.source==="hand")StandaloneWebHandMode.note();
-    i.nativeEvent?.preventDefault?.();
   },
   holdLastPose(){
     if(WebCleanupMode.mode==="waiting")return;
@@ -322,10 +286,7 @@ AFRAME.registerComponent("web-cleanup-controller",{
       const o=this.world.object3D;o.position.copy(this.basePos);o.quaternion.identity();o.scale.copy(this.baseScale);o.visible=true;
     }
   },
-  hideWorld(){
-    this.tracking=false;this.holding=false;this.drag=null;
-    if(this.world)this.world.object3D.visible=false;
-  },
+  hideWorld(){this.tracking=false;this.holding=false;if(this.world)this.world.object3D.visible=false},
   tick(){
     if(!this.world||WebCleanupMode.mode==="waiting")return;
     if(this.tracking){

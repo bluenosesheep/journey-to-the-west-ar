@@ -1,9 +1,7 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Magic 07 · 清理蜘蛛网</title>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Magic 07 · 清理蜘蛛网 v2</title>
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 <script src="../../js/input-router.js"></script>
@@ -19,50 +17,21 @@ canvas.a-canvas{background:transparent!important;transform:scaleX(-1)!important;
 #cameraOrientationControl{position:fixed;left:18px;top:18px;z-index:160;display:flex;gap:7px;align-items:center;padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.92);font:800 11px system-ui;box-shadow:0 4px 16px rgba(0,0,0,.13)}
 #cameraOrientationControl select{border:0;border-radius:999px;padding:5px 8px;background:rgba(255,240,180,.92);font:800 12px system-ui}
 .mindar-ui-scanning,.mindar-ui-scanning .scanning,.mindar-ui-scanning .scanning-line,.mindar-ui-scanning .inner,.mindar-ui-scanning .scanline{display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}
-</style>
-</head>
-<body>
-<div id="cameraOrientationControl"><span>📷 CAMERA</span><select id="cameraOrientationSelect">
-<option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option>
-</select></div>
+</style></head><body>
+<div id="cameraOrientationControl"><span>📷 CAMERA</span><select id="cameraOrientationSelect"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select></div>
 <div id="hint">请把镜头对准 MAGIC 07 卡</div>
-
 <script>
-WebCleanupSceneModule.install({
- integrated:false,assetBase:"../../assets/web_cleanup/",
- mirrorAR:true,mirrorHand:true,handFps:15,sleepMs:3000
-});
+WebCleanupSceneModule.install({integrated:false,assetBase:"../../assets/web_cleanup/",mirrorAR:true,mirrorHand:true,handFps:15,sleepMs:3000});
 </script>
-
-<a-scene
- mindar-image="imageTargetSrc: ../../targets/web_cleanup.mind; autoStart:true; maxTrack:1;"
- color-space="sRGB"
- renderer="colorManagement:true;physicallyCorrectLights:true;alpha:true;antialias:true"
- vr-mode-ui="enabled:false"
- device-orientation-permission-ui="enabled:false">
- <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
- <a-entity mindar-image-target="targetIndex:0" web-cleanup-controller="world:#webCleanupWorld"></a-entity>
- <a-entity id="webCleanupWorld" visible="false">
-   <a-plane id="webDisplay" width="2.15" height="2.15" position="0 0.03 0.02"
-    material="shader:flat;src:#webCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double"
-    web-cleanup-canvas></a-plane>
- </a-entity>
+<a-scene mindar-image="imageTargetSrc: ../../targets/web_cleanup.mind; autoStart:true; maxTrack:1;" color-space="sRGB" renderer="colorManagement:true;physicallyCorrectLights:true;alpha:true;antialias:true" vr-mode-ui="enabled:false" device-orientation-permission-ui="enabled:false">
+<a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+<a-entity mindar-image-target="targetIndex:0" web-cleanup-controller="world:#webCleanupWorld"></a-entity>
+<a-entity id="webCleanupWorld" visible="false"><a-plane id="webDisplay" width="2.15" height="2.15" position="0 0.03 0.02" material="shader:flat;src:#webCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double" web-cleanup-canvas></a-plane></a-entity>
 </a-scene>
-
 <script>
 document.addEventListener("DOMContentLoaded",()=>{
- const sel=document.getElementById("cameraOrientationSelect");
- let a=Number(localStorage.getItem("webCleanupCameraAngle")||0);sel.value=String(a);
- const apply=()=>{
-   const v=document.querySelector("video");if(!v){setTimeout(apply,120);return}
-   v.style.transformOrigin="50% 50%";
-   if(a===90||a===270){
-     const sc=Math.max(innerWidth/innerHeight,innerHeight/innerWidth);
-     v.style.transform=`rotate(${a}deg) scale(${sc}) scaleX(-1)`;
-   }else v.style.transform=`rotate(${a}deg) scaleX(-1)`;
- };
- sel.addEventListener("change",()=>{a=Number(sel.value)||0;localStorage.setItem("webCleanupCameraAngle",String(a));apply()});
- apply();
+ const sel=document.getElementById("cameraOrientationSelect");let a=Number(localStorage.getItem("webCleanupCameraAngle")||0);sel.value=String(a);
+ const apply=()=>{const v=document.querySelector("video");if(!v){setTimeout(apply,120);return}v.style.transformOrigin="50% 50%";if(a===90||a===270){const sc=Math.max(innerWidth/innerHeight,innerHeight/innerWidth);v.style.transform=`rotate(${a}deg) scale(${sc}) scaleX(-1)`}else v.style.transform=`rotate(${a}deg) scaleX(-1)`};
+ sel.addEventListener("change",()=>{a=Number(sel.value)||0;localStorage.setItem("webCleanupCameraAngle",String(a));apply()});apply();
 });
-</script>
-</body></html>
+</script></body></html>
