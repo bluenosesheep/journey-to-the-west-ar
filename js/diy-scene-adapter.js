@@ -38,6 +38,10 @@ window.DIYSceneRegistry={
     targetIndex:7,
     assetBase:diyProjectUrl("assets/spider/")
   },
+  web_cleanup:{
+    targetIndex:8,
+    assetBase:diyProjectUrl("assets/web_cleanup/")
+  },
   magic:{
     cloud:{targetIndex:3},
     fire:{targetIndex:4},
@@ -126,6 +130,25 @@ window.DIYSceneAdapter={
     });
     window.SpiderSceneModule?.ensureUI?.();
     window.SpiderSceneModule?.bindUI?.();
+
+    // WEB CLEANUP interactive Magic. Keep its standalone scene logic unchanged;
+    // the adapter only supplies shared host UI, asset path and lifecycle callbacks.
+    window.WebCleanupSceneModule?.configure?.({
+      integrated:true,
+      assetBase:cfg.web_cleanup.assetBase,
+      mirrorAR:true,
+      mirrorHand:true,
+      handFps:15,
+      sleepMs:3000,
+      onActivate(){
+        window.DIYSceneManager?.activate("web_cleanup");
+      },
+      onLeave(){
+        window.DIYSceneManager?.leaveCurrent();
+      }
+    });
+    window.WebCleanupSceneModule?.ensureUI?.();
+    window.WebCleanupSceneModule?.bindUI?.();
   },
 
   patchIntegratedSceneLayers(){
@@ -293,6 +316,20 @@ window.DIYSceneAdapter={
     spiderDisplay.setAttribute("material","shader:flat;src:#spiderCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double");
     spiderDisplay.setAttribute("spider-canvas","");
     spiderWorld.appendChild(spiderDisplay);
+
+    const webCleanupWorld=document.createElement("a-entity");
+    webCleanupWorld.id="webCleanupWorld";
+    webCleanupWorld.setAttribute("visible","false");
+    scene.appendChild(webCleanupWorld);
+
+    const webCleanupDisplay=document.createElement("a-plane");
+    webCleanupDisplay.id="webDisplay";
+    webCleanupDisplay.setAttribute("width","2.15");
+    webCleanupDisplay.setAttribute("height","2.15");
+    webCleanupDisplay.setAttribute("position","0 0.03 0.02");
+    webCleanupDisplay.setAttribute("material","shader:flat;src:#webCanvas;transparent:true;alphaTest:0.01;depthWrite:false;side:double");
+    webCleanupDisplay.setAttribute("web-cleanup-canvas","");
+    webCleanupWorld.appendChild(webCleanupDisplay);
   },
 
   createTargets(scene){
@@ -321,6 +358,11 @@ window.DIYSceneAdapter={
     spiderTarget.setAttribute("mindar-image-target",`targetIndex:${cfg.spider.targetIndex}`);
     spiderTarget.setAttribute("spider-controller","world:#spiderWorld");
     scene.appendChild(spiderTarget);
+
+    const webCleanupTarget=document.createElement("a-entity");
+    webCleanupTarget.setAttribute("mindar-image-target",`targetIndex:${cfg.web_cleanup.targetIndex}`);
+    webCleanupTarget.setAttribute("web-cleanup-controller","world:#webCleanupWorld");
+    scene.appendChild(webCleanupTarget);
 
     // Pure, non-interactive Magic reuses the SAME magic-only-manager.js
     // used by the standalone Magic Only entry. Only target mapping lives here.

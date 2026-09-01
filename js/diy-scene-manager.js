@@ -11,6 +11,7 @@ window.DIYSceneManager={
     window.StandaloneHandMode?.sleep();
     window.StandaloneMarketHandMode?.sleep();
     window.StandaloneSpiderHandMode?.sleep();
+    window.StandaloneWebHandMode?.sleep();
     const cursor=document.getElementById("handCursor");
     if(cursor)cursor.style.display="none";
   },
@@ -74,6 +75,31 @@ window.DIYSceneManager={
     if(window.SpiderMode)window.SpiderMode.mode="waiting";
   },
 
+  hideWebCleanup(){
+    window.StandaloneWebHandMode?.sleep();
+
+    ["webStartBtn","webRetryBtn","webLeaveBtn","webProgress"].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el)el.style.display="none";
+    });
+
+    const ctrl=document.querySelector('[web-cleanup-controller]')?.components?.["web-cleanup-controller"];
+    if(ctrl){
+      ctrl.tracking=false;
+      ctrl.holding=false;
+      ctrl.hideWorld?.();
+    }
+
+    const comp=document.getElementById("webDisplay")?.components?.["web-cleanup-canvas"];
+    comp?.reset?.();
+    if(window.WebCleanupMode)window.WebCleanupMode.mode="waiting";
+
+    // WebCleanupMode.hint("") hides the shared hint pill during gameplay.
+    // Restore it before the next scene / waiting screen.
+    const hint=document.getElementById("hint");
+    if(hint)hint.style.display="block";
+  },
+
   resetSharedHandUI(kind){
     const btn=document.getElementById("handBtn");
     const status=document.getElementById("handStatus");
@@ -100,21 +126,27 @@ window.DIYSceneManager={
     this.hidePark();
     this.hideMarket();
     this.hideSpider();
-    document.body.classList.remove("diy-building","diy-park","diy-market","diy-spider");
+    this.hideWebCleanup();
+    document.body.classList.remove("diy-building","diy-park","diy-market","diy-spider","diy-web_cleanup");
   },
 
   activate(kind){
     if(this.active!==kind)this.hideAll();
 
     this.active=kind;
-    document.body.classList.remove("diy-waiting","diy-building","diy-park","diy-market","diy-spider");
+    document.body.classList.remove("diy-waiting","diy-building","diy-park","diy-market","diy-spider","diy-web_cleanup");
     document.body.classList.add("diy-"+kind);
     this.resetSharedHandUI(kind);
 
     const leave=document.getElementById("leaveSceneBtn");
     if(leave){
       leave.style.display="block";
-      leave.textContent=kind==="building"?"← 离开城市":kind==="park"?"← 离开公园":kind==="market"?"← 离开市场":"← 离开蜘蛛挑战";
+      leave.textContent=
+        kind==="building"?"← 离开城市":
+        kind==="park"?"← 离开公园":
+        kind==="market"?"← 离开市场":
+        kind==="web_cleanup"?"← 离开清理任务":
+        "← 离开蜘蛛挑战";
     }
   },
 
@@ -147,13 +179,14 @@ window.DIYSceneManager={
     if(leave)leave.style.display="none";
 
     this.resetSharedHandUI(null);
-    this.setHint("✨ 扫描 BUILDING / PARK / MARKET / SPIDER 开始一个场景，也可以随时扫描 CLOUD / FIRE / RAIN / GROW");
+    this.setHint("✨ 扫描 BUILDING / PARK / MARKET / SPIDER / WEB CLEANUP 开始一个场景，也可以随时扫描 CLOUD / FIRE / RAIN / GROW");
   },
 
   handToggle(){
     if(this.active==="park")window.StandaloneHandMode?.toggle();
     else if(this.active==="market")window.StandaloneMarketHandMode?.toggle();
     else if(this.active==="spider")window.StandaloneSpiderHandMode?.toggle();
+    else if(this.active==="web_cleanup")window.StandaloneWebHandMode?.toggle();
   }
 };
 
