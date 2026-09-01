@@ -447,7 +447,9 @@ AFRAME.registerComponent("spider-canvas",{
     const binH=binW*binRatio;
     const binCX=w*.50;
     const binCY=h*.84;
-    const frontRimY=binCY-binH*.12;
+    // The basket opening is near the upper quarter of the image, not the middle.
+    // Use the same rim geometry as drawGame() so release success matches the visual mouth.
+    const frontRimY=binCY-binH*.24;
 
     const withinMouthX =
       s.x>=binCX-binW*.44 && s.x<=binCX+binW*.44;
@@ -576,8 +578,11 @@ AFRAME.registerComponent("spider-canvas",{
     const binCY=h*.84;
 
     // Approximate visible mouth / front-rim positions in canvas space.
-    const mouthY=binCY-binH*.34;
-    const frontRimY=binCY-binH*.12;
+    // The visible opening lives much higher than the old values suggested.
+    // Start shrinking as the spider reaches the back of the opening, then let the
+    // front wall cover it shortly afterwards so it appears to enter from the top.
+    const mouthY=binCY-binH*.43;
+    const frontRimY=binCY-binH*.24;
 
     this.drawCentered(this.img.bin,binCX,binCY,binW,binH,0,1);
 
@@ -625,6 +630,7 @@ AFRAME.registerComponent("spider-canvas",{
       if(!body)continue;
 
       let visualScale=1;
+      let visualX=s.x;
       let visualY=s.y;
       let visualAlpha=1;
 
@@ -635,20 +641,25 @@ AFRAME.registerComponent("spider-canvas",{
         // At the bin opening: gradually shrink.
         if(s.y>=mouthY && s.y<frontRimY){
           const depth=Math.max(0,Math.min(1,(s.y-mouthY)/(frontRimY-mouthY)));
-          visualScale=1-.48*depth;
-          visualY=s.y+8*depth;
+          // Funnel the spider toward the center of the opening while it descends.
+          // This gives a diagonal "into the mouth" trajectory instead of sliding
+          // straight down across the front of the bin.
+          visualX=s.x+(binCX-s.x)*(.62*depth);
+          visualScale=1-.46*depth;
+          visualY=s.y+5*depth;
         }
-        // Once below the front rim, hide the spider completely.
+        // Once it crosses the front rim, the front-wall occlusion pass hides it.
         else if(s.y>=frontRimY){
-          visualScale=.52;
-          visualY=s.y+8;
+          visualX=s.x+(binCX-s.x)*.68;
+          visualScale=.54;
+          visualY=s.y+5;
           visualAlpha=0;
         }
       }
 
       const size=w*s.scale*(1+.025*wiggle)*visualScale;
       const ratio=body.naturalHeight/body.naturalWidth;
-      this.drawCentered(body,s.x,visualY,size,size*ratio,wiggle*.045,visualAlpha);
+      this.drawCentered(body,visualX,visualY,size,size*ratio,wiggle*.045,visualAlpha);
     }
 
     // Front-wall occlusion pass.
@@ -656,7 +667,9 @@ AFRAME.registerComponent("spider-canvas",{
     // bin back on top. This creates a convincing "drop into the bin" effect.
     if(this.img.bin){
       const img=this.img.bin;
-      const srcY=Math.round(img.naturalHeight*.38);
+      // Repaint the front wall from the actual front rim upward enough to
+      // occlude the spider as soon as it slips through the opening.
+      const srcY=Math.round(img.naturalHeight*.26);
       const srcH=img.naturalHeight-srcY;
       const dstTop=frontRimY;
       const dstH=(binCY+binH/2)-frontRimY;
