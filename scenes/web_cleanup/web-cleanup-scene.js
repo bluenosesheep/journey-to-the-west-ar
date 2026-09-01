@@ -236,51 +236,188 @@ AFRAME.registerComponent("web-cleanup-canvas",{
     const c=this.ctx;c.clearRect(0,0,768,768);const t=now/1000;
     if(this.mode==="story"){
       const web=this.image("web_large.png");
-      const breath=Math.sin(t*1.18);
-      const scaleX=1+breath*.026,scaleY=1-breath*.014;
-      let rot=Math.sin(t*.82)*.018+Math.sin(t*1.73)*.006;
-      let x=384+Math.sin(t*.57)*5,y=338+Math.sin(t*.91)*5;
-
-      const cycle=t%7.6;
-      if(cycle>2.15&&cycle<3.35){
-        const p=(cycle-2.15)/1.20,tug=Math.sin(Math.PI*p);
-        x-=tug*17;rot-=tug*.022;
-      }else if(cycle>5.15&&cycle<6.30){
-        const p=(cycle-5.15)/1.15,tug=Math.sin(Math.PI*p);
-        x+=tug*14;rot+=tug*.019;
-      }
-
       const ctx=this.ctx;
-      if(web?.complete&&web.naturalWidth){
-        ctx.save();ctx.globalAlpha=.13;ctx.translate(x+5,y+7);ctx.rotate(rot*.72);
-        ctx.scale(scaleX*1.045,scaleY*1.045);ctx.drawImage(web,-390,-280,780,560);ctx.restore();
 
-        ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.scale(scaleX,scaleY);
-        ctx.drawImage(web,-390,-280,780,560);ctx.restore();
+      /*
+       * DEMO VISUAL V2
+       * Base motion: breathing + drift + occasional wind tug.
+       * Added:
+       *   1) wind-shear deformation across horizontal strips;
+       *   2) localized ripple packets that travel across the silk;
+       *   3) stronger but still subtle shimmer while the ripple passes.
+       */
+
+      const breath=Math.sin(t*1.15);
+      const baseScaleX=1+breath*.024;
+      const baseScaleY=1-breath*.013;
+      let baseRot=Math.sin(t*.78)*.016+Math.sin(t*1.63)*.006;
+      let baseX=384+Math.sin(t*.54)*5;
+      let baseY=338+Math.sin(t*.88)*5;
+
+      // Wind cycle: a gust comes from alternating sides every few seconds.
+      const windCycle=t%8.4;
+      let gust=0;
+      let gustDir=1;
+      if(windCycle>1.8&&windCycle<3.25){
+        const p=(windCycle-1.8)/1.45;
+        gust=Math.sin(Math.PI*p);
+        gustDir=-1;
+      }else if(windCycle>5.0&&windCycle<6.45){
+        const p=(windCycle-5.0)/1.45;
+        gust=Math.sin(Math.PI*p);
+        gustDir=1;
       }
 
-      const sweep=(t*.18)%1,sweepX=105+sweep*560;
-      const grad=ctx.createLinearGradient(sweepX-85,120,sweepX+85,560);
+      baseX+=gustDir*gust*14;
+      baseRot+=gustDir*gust*.017;
+
+      // Soft depth echo behind the web.
+      if(web?.complete&&web.naturalWidth){
+        ctx.save();
+        ctx.globalAlpha=.11+.03*gust;
+        ctx.translate(baseX+5,baseY+7);
+        ctx.rotate(baseRot*.7);
+        ctx.scale(baseScaleX*1.045,baseScaleY*1.045);
+        ctx.drawImage(web,-390,-280,780,560);
+        ctx.restore();
+      }
+
+      /*
+       * Draw the main web in horizontal strips.
+       * Each strip gets a slightly different X offset and width modulation.
+       * This gives the impression that flexible silk is being pushed by air,
+       * instead of the whole PNG moving as one rigid card.
+       */
+      if(web?.complete&&web.naturalWidth){
+        const srcW=web.naturalWidth,srcH=web.naturalHeight;
+        const strips=14;
+        const stripH=srcH/strips;
+        const destH=560/strips;
+
+        ctx.save();
+        ctx.translate(baseX,baseY);
+        ctx.rotate(baseRot);
+
+        for(let i=0;i<strips;i++){
+          const ny=(i/(strips-1))*2-1; // -1 top, +1 bottom
+
+          // Ambient silk motion.
+          const ambient=Math.sin(t*1.55+i*.58)*2.2+
+                        Math.sin(t*.72+i*.31)*1.4;
+
+          // Gust bends the free middle/bottom regions more than the anchored top.
+          const freedom=.35+.65*Math.pow((i+1)/strips,1.25);
+          const gustOffset=gustDir*gust*11*freedom*
+                           Math.sin((i/(strips-1))*Math.PI*.92+.35);
+
+          // Slight horizontal stretch/compression during gust.
+          const stretch=1+gust*.018*freedom+
+                        Math.sin(t*1.18+i*.22)*.006;
+
+          const dx=ambient+gustOffset;
+          const dy=(i-(strips-1)/2)*destH;
+
+          ctx.drawImage(
+            web,
+            0,i*stripH,srcW,stripH+1,
+            -390*baseScaleX*stretch+dx,
+            -280*baseScaleY+i*destH*baseScaleY,
+            780*baseScaleX*stretch,
+            destH*baseScaleY+1
+          );
+        }
+        ctx.restore();
+      }
+
+      /*
+       * Local ripple packets:
+       * every ~5.8s a small disturbance starts near one side of the web and
+       * travels through it. The rings are clipped to the web's visual region.
+       */
+      const rippleCycle=t%5.8;
+      const rippleP=Math.min(1,Math.max(0,(rippleCycle-.65)/1.75));
+      const rippleActive=rippleCycle>.65&&rippleCycle<2.40;
+
+      if(rippleActive){
+        const dir=(Math.floor(t/5.8)%2===0)?1:-1;
+        const startX=dir>0?210:555;
+        const endX=dir>0?555:210;
+        const rx=startX+(endX-startX)*rippleP;
+        const ry=325+Math.sin(rippleP*Math.PI)*18;
+        const amp=Math.sin(Math.PI*rippleP);
+
+        ctx.save();
+        ctx.globalCompositeOperation="screen";
+
+        // Three soft expanding silk waves.
+        for(let k=0;k<3;k++){
+          const localP=Math.max(0,Math.min(1,rippleP-k*.10));
+          if(localP<=0)continue;
+          const radius=28+localP*105+k*16;
+          const alpha=(1-localP)*.10+amp*.07;
+
+          ctx.strokeStyle=`rgba(255,252,224,${Math.max(0,alpha)})`;
+          ctx.lineWidth=1.2+k*.35;
+          ctx.beginPath();
+          ctx.ellipse(
+            rx-k*dir*18,
+            ry+k*7,
+            radius*1.35,
+            radius*.72,
+            .08*dir,
+            0,Math.PI*2
+          );
+          ctx.stroke();
+        }
+
+        // Local glint at the ripple head.
+        const headAlpha=.24*amp;
+        const headR=6+amp*5;
+        ctx.strokeStyle=`rgba(255,255,238,${headAlpha})`;
+        ctx.lineWidth=1.4;
+        ctx.beginPath();
+        ctx.moveTo(rx-headR*1.8,ry);ctx.lineTo(rx+headR*1.8,ry);
+        ctx.moveTo(rx,ry-headR*1.8);ctx.lineTo(rx,ry+headR*1.8);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Slow diagonal silk highlight sweep from V1.
+      const sweep=(t*.17)%1;
+      const sweepX=95+sweep*575;
+      const grad=ctx.createLinearGradient(sweepX-90,115,sweepX+90,565);
       grad.addColorStop(0,"rgba(255,255,255,0)");
       grad.addColorStop(.43,"rgba(255,250,218,0)");
-      grad.addColorStop(.50,"rgba(255,255,235,.22)");
+      grad.addColorStop(.50,`rgba(255,255,235,${.16+gust*.06})`);
       grad.addColorStop(.57,"rgba(255,250,218,0)");
       grad.addColorStop(1,"rgba(255,255,255,0)");
-      ctx.save();ctx.globalCompositeOperation="screen";ctx.fillStyle=grad;
-      ctx.beginPath();ctx.ellipse(384,340,315,230,0,0,Math.PI*2);ctx.clip();
-      ctx.fillRect(70,80,630,540);ctx.restore();
+      ctx.save();
+      ctx.globalCompositeOperation="screen";
+      ctx.fillStyle=grad;
+      ctx.beginPath();
+      ctx.ellipse(384,340,320,235,0,0,Math.PI*2);
+      ctx.clip();
+      ctx.fillRect(65,75,640,550);
+      ctx.restore();
 
+      // Small dew/silk glints, still deliberately sparse.
       [[235,238,0],[405,185,1.3],[548,270,2.5],[320,390,3.4],[505,410,4.7],[180,345,5.5]]
       .forEach(([gx,gy,phase])=>{
-        const a=Math.max(0,Math.sin(t*1.45+phase));if(a<.72)return;
-        const alpha=(a-.72)/.28*.72,r=2.2+alpha*3.2;
-        ctx.save();ctx.globalCompositeOperation="screen";
-        ctx.strokeStyle=`rgba(255,252,220,${alpha})`;ctx.lineWidth=1.4;
-        ctx.beginPath();ctx.moveTo(gx-r*2.1,gy);ctx.lineTo(gx+r*2.1,gy);
-        ctx.moveTo(gx,gy-r*2.1);ctx.lineTo(gx,gy+r*2.1);ctx.stroke();
-        ctx.fillStyle=`rgba(255,255,245,${Math.min(1,alpha+.15)})`;
-        ctx.beginPath();ctx.arc(gx,gy,r*.55,0,Math.PI*2);ctx.fill();ctx.restore();
+        const a=Math.max(0,Math.sin(t*1.42+phase));
+        if(a<.76)return;
+        const alpha=(a-.76)/.24*.66;
+        const r=2.0+alpha*3.0;
+        ctx.save();
+        ctx.globalCompositeOperation="screen";
+        ctx.strokeStyle=`rgba(255,252,220,${alpha})`;
+        ctx.lineWidth=1.25;
+        ctx.beginPath();
+        ctx.moveTo(gx-r*2,gy);ctx.lineTo(gx+r*2,gy);
+        ctx.moveTo(gx,gy-r*2);ctx.lineTo(gx,gy+r*2);
+        ctx.stroke();
+        ctx.restore();
       });
+
       return;
     }
     if(this.mode!=="game"&&this.mode!=="complete")return;
