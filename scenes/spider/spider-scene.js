@@ -449,7 +449,7 @@ AFRAME.registerComponent("spider-canvas",{
     const binCY=h*.84;
     // The basket opening is near the upper quarter of the image, not the middle.
     // Use the same rim geometry as drawGame() so release success matches the visual mouth.
-    const frontRimY=binCY-binH*.24;
+    const frontRimY=binCY-binH*.34;
 
     const withinMouthX =
       s.x>=binCX-binW*.44 && s.x<=binCX+binW*.44;
@@ -581,8 +581,8 @@ AFRAME.registerComponent("spider-canvas",{
     // The visible opening lives much higher than the old values suggested.
     // Start shrinking as the spider reaches the back of the opening, then let the
     // front wall cover it shortly afterwards so it appears to enter from the top.
-    const mouthY=binCY-binH*.43;
-    const frontRimY=binCY-binH*.24;
+    const mouthY=binCY-binH*.46;
+    const frontRimY=binCY-binH*.34;
 
     this.drawCentered(this.img.bin,binCX,binCY,binW,binH,0,1);
 
@@ -646,13 +646,13 @@ AFRAME.registerComponent("spider-canvas",{
           // straight down across the front of the bin.
           visualX=s.x+(binCX-s.x)*(.62*depth);
           visualScale=1-.46*depth;
-          visualY=s.y+5*depth;
+          visualY=s.y+2*depth;
         }
         // Once it crosses the front rim, the front-wall occlusion pass hides it.
         else if(s.y>=frontRimY){
           visualX=s.x+(binCX-s.x)*.68;
           visualScale=.54;
-          visualY=s.y+5;
+          visualY=s.y+2;
           visualAlpha=0;
         }
       }
@@ -669,7 +669,7 @@ AFRAME.registerComponent("spider-canvas",{
       const img=this.img.bin;
       // Repaint the front wall from the actual front rim upward enough to
       // occlude the spider as soon as it slips through the opening.
-      const srcY=Math.round(img.naturalHeight*.26);
+      const srcY=Math.round(img.naturalHeight*.18);
       const srcH=img.naturalHeight-srcY;
       const dstTop=frontRimY;
       const dstH=(binCY+binH/2)-frontRimY;
