@@ -362,23 +362,8 @@ AFRAME.registerComponent("spider-canvas",{
     this.img={};
     this.loaded=0;
 
-    // Large-spider variant is chosen once per story run and then locked.
-    // With two variants we avoid an immediate repeat, so different children
-    // are much more likely to meet a different spider.
-    this.spiderVariants={
-      red:{key:"bodyRed",scale:1.04,crawl:1.08,attack:1.10},
-      gray:{key:"bodyGray",scale:.99,crawl:.94,attack:1.04}
-    };
-    this.currentVariantName=null;
-    this.lastVariantName=null;
-    this.storyAction="idle";
-    this.storyActionStart=0;
-    this.storyActionDuration=0;
-    this.nextStoryAction=0;
-
     const sources={
-      bodyRed:window.SpiderSceneModule.asset("spider_body.png"),
-      bodyGray:window.SpiderSceneModule.asset("spider_gray.png"),
+      body:window.SpiderSceneModule.asset("spider_body.png"),
       shadow:window.SpiderSceneModule.asset("spider_shadow.png"),
       web:window.SpiderSceneModule.asset("spider_web.png"),
       dust:window.SpiderSceneModule.asset("spider_dust.png"),
@@ -399,59 +384,9 @@ AFRAME.registerComponent("spider-canvas",{
   },
 
   setMode(mode){
-    const previous=this.mode;
     this.mode=mode;
     this.start=performance.now();
     this._last=0;
-
-    if(mode==="story" && previous!=="story"){
-      this.chooseSpiderVariant();
-      this.storyAction="intro";
-      this.storyActionStart=this.start;
-      this.storyActionDuration=1450;
-      this.nextStoryAction=this.start+2300+Math.random()*900;
-    }
-  },
-
-  chooseSpiderVariant(){
-    const names=Object.keys(this.spiderVariants);
-    let candidates=names;
-    if(this.lastVariantName && names.length>1){
-      candidates=names.filter(n=>n!==this.lastVariantName);
-    }
-    const picked=candidates[Math.floor(Math.random()*candidates.length)]||names[0];
-    this.currentVariantName=picked;
-    this.lastVariantName=picked;
-    return picked;
-  },
-
-  currentVariant(){
-    return this.spiderVariants[this.currentVariantName]||this.spiderVariants.red;
-  },
-
-  currentBody(){
-    const v=this.currentVariant();
-    return this.img[v.key]||this.img.bodyRed||this.img.bodyGray||null;
-  },
-
-  scheduleStoryAction(now){
-    if(now<this.nextStoryAction)return;
-    const r=Math.random();
-    if(r<.34){
-      this.storyAction="crawlLeft";
-      this.storyActionDuration=900+Math.random()*500;
-    }else if(r<.68){
-      this.storyAction="crawlRight";
-      this.storyActionDuration=900+Math.random()*500;
-    }else if(r<.84){
-      this.storyAction="watch";
-      this.storyActionDuration=750+Math.random()*450;
-    }else{
-      this.storyAction="attack";
-      this.storyActionDuration=720;
-    }
-    this.storyActionStart=now;
-    this.nextStoryAction=now+this.storyActionDuration+1100+Math.random()*2100;
   },
 
   resetGame(){
@@ -552,128 +487,53 @@ AFRAME.registerComponent("spider-canvas",{
 
   drawStory(now){
     const c=this.c,w=c.width,h=c.height;
-    const elapsed=(now-this.start)/1000;
-    const v=this.currentVariant();
-    const body=this.currentBody();
+    const t=((now-this.start)/1000)%3.8;
 
-    // Web reacts independently so the boss feels attached to a flexible surface.
-    const webPulse=1+Math.sin(elapsed*1.18)*.012;
-    const webRot=Math.sin(elapsed*.72)*.010;
-    const webX=Math.sin(elapsed*.49)*4;
-    const webY=Math.sin(elapsed*.83)*3;
-    this.ctx.save();
-    this.ctx.translate(w*.50+webX,h*.61+webY);
-    this.ctx.rotate(webRot);
-    this.ctx.scale(webPulse,1-(webPulse-1)*.55);
-    this.ctx.globalAlpha=.46;
-    if(this.img.web)this.ctx.drawImage(this.img.web,-w*.43,-h*.245,w*.86,h*.49);
-    this.ctx.restore();
+    this.drawCentered(this.img.web,w*.50,h*.61,w*.86,h*.49,0,.46);
 
     let x=0,y=0,sx=1,sy=1,rot=0;
     let shadowSx=1,shadowSy=.62,shadowA=.48;
-    let dustA=0,dustScale=.78,dustX=0;
-    let linesA=0,linesScale=.75;
-    let webShock=0;
+    let dustA=0,dustScale=.75,dustX=0;
+    let linesA=0,linesScale=.72;
 
-    // First appearance: rush from far away, overshoot slightly, then land heavily.
-    if(elapsed<1.45){
-      const p=Math.max(0,Math.min(1,elapsed/1.45));
-      const ease=1-Math.pow(1-p,3);
-      const land=Math.max(0,(p-.72)/.28);
-      const landPulse=Math.sin(Math.PI*Math.min(1,land));
-
-      const introScale=.34+(1.10-.34)*ease;
-      sx=introScale;
-      sy=introScale;
-      y=-105*(1-ease)+18*landPulse;
-      rot=Math.sin(p*Math.PI*2)*.8*Math.PI/180*(1-p);
-
-      if(land>0){
-        sx*=1+.075*landPulse;
-        sy*=1-.075*landPulse;
-        shadowSx=.72+.43*land;
-        shadowSy=.48+.12*land;
-        shadowA=.30+.22*land;
-        dustA=.55*landPulse;
-        dustScale=.72+.35*land;
-        webShock=landPulse;
+    if(t<1.45){
+      const u=t/1.45,b=Math.sin(u*Math.PI*4);
+      y=b*5;sx=1+b*.012;sy=1-b*.018;
+      rot=Math.sin(u*Math.PI*2)*.7*Math.PI/180;
+      shadowSx=1-b*.018;shadowSy=.62+b*.015;
+    }else if(t<2.55){
+      const u=(t-1.45)/1.10,e=u*u*(3-2*u);
+      y=-9*e+Math.sin(u*Math.PI*4)*4;
+      x=Math.sin(u*Math.PI*2)*8;
+      sx=1.015+.02*Math.sin(u*Math.PI*2);
+      sy=.985-.015*Math.sin(u*Math.PI*2);
+      rot=Math.sin(u*Math.PI*2)*1.2*Math.PI/180;
+      dustA=.18+.28*Math.sin(Math.PI*u);
+      dustScale=.72+.12*e;dustX=-x*.7;
+      shadowSx=1.02;shadowSy=.58;
+    }else if(t<3.15){
+      const u=(t-2.55)/.60;
+      if(u<.34){
+        const q=u/.34;
+        y=13*q;sx=1.05-.04*q;sy=.94+.03*q;
+        rot=Math.sin(q*Math.PI)*1.2*Math.PI/180;
+        shadowSx=.92;shadowSy=.56;
       }else{
-        shadowSx=.55+.24*ease;
-        shadowSy=.42+.10*ease;
-        shadowA=.18+.20*ease;
+        const q=(u-.34)/.66,e=1-Math.pow(1-q,3);
+        y=13-62*e;sx=1.01+.20*e;sy=.97+.16*e;
+        rot=Math.sin(q*Math.PI)*1.8*Math.PI/180;
+        linesA=Math.sin(Math.PI*q)*.88;
+        linesScale=.70+.20*e;
+        dustA=.30+.45*Math.sin(Math.PI*q);
+        dustScale=.82+.18*e;
+        shadowSx=1.04+.10*e;shadowSy=.55-.08*e;shadowA=.48-.10*e;
       }
     }else{
-      this.scheduleStoryAction(now);
-      const local=Math.max(0,(now-this.storyActionStart)/Math.max(1,this.storyActionDuration));
-      const p=Math.min(1,local);
-      const smooth=p*p*(3-2*p);
-      const breathe=Math.sin(elapsed*2.0)*.012;
-      sx=1+breathe;
-      sy=1-breathe*.8;
-      y=Math.sin(elapsed*1.55)*3;
-      rot=Math.sin(elapsed*.86)*.55*Math.PI/180;
-
-      if(this.storyAction==="crawlLeft"||this.storyAction==="crawlRight"){
-        const dir=this.storyAction==="crawlLeft"?-1:1;
-        const step=Math.sin(Math.PI*p);
-        x=dir*18*smooth;
-        y-=Math.abs(Math.sin(p*Math.PI*3))*4*v.crawl;
-        rot+=dir*Math.sin(Math.PI*p)*1.25*Math.PI/180;
-        sx+=.018*step;sy-=.010*step;
-        dustA=.18*Math.max(0,Math.sin(p*Math.PI*2));
-        dustScale=.78+.12*step;dustX=-dir*10;
-      }else if(this.storyAction==="watch"){
-        const crouch=Math.sin(Math.PI*p);
-        y+=7*crouch;
-        sx+=.035*crouch;
-        sy-=.055*crouch;
-        shadowSx=1+.07*crouch;
-        shadowSy=.62-.05*crouch;
-      }else if(this.storyAction==="attack"){
-        // Crouch -> fast lunge toward camera -> spring back.
-        if(p<.30){
-          const q=p/.30;
-          y+=10*q;
-          sx+=.035*q;sy-=.055*q;
-          shadowSx=.96;shadowSy=.57;
-        }else if(p<.70){
-          const q=(p-.30)/.40;
-          const e=1-Math.pow(1-q,3);
-          y=10-56*e*v.attack;
-          sx=1.03+.19*e*v.attack;
-          sy=.95+.15*e*v.attack;
-          linesA=Math.sin(Math.PI*q)*.88;
-          linesScale=.72+.22*e;
-          dustA=.26+.42*Math.sin(Math.PI*q);
-          dustScale=.82+.20*e;
-          shadowSx=1.03+.11*e;
-          shadowSy=.56-.08*e;
-          shadowA=.48-.10*e;
-          webShock=Math.sin(Math.PI*q)*.72;
-        }else{
-          const q=(p-.70)/.30;
-          const e=q*q*(3-2*q);
-          y=-46*(1-e)*v.attack;
-          sx=1.19-.19*e;
-          sy=1.12-.12*e;
-          linesA=(1-q)*.16;
-          dustA=(1-q)*.20;
-          dustScale=.95-.12*e;
-          shadowSx=1.12-.12*e;
-          shadowSy=.50+.12*e;
-          shadowA=.40+.08*e;
-        }
-      }
-    }
-
-    // Brief elastic ripple/shock in the web when the spider lands or lunges.
-    if(webShock>0 && this.img.web){
-      this.ctx.save();
-      this.ctx.globalAlpha=.12*webShock;
-      this.ctx.translate(w*.50,h*.61);
-      this.ctx.scale(1+.055*webShock,1-.025*webShock);
-      this.ctx.drawImage(this.img.web,-w*.43,-h*.245,w*.86,h*.49);
-      this.ctx.restore();
+      const u=(t-3.15)/.65,e=u*u*(3-2*u);
+      y=-44*(1-e);sx=1.18-.18*e;sy=1.12-.12*e;
+      rot=Math.sin((1-u)*Math.PI)*.8*Math.PI/180;
+      linesA=(1-u)*.18;dustA=(1-u)*.25;dustScale=.95-.12*e;
+      shadowSx=1.12-.12*e;shadowSy=.50+.12*e;shadowA=.40+.08*e;
     }
 
     if(linesA>0){
@@ -684,13 +544,13 @@ AFRAME.registerComponent("spider-canvas",{
       this.drawCentered(this.img.dust,w*.50+dustX,h*.69,w*.79*dustScale,h*.40*dustScale,0,dustA);
     }
 
+    const body=this.img.body;
     if(body){
       const ratio=body.naturalHeight/body.naturalWidth;
-      const bw=w*.58*v.scale,bh=bw*ratio;
+      const bw=w*.58,bh=bw*ratio;
       this.ctx.save();
       this.ctx.translate(w*.50+x,h*.47+y);
-      this.ctx.rotate(rot);
-      this.ctx.scale(sx,sy);
+      this.ctx.rotate(rot);this.ctx.scale(sx,sy);
       this.ctx.drawImage(body,-bw/2,-bh/2,bw,bh);
       this.ctx.restore();
     }
@@ -761,7 +621,7 @@ AFRAME.registerComponent("spider-canvas",{
       }
 
       const wiggle=Math.sin(now*.006+s.phase);
-      const body=this.currentBody();
+      const body=this.img.body;
       if(!body)continue;
 
       let visualScale=1;

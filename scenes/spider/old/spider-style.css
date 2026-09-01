@@ -1,0 +1,10 @@
+/* ---------- SPIDER story + interactive ---------- */
+#spiderFightBtn,#spiderLeaveBtn,#spiderRetryBtn{position:fixed;z-index:128;display:none;border-radius:999px;padding:12px 19px;font:900 14px/1 system-ui;box-shadow:0 6px 20px rgba(0,0,0,.20);cursor:pointer}
+#spiderFightBtn{left:50%;bottom:max(76px,calc(env(safe-area-inset-bottom) + 58px));transform:translateX(-50%);border:0;background:rgba(171,57,37,.97);color:white}
+#spiderRetryBtn,#spiderLeaveBtn{bottom:max(76px,calc(env(safe-area-inset-bottom) + 58px));border:2px solid #6f8e42;background:rgba(255,248,220,.98);color:#56713b}
+#spiderProgress{position:fixed;right:18px;top:72px;z-index:128;display:none;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.92);color:#333;font:800 13px/1 system-ui;box-shadow:0 5px 18px rgba(0,0,0,.16)}
+/* Standalone fallbacks */
+#handBtn{display:none}
+#spiderModuleRoot{position:fixed;inset:0;z-index:0;pointer-events:none}
+#spiderModuleRoot button{pointer-events:auto}
+
