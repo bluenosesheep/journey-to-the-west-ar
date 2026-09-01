@@ -359,11 +359,20 @@ AFRAME.registerComponent("spider-canvas",{
     this.mode="waiting";
     this.start=performance.now();
 
+    // Big-spider variant state. The selected Boss is locked for the full Story.
+    this.storyVariant=null;
+    this.lastStoryVariant=window.SpiderSceneModule._lastStoryVariant||null;
+    this.storyAction="idle";
+    this.storyActionStart=performance.now();
+    this.storyActionDuration=1800;
+    this.nextStoryAction=performance.now()+1800;
+
     this.img={};
     this.loaded=0;
 
     const sources={
       body:window.SpiderSceneModule.asset("spider_body.png"),
+      gray:window.SpiderSceneModule.asset("spider_gray.png"),
       shadow:window.SpiderSceneModule.asset("spider_shadow.png"),
       web:window.SpiderSceneModule.asset("spider_web.png"),
       dust:window.SpiderSceneModule.asset("spider_dust.png"),
@@ -387,6 +396,47 @@ AFRAME.registerComponent("spider-canvas",{
     this.mode=mode;
     this.start=performance.now();
     this._last=0;
+
+    if(mode==="story"){
+      this.chooseStoryVariant();
+      this.storyAction="enter";
+      this.storyActionStart=this.start;
+      this.storyActionDuration=1450;
+      this.nextStoryAction=this.start+2200;
+    }
+  },
+
+  chooseStoryVariant(){
+    const variants=[
+      {key:"red",img:"body",scale:1.04,speed:1.08,attack:1.12,drift:1.00},
+      {key:"gray",img:"gray",scale:.98,speed:.94,attack:1.04,drift:1.16}
+    ];
+
+    let pool=variants;
+    if(this.lastStoryVariant && variants.length>1){
+      pool=variants.filter(v=>v.key!==this.lastStoryVariant);
+    }
+    const picked=pool[Math.floor(Math.random()*pool.length)];
+    this.storyVariant=picked;
+    this.lastStoryVariant=picked.key;
+    window.SpiderSceneModule._lastStoryVariant=picked.key;
+  },
+
+  scheduleStoryAction(now){
+    const v=this.storyVariant||{speed:1,attack:1,drift:1};
+    const r=Math.random();
+    if(r<.34){
+      this.storyAction=Math.random()<.5?"crawl-left":"crawl-right";
+      this.storyActionDuration=(900+Math.random()*700)/v.speed;
+    }else if(r<.62){
+      this.storyAction="watch";
+      this.storyActionDuration=900+Math.random()*800;
+    }else{
+      this.storyAction="attack";
+      this.storyActionDuration=(720+Math.random()*260)/v.attack;
+    }
+    this.storyActionStart=now;
+    this.nextStoryAction=now+this.storyActionDuration+900+Math.random()*1600;
   },
 
   resetGame(){
@@ -489,70 +539,130 @@ AFRAME.registerComponent("spider-canvas",{
 
   drawStory(now){
     const c=this.c,w=c.width,h=c.height;
-    const t=((now-this.start)/1000)%3.8;
+    const sec=(now-this.start)/1000;
+    const v=this.storyVariant||{key:"red",img:"body",scale:1,speed:1,attack:1,drift:1};
 
-    this.drawCentered(this.img.web,w*.50,h*.61,w*.86,h*.49,0,.46);
+    if(now>=this.nextStoryAction && this.storyAction!=="enter"){
+      this.scheduleStoryAction(now);
+    }
 
-    let x=0,y=0,sx=1,sy=1,rot=0;
+    // Web reacts to the Boss: subtle breathing plus an impact wave on entrance/attack.
+    let webPulse=0;
+    if(this.storyAction==="enter"){
+      const p=Math.min(1,(now-this.storyActionStart)/this.storyActionDuration);
+      webPulse=Math.sin(Math.PI*Math.min(1,p))*1.0;
+    }else if(this.storyAction==="attack"){
+      const p=Math.min(1,(now-this.storyActionStart)/this.storyActionDuration);
+      webPulse=Math.sin(Math.PI*p)*.72;
+    }
+
+    this.ctx.save();
+    this.ctx.translate(w*.50,h*.61);
+    this.ctx.rotate(Math.sin(sec*.9)*.006);
+    this.ctx.scale(1+webPulse*.025,1-webPulse*.015);
+    this.ctx.globalAlpha=.46;
+    this.ctx.drawImage(this.img.web,-w*.43,-h*.245,w*.86,h*.49);
+    this.ctx.restore();
+
+    let x=Math.sin(sec*.72*v.drift)*4;
+    let y=Math.sin(sec*1.08)*2;
+    let sx=1,sy=1,rot=Math.sin(sec*.65)*.35*Math.PI/180;
     let shadowSx=1,shadowSy=.62,shadowA=.48;
     let dustA=0,dustScale=.75,dustX=0;
     let linesA=0,linesScale=.72;
 
-    if(t<1.45){
-      const u=t/1.45,b=Math.sin(u*Math.PI*4);
-      y=b*5;sx=1+b*.012;sy=1-b*.018;
-      rot=Math.sin(u*Math.PI*2)*.7*Math.PI/180;
-      shadowSx=1-b*.018;shadowSy=.62+b*.015;
-    }else if(t<2.55){
-      const u=(t-1.45)/1.10,e=u*u*(3-2*u);
-      y=-9*e+Math.sin(u*Math.PI*4)*4;
-      x=Math.sin(u*Math.PI*2)*8;
-      sx=1.015+.02*Math.sin(u*Math.PI*2);
-      sy=.985-.015*Math.sin(u*Math.PI*2);
-      rot=Math.sin(u*Math.PI*2)*1.2*Math.PI/180;
-      dustA=.18+.28*Math.sin(Math.PI*u);
-      dustScale=.72+.12*e;dustX=-x*.7;
-      shadowSx=1.02;shadowSy=.58;
-    }else if(t<3.15){
-      const u=(t-2.55)/.60;
-      if(u<.34){
-        const q=u/.34;
-        y=13*q;sx=1.05-.04*q;sy=.94+.03*q;
-        rot=Math.sin(q*Math.PI)*1.2*Math.PI/180;
-        shadowSx=.92;shadowSy=.56;
+    const actionP=Math.max(0,Math.min(1,(now-this.storyActionStart)/Math.max(1,this.storyActionDuration)));
+
+    if(this.storyAction==="enter"){
+      // Boss rushes in from the distance, overshoots, then lands with weight.
+      const p=actionP;
+      if(p<.62){
+        const q=p/.62;
+        const e=1-Math.pow(1-q,3);
+        const arrive=.28+.88*e;
+        sx=sy=arrive;
+        y=-52*(1-e);
+        rot=(1-e)*(-2.0*Math.PI/180);
+        shadowSx=.55+.48*e;
+        shadowSy=.34+.26*e;
+        shadowA=.22+.26*e;
       }else{
-        const q=(u-.34)/.66,e=1-Math.pow(1-q,3);
-        y=13-62*e;sx=1.01+.20*e;sy=.97+.16*e;
-        rot=Math.sin(q*Math.PI)*1.8*Math.PI/180;
-        linesA=Math.sin(Math.PI*q)*.88;
-        linesScale=.70+.20*e;
-        dustA=.30+.45*Math.sin(Math.PI*q);
-        dustScale=.82+.18*e;
-        shadowSx=1.04+.10*e;shadowSy=.55-.08*e;shadowA=.48-.10*e;
+        const q=(p-.62)/.38;
+        const impact=Math.sin(Math.PI*q);
+        sx=1.16-impact*.08;
+        sy=1.10-impact*.16;
+        y=10*impact;
+        shadowSx=1.12+impact*.15;
+        shadowSy=.58+impact*.04;
+        dustA=.68*(1-q);
+        dustScale=.82+.26*q;
       }
+    }else if(this.storyAction==="crawl-left"||this.storyAction==="crawl-right"){
+      const dir=this.storyAction==="crawl-left"?-1:1;
+      const p=actionP;
+      const smooth=p*p*(3-2*p);
+      x+=dir*(8+24*smooth);
+      y+=Math.sin(p*Math.PI*4)*3;
+      rot+=dir*Math.sin(p*Math.PI)*1.35*Math.PI/180;
+      sx=1.01+.012*Math.sin(p*Math.PI*2);
+      sy=.99-.010*Math.sin(p*Math.PI*2);
+      shadowSx=1.02;shadowSy=.59;
+      if(p>.75){
+        dustA=.16*(1-p)/.25;
+        dustScale=.72+.10*p;
+        dustX=-dir*9;
+      }
+    }else if(this.storyAction==="watch"){
+      // Low, tense "watching you" pose.
+      const p=Math.sin(Math.PI*actionP);
+      y+=8*p;
+      sx=1.035-.015*p;
+      sy=.97-.055*p;
+      rot+=Math.sin(actionP*Math.PI*2)*.55*Math.PI/180;
+      shadowSx=.96+.05*p;
+      shadowSy=.58-.04*p;
+    }else if(this.storyAction==="attack"){
+      // Short threatening lunge toward camera, then recover.
+      const p=actionP;
+      const punch=Math.sin(Math.PI*p);
+      const lunge=Math.pow(punch,.72);
+      y-=34*lunge*v.attack;
+      sx=1+.18*lunge*v.attack;
+      sy=1+.13*lunge*v.attack;
+      rot+=Math.sin(p*Math.PI*2)*1.1*Math.PI/180;
+      linesA=.82*Math.pow(punch,1.25);
+      linesScale=.70+.24*lunge;
+      dustA=.36*Math.pow(punch,.9);
+      dustScale=.80+.18*lunge;
+      shadowSx=1.02+.12*lunge;
+      shadowSy=.56-.07*lunge;
+      shadowA=.48-.08*lunge;
     }else{
-      const u=(t-3.15)/.65,e=u*u*(3-2*u);
-      y=-44*(1-e);sx=1.18-.18*e;sy=1.12-.12*e;
-      rot=Math.sin((1-u)*Math.PI)*.8*Math.PI/180;
-      linesA=(1-u)*.18;dustA=(1-u)*.25;dustScale=.95-.12*e;
-      shadowSx=1.12-.12*e;shadowSy=.50+.12*e;shadowA=.40+.08*e;
+      // Organic idle, deliberately non-mechanical.
+      x+=Math.sin(sec*1.37)*3*v.drift;
+      y+=Math.sin(sec*.91)*2;
+      sx=1+.008*Math.sin(sec*1.7);
+      sy=1-.007*Math.sin(sec*1.7);
     }
 
     if(linesA>0){
       this.drawCentered(this.img.lines,w*.50,h*.47,w*.94*linesScale,h*.94*linesScale,0,linesA);
     }
+
     this.drawCentered(this.img.shadow,w*.50,h*.70,w*.49*shadowSx,h*.18*shadowSy,0,shadowA);
+
     if(dustA>0){
       this.drawCentered(this.img.dust,w*.50+dustX,h*.69,w*.79*dustScale,h*.40*dustScale,0,dustA);
     }
 
-    const body=this.img.body;
+    const body=this.img[v.img]||this.img.body;
     if(body){
       const ratio=body.naturalHeight/body.naturalWidth;
-      const bw=w*.58,bh=bw*ratio;
+      const bw=w*.58*v.scale,bh=bw*ratio;
       this.ctx.save();
       this.ctx.translate(w*.50+x,h*.47+y);
-      this.ctx.rotate(rot);this.ctx.scale(sx,sy);
+      this.ctx.rotate(rot);
+      this.ctx.scale(sx,sy);
       this.ctx.drawImage(body,-bw/2,-bh/2,bw,bh);
       this.ctx.restore();
     }
