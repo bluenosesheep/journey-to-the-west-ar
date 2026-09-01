@@ -401,8 +401,8 @@ AFRAME.registerComponent("spider-canvas",{
       this.chooseStoryVariant();
       this.storyAction="enter";
       this.storyActionStart=this.start;
-      this.storyActionDuration=1450;
-      this.nextStoryAction=this.start+2200;
+      this.storyActionDuration=2100;
+      this.nextStoryAction=this.start+3000;
     }
   },
 
@@ -422,18 +422,23 @@ AFRAME.registerComponent("spider-canvas",{
     window.SpiderSceneModule._lastStoryVariant=picked.key;
   },
 
+  currentSpiderImage(){
+    const v=this.storyVariant;
+    return this.img?.[v?.img] || this.img?.body;
+  },
+
   scheduleStoryAction(now){
     const v=this.storyVariant||{speed:1,attack:1,drift:1};
     const r=Math.random();
-    if(r<.34){
+    if(r<.26){
       this.storyAction=Math.random()<.5?"crawl-left":"crawl-right";
-      this.storyActionDuration=(900+Math.random()*700)/v.speed;
-    }else if(r<.62){
+      this.storyActionDuration=(900+Math.random()*650)/v.speed;
+    }else if(r<.46){
       this.storyAction="watch";
-      this.storyActionDuration=900+Math.random()*800;
+      this.storyActionDuration=850+Math.random()*650;
     }else{
       this.storyAction="attack";
-      this.storyActionDuration=(720+Math.random()*260)/v.attack;
+      this.storyActionDuration=(820+Math.random()*220)/v.attack;
     }
     this.storyActionStart=now;
     this.nextStoryAction=now+this.storyActionDuration+900+Math.random()*1600;
@@ -579,9 +584,9 @@ AFRAME.registerComponent("spider-canvas",{
       if(p<.62){
         const q=p/.62;
         const e=1-Math.pow(1-q,3);
-        const arrive=.28+.88*e;
+        const arrive=.18+1.02*e;
         sx=sy=arrive;
-        y=-52*(1-e);
+        y=-82*(1-e);
         rot=(1-e)*(-2.0*Math.PI/180);
         shadowSx=.55+.48*e;
         shadowSy=.34+.26*e;
@@ -589,19 +594,19 @@ AFRAME.registerComponent("spider-canvas",{
       }else{
         const q=(p-.62)/.38;
         const impact=Math.sin(Math.PI*q);
-        sx=1.16-impact*.08;
-        sy=1.10-impact*.16;
-        y=10*impact;
-        shadowSx=1.12+impact*.15;
-        shadowSy=.58+impact*.04;
-        dustA=.68*(1-q);
-        dustScale=.82+.26*q;
+        sx=1.24-impact*.11;
+        sy=1.16-impact*.24;
+        y=18*impact;
+        shadowSx=1.08+impact*.28;
+        shadowSy=.54+impact*.10;
+        dustA=.88*(1-q);
+        dustScale=.78+.40*q;
       }
     }else if(this.storyAction==="crawl-left"||this.storyAction==="crawl-right"){
       const dir=this.storyAction==="crawl-left"?-1:1;
       const p=actionP;
       const smooth=p*p*(3-2*p);
-      x+=dir*(8+24*smooth);
+      x+=dir*(10+36*smooth);
       y+=Math.sin(p*Math.PI*4)*3;
       rot+=dir*Math.sin(p*Math.PI)*1.35*Math.PI/180;
       sx=1.01+.012*Math.sin(p*Math.PI*2);
@@ -626,13 +631,13 @@ AFRAME.registerComponent("spider-canvas",{
       const p=actionP;
       const punch=Math.sin(Math.PI*p);
       const lunge=Math.pow(punch,.72);
-      y-=34*lunge*v.attack;
-      sx=1+.18*lunge*v.attack;
-      sy=1+.13*lunge*v.attack;
+      y-=56*lunge*v.attack;
+      sx=1+.28*lunge*v.attack;
+      sy=1+.20*lunge*v.attack;
       rot+=Math.sin(p*Math.PI*2)*1.1*Math.PI/180;
-      linesA=.82*Math.pow(punch,1.25);
-      linesScale=.70+.24*lunge;
-      dustA=.36*Math.pow(punch,.9);
+      linesA=.96*Math.pow(punch,1.15);
+      linesScale=.72+.34*lunge;
+      dustA=.52*Math.pow(punch,.9);
       dustScale=.80+.18*lunge;
       shadowSx=1.02+.12*lunge;
       shadowSy=.56-.07*lunge;
@@ -736,7 +741,7 @@ AFRAME.registerComponent("spider-canvas",{
       }
 
       const wiggle=Math.sin(now*.006+s.phase);
-      const body=this.img.body;
+      const body=this.currentSpiderImage();
       if(!body)continue;
 
       let visualScale=1;
@@ -767,7 +772,8 @@ AFRAME.registerComponent("spider-canvas",{
         }
       }
 
-      const size=w*s.scale*(1+.025*wiggle)*visualScale;
+      const variantScale=this.storyVariant?.key==="gray"?.96:1;
+      const size=w*s.scale*variantScale*(1+.025*wiggle)*visualScale;
       const ratio=body.naturalHeight/body.naturalWidth;
       this.drawCentered(body,visualX,visualY,size,size*ratio,wiggle*.045,visualAlpha);
     }
