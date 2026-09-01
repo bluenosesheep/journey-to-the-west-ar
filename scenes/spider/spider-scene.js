@@ -547,7 +547,26 @@ AFRAME.registerComponent("spider-canvas",{
     const sec=(now-this.start)/1000;
     const v=this.storyVariant||{key:"red",img:"body",scale:1,speed:1,attack:1,drift:1};
 
-    if(now>=this.nextStoryAction && this.storyAction!=="enter"){
+    // Story action state machine.
+    // V3 stayed in "enter" forever after the opening animation finished,
+    // because the scheduler explicitly skipped "enter". Move into a living
+    // idle state when any action completes, then schedule the next random action.
+    const elapsedAction=now-this.storyActionStart;
+    if(this.storyAction==="enter" && elapsedAction>=this.storyActionDuration){
+      this.storyAction="idle";
+      this.storyActionStart=now;
+      this.storyActionDuration=900;
+      this.nextStoryAction=now+700+Math.random()*900;
+    }else if(
+      this.storyAction!=="idle" &&
+      this.storyAction!=="enter" &&
+      elapsedAction>=this.storyActionDuration
+    ){
+      this.storyAction="idle";
+      this.storyActionStart=now;
+      this.storyActionDuration=700+Math.random()*700;
+      this.nextStoryAction=now+450+Math.random()*1050;
+    }else if(this.storyAction==="idle" && now>=this.nextStoryAction){
       this.scheduleStoryAction(now);
     }
 
@@ -643,11 +662,14 @@ AFRAME.registerComponent("spider-canvas",{
       shadowSy=.56-.07*lunge;
       shadowA=.48-.08*lunge;
     }else{
-      // Organic idle, deliberately non-mechanical.
-      x+=Math.sin(sec*1.37)*3*v.drift;
-      y+=Math.sin(sec*.91)*2;
-      sx=1+.008*Math.sin(sec*1.7);
-      sy=1-.007*Math.sin(sec*1.7);
+      // Organic idle, deliberately non-mechanical and continuously alive.
+      x+=Math.sin(sec*1.37)*5*v.drift + Math.sin(sec*.53)*2.5;
+      y+=Math.sin(sec*.91)*3 + Math.sin(sec*1.83)*1.2;
+      rot+=Math.sin(sec*.74)*.55*Math.PI/180;
+      sx=1+.012*Math.sin(sec*1.7);
+      sy=1-.010*Math.sin(sec*1.7);
+      shadowSx=1+.018*Math.sin(sec*1.4);
+      shadowSy=.62-.012*Math.sin(sec*1.4);
     }
 
     if(linesA>0){
