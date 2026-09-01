@@ -163,15 +163,17 @@ AFRAME.registerComponent("web-cleanup-canvas",{
   init(){
     this.canvas=document.getElementById("webCanvas");this.ctx=this.canvas.getContext("2d");
     this.mode="waiting";this.webs=[];this.done=0;this.last=0;
+    this.needsRender=true;this.texture=null;
     this.images={};
     ["web_large.png","web_small.png","web_basket.png"].forEach(n=>{
       const i=new Image();i.src=WebCleanupSceneModule.asset(n);this.images[n]=i;
     });
   },
-  reset(){this.mode="waiting";this.webs=[];this.done=0},
-  showStory(){this.mode="story";this.webs=[];this.done=0},
+  invalidate(){this.needsRender=true;this.last=0},
+  reset(){this.mode="waiting";this.webs=[];this.done=0;this.invalidate()},
+  showStory(){this.mode="story";this.webs=[];this.done=0;this.invalidate()},
   startGame(){
-    this.mode="game";this.done=0;
+    this.mode="game";this.done=0;this.invalidate();
     // Five webs use noticeably different sizes and angles so they do not
     // look like cloned copies. A small amount of jitter is added each round.
     const seeds=[
@@ -223,9 +225,10 @@ AFRAME.registerComponent("web-cleanup-canvas",{
     w.pileX=slot.x;w.pileY=slot.y;w.pileScale=slot.scale;w.pileRot=slot.rot;
     w.mouthX=585;w.mouthY=542;
     w.state="flying";w.flyStart=performance.now();w.fromX=w.x;w.fromY=w.y;
+    this.needsRender=true;
     return true;
   },
-  complete(){this.mode="complete"},
+  complete(){this.mode="complete";this.invalidate()},
   drawImg(img,x,y,w,h,a=1,rot=0,scale=1){
     if(!img?.complete||!img.naturalWidth)return;
     const c=this.ctx;c.save();c.globalAlpha=a;c.translate(x,y);c.rotate(rot);c.scale(scale,scale);
@@ -499,25 +502,50 @@ AFRAME.registerComponent("web-cleanup-canvas",{
 
       if(p>=1){
         w.state="piled";
+        this.needsRender=true;
         this.done++;
         WebCleanupMode.progress(this.done,this.webs.length);
         if(this.done===this.webs.length)setTimeout(()=>WebCleanupMode.complete(),260);
       }
     });
   },
+  prepareTexture(map){
+    if(!map||this.texture===map)return;
+    // This canvas changes frequently. Generating a complete mip chain after
+    // every upload adds GPU work without helping this front-facing AR plane.
+    map.generateMipmaps=false;
+    if(window.THREE?.LinearFilter){
+      map.minFilter=THREE.LinearFilter;
+      map.magFilter=THREE.LinearFilter;
+    }
+    this.texture=map;
+  },
   tick(){
     if(this.mode==="waiting")return;
-    const now=performance.now();if(this.last&&now-this.last<42)return;this.last=now;
+    const movingWeb=this.mode==="game"&&this.webs.some(w=>w.state==="flying"||w.state==="sinking");
+    const animated=this.mode==="story"||
+      (this.mode==="game"&&this.webs.some(w=>w.state==="idle"||w.state==="flying"||w.state==="sinking"));
+    if(!animated&&!this.needsRender)return;
+
+    // Keep the short collection flight at ~24 FPS. Story breathing and idle
+    // bobbing are deliberately capped at 15 FPS to reduce full-canvas uploads.
+    const frameMs=movingWeb?42:66;
+    const now=performance.now();
+    if(!this.needsRender&&this.last&&now-this.last<frameMs)return;
+    this.last=now;this.needsRender=false;
     this.draw(now);
-    const mesh=this.el.getObject3D("mesh");if(mesh?.material?.map)mesh.material.map.needsUpdate=true;
+    const mesh=this.el.getObject3D("mesh"),map=mesh?.material?.map;
+    if(map){this.prepareTexture(map);map.needsUpdate=true}
   }
 });
 
 AFRAME.registerComponent("web-cleanup-controller",{
   schema:{world:{type:"selector"}},
   init(){
-    this.world=this.data.world;this.tracking=false;this.holding=false;this.hist=[];
+    this.world=this.data.world;this.tracking=false;this.holding=false;
+    this.hist=new Array(24);this.histCount=0;this.histIndex=0;
     this.basePos=new THREE.Vector3();this.baseScale=new THREE.Vector3(1,1,1);
+    this.posePos=new THREE.Vector3();this.poseQuat=new THREE.Quaternion();this.poseScale=new THREE.Vector3();
     if(this.world)this.world.object3D.visible=false;
 
     // Market-style: a click or a hand pinch DOWN selects one web. No drag/move/up logic.
@@ -528,7 +556,7 @@ AFRAME.registerComponent("web-cleanup-controller",{
     this.el.addEventListener("targetFound",()=>{
       if(WebCleanupMode.mode!=="waiting")return;
       if(typeof WebCleanupSceneModule.config.onActivate==="function")WebCleanupSceneModule.config.onActivate("web_cleanup");
-      this.tracking=true;this.holding=false;this.hist=[];
+      this.tracking=true;this.holding=false;this.histCount=0;this.histIndex=0;
       if(this.world)this.world.object3D.visible=true;
       WebCleanupMode.showStory();
     });
@@ -577,24 +605,34 @@ AFRAME.registerComponent("web-cleanup-controller",{
   holdLastPose(){
     if(WebCleanupMode.mode==="waiting")return;
     this.tracking=false;this.holding=true;
-    const stable=this.hist.length?this.hist[Math.max(0,this.hist.length-6)]:null;
+    const oldest=(this.histIndex-this.histCount+this.hist.length)%this.hist.length;
+    const stableIndex=(oldest+Math.max(0,this.histCount-6))%this.hist.length;
+    const stable=this.histCount?this.hist[stableIndex]:null;
     if(stable){this.basePos.copy(stable.p);this.baseScale.copy(stable.s)}
     if(this.world){
       const o=this.world.object3D;o.position.copy(this.basePos);o.quaternion.identity();o.scale.copy(this.baseScale);o.visible=true;
     }
   },
-  hideWorld(){this.tracking=false;this.holding=false;if(this.world)this.world.object3D.visible=false},
+  hideWorld(){
+    this.tracking=false;this.holding=false;this.histCount=0;this.histIndex=0;
+    if(this.world)this.world.object3D.visible=false;
+  },
+  rememberPose(now){
+    let slot=this.hist[this.histIndex];
+    if(!slot)slot=this.hist[this.histIndex]={p:new THREE.Vector3(),s:new THREE.Vector3(),t:0};
+    slot.p.copy(this.posePos);slot.s.copy(this.poseScale);slot.t=now;
+    this.histIndex=(this.histIndex+1)%this.hist.length;
+    this.histCount=Math.min(this.histCount+1,this.hist.length);
+  },
   tick(){
     if(!this.world||WebCleanupMode.mode==="waiting")return;
     if(this.tracking){
       this.el.object3D.updateMatrixWorld(true);
-      const p=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();
-      this.el.object3D.matrixWorld.decompose(p,q,s);
-      this.hist.push({p:p.clone(),s:s.clone(),t:performance.now()});if(this.hist.length>24)this.hist.shift();
-      this.basePos.copy(p);this.baseScale.copy(s);
-      const o=this.world.object3D;o.position.copy(p);o.quaternion.identity();o.scale.copy(s);o.visible=true;
-    }else if(this.holding){
-      const o=this.world.object3D;o.position.copy(this.basePos);o.quaternion.identity();o.scale.copy(this.baseScale);o.visible=true;
+      this.el.object3D.matrixWorld.decompose(this.posePos,this.poseQuat,this.poseScale);
+      this.rememberPose(performance.now());
+      this.basePos.copy(this.posePos);this.baseScale.copy(this.poseScale);
+      const o=this.world.object3D;
+      o.position.copy(this.posePos);o.quaternion.identity();o.scale.copy(this.poseScale);o.visible=true;
     }
   }
 });
