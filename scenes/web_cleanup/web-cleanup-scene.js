@@ -235,7 +235,52 @@ AFRAME.registerComponent("web-cleanup-canvas",{
   draw(now){
     const c=this.ctx;c.clearRect(0,0,768,768);const t=now/1000;
     if(this.mode==="story"){
-      this.drawImg(this.image("web_large.png"),384,350+Math.sin(t*1.4)*5,750,540,1,Math.sin(t*1.7)*.025,1+Math.sin(t*2)*.015);
+      const web=this.image("web_large.png");
+      const breath=Math.sin(t*1.18);
+      const scaleX=1+breath*.026,scaleY=1-breath*.014;
+      let rot=Math.sin(t*.82)*.018+Math.sin(t*1.73)*.006;
+      let x=384+Math.sin(t*.57)*5,y=338+Math.sin(t*.91)*5;
+
+      const cycle=t%7.6;
+      if(cycle>2.15&&cycle<3.35){
+        const p=(cycle-2.15)/1.20,tug=Math.sin(Math.PI*p);
+        x-=tug*17;rot-=tug*.022;
+      }else if(cycle>5.15&&cycle<6.30){
+        const p=(cycle-5.15)/1.15,tug=Math.sin(Math.PI*p);
+        x+=tug*14;rot+=tug*.019;
+      }
+
+      const ctx=this.ctx;
+      if(web?.complete&&web.naturalWidth){
+        ctx.save();ctx.globalAlpha=.13;ctx.translate(x+5,y+7);ctx.rotate(rot*.72);
+        ctx.scale(scaleX*1.045,scaleY*1.045);ctx.drawImage(web,-390,-280,780,560);ctx.restore();
+
+        ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.scale(scaleX,scaleY);
+        ctx.drawImage(web,-390,-280,780,560);ctx.restore();
+      }
+
+      const sweep=(t*.18)%1,sweepX=105+sweep*560;
+      const grad=ctx.createLinearGradient(sweepX-85,120,sweepX+85,560);
+      grad.addColorStop(0,"rgba(255,255,255,0)");
+      grad.addColorStop(.43,"rgba(255,250,218,0)");
+      grad.addColorStop(.50,"rgba(255,255,235,.22)");
+      grad.addColorStop(.57,"rgba(255,250,218,0)");
+      grad.addColorStop(1,"rgba(255,255,255,0)");
+      ctx.save();ctx.globalCompositeOperation="screen";ctx.fillStyle=grad;
+      ctx.beginPath();ctx.ellipse(384,340,315,230,0,0,Math.PI*2);ctx.clip();
+      ctx.fillRect(70,80,630,540);ctx.restore();
+
+      [[235,238,0],[405,185,1.3],[548,270,2.5],[320,390,3.4],[505,410,4.7],[180,345,5.5]]
+      .forEach(([gx,gy,phase])=>{
+        const a=Math.max(0,Math.sin(t*1.45+phase));if(a<.72)return;
+        const alpha=(a-.72)/.28*.72,r=2.2+alpha*3.2;
+        ctx.save();ctx.globalCompositeOperation="screen";
+        ctx.strokeStyle=`rgba(255,252,220,${alpha})`;ctx.lineWidth=1.4;
+        ctx.beginPath();ctx.moveTo(gx-r*2.1,gy);ctx.lineTo(gx+r*2.1,gy);
+        ctx.moveTo(gx,gy-r*2.1);ctx.lineTo(gx,gy+r*2.1);ctx.stroke();
+        ctx.fillStyle=`rgba(255,255,245,${Math.min(1,alpha+.15)})`;
+        ctx.beginPath();ctx.arc(gx,gy,r*.55,0,Math.PI*2);ctx.fill();ctx.restore();
+      });
       return;
     }
     if(this.mode!=="game"&&this.mode!=="complete")return;
