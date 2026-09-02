@@ -1,18 +1,62 @@
-#storyCityMini{position:fixed;left:5vw;top:10vh;width:min(27vw,330px);height:min(34vh,280px);z-index:45;pointer-events:none;opacity:0;transform:scale(.86);transform-origin:left top;transition:left .65s ease,top .65s ease,width .65s ease,height .65s ease,opacity .3s ease,transform .65s ease}
+#storyCityMini{
+  position:fixed;
+  left:clamp(18px,5vw,72px);
+  top:clamp(76px,14vh,132px);
+  width:clamp(210px,36vmin,340px);
+  aspect-ratio:1;
+  z-index:45;
+  pointer-events:none;
+  opacity:0;
+  transform:scale(.86);
+  transform-origin:left top;
+  transition:left .65s ease,top .65s ease,width .65s ease,opacity .3s ease,transform .65s ease
+}
 #storyCityMini.show{opacity:1;transform:scale(1)}
 #storyCityMini.near{
   left:50%;
   top:50%;
-  width:min(82vw,900px);
-  height:min(82vh,700px);
+  width:min(72vmin,700px);
   transform:translate(-50%,-50%) scale(1);
   transform-origin:center center;
 }
 #storyCityMini.to-center{left:50%;top:50%;transform:translate(-50%,-50%) scale(2.1);opacity:0;transition:left .76s,top .76s,transform .76s,opacity .68s}
-#storyCityMini img{position:absolute;object-fit:contain;filter:drop-shadow(0 5px 9px rgba(0,0,0,.18))}
-#storyCityMini .mini-building{width:42%;height:72%;left:29%;top:0}
-#storyCityMini .mini-park{width:48%;height:40%;left:0;bottom:0}
-#storyCityMini .mini-market{width:48%;height:40%;right:0;bottom:0}
+#storyCityMini img{
+  position:absolute;
+  aspect-ratio:1;
+  height:auto;
+  object-fit:contain;
+  filter:drop-shadow(0 5px 9px rgba(0,0,0,.18))
+}
+#storyCityMini .mini-building{width:50%;left:25%;top:0}
+#storyCityMini .mini-park{width:55%;left:-2.5%;bottom:4%}
+#storyCityMini .mini-market{width:55%;right:-2.5%;bottom:4%}
+
+/* Phones get a readable far view without covering most of the camera image. */
+@media (max-width:700px){
+  #storyCityMini{
+    left:clamp(14px,4vw,24px);
+    top:clamp(74px,12vh,108px);
+    width:clamp(168px,48vw,220px)
+  }
+  #storyCityMini.near{
+    left:50%;
+    top:48%;
+    width:min(84vw,68vh,520px)
+  }
+}
+
+/* Short landscape screens need room for the controls and lower hint pill. */
+@media (max-height:520px) and (orientation:landscape){
+  #storyCityMini{
+    top:clamp(68px,17vh,92px);
+    width:clamp(190px,54vh,260px)
+  }
+  #storyCityMini.near{
+    left:50%;
+    top:51%;
+    width:min(70vh,62vw,520px)
+  }
+}
 #modeSwitch{
   position:fixed;right:18px;top:18px;z-index:90;display:none;gap:7px;padding:6px;
   border-radius:999px;background:rgba(255,255,255,.90);box-shadow:0 5px 18px rgba(0,0,0,.16)
