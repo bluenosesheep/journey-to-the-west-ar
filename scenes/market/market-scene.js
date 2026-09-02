@@ -227,7 +227,7 @@ AFRAME.registerComponent("market-persist",{
       if(window.StandaloneMarketMode?.mode==="story"){
         this.holding=false;this.hideHoldHits();
         if(this.world)this.world.object3D.visible=false;
-        document.getElementById("hint").textContent="MARKET · 继续用玩偶讲故事吧 🧺";
+        document.getElementById("hint").textContent="继续讲故事吧 🧺";
       }else{
         this.updateHoldHits();this.showHoldHits();
       }
@@ -470,7 +470,7 @@ AFRAME.registerComponent("market-canvas",{
       item.selected=false;
       item.start=0;
     });
-    document.getElementById("hint").textContent="MARKET · 点一个食物放进篮筐吧！🧺";
+    document.getElementById("hint").textContent="选一个食物放进篮筐吧！🧺";
   },
   tick:function(){
     if(window.StandaloneMarketMode?.mode==="story")return;
@@ -628,7 +628,7 @@ window.StandaloneMarketMode={
     document.getElementById("shopBtn").style.display="block";
     document.getElementById("checkoutBtn").style.display="none";
     const w=document.getElementById("marketWorld");if(w)w.object3D.visible=false;
-    document.getElementById("hint").textContent="MARKET · 先用玩偶讲讲这里发生了什么吧 🧺";
+    document.getElementById("hint").textContent="讲讲这里发生了什么吧 🧺";
   },
   checkout(){
     window.StandaloneMarketHandMode?.sleep();
@@ -650,7 +650,7 @@ window.StandaloneMarketMode={
     const world=document.getElementById("marketWorld");
     if(world)world.object3D.visible=false;
 
-    document.getElementById("hint").textContent="MARKET · 买好东西啦，继续讲故事吧 🧺";
+    document.getElementById("hint").textContent="买好东西啦，继续讲故事吧 🧺";
   },
 
   enterShop(){
@@ -665,7 +665,7 @@ window.StandaloneMarketMode={
       const o=w.object3D;o.position.copy(c.basePos);o.quaternion.identity();o.scale.copy(c.baseScale);o.visible=true;o.updateMatrixWorld(true);
       c.tracking=false;c.holding=true;c.holdStart=performance.now();c.showHoldHits();c.updateHoldHits();
     }
-    document.getElementById("hint").textContent="MARKET · 选点东西放进篮筐吧！🧺";
+    document.getElementById("hint").textContent="选点东西放进篮筐吧！🧺";
   }
 };
 

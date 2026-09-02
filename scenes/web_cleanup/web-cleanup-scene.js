@@ -52,7 +52,7 @@ window.WebCleanupSceneModule={
     ["webStartBtn","webRetryBtn","webLeaveBtn","webProgress","handBtn","handStatus"].forEach(id=>{
       const e=document.getElementById(id);if(e)e.style.display="none";
     });
-    const h=document.getElementById("hint");if(h)h.textContent="请把镜头对准 MAGIC 07 卡";
+    const h=document.getElementById("hint");if(h)h.textContent="请把镜头对准蛛网卡";
   }
 };
 

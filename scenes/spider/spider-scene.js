@@ -173,7 +173,7 @@ window.SpiderMode={
     const comp=document.getElementById("spiderDisplay")?.components?.["spider-canvas"];
     comp?.setMode("story");
 
-    this.setHint("MAGIC 05 · 大蜘蛛出现了！🕷️");
+    this.setHint("大蜘蛛出现了！🕷️");
   },
 
   enterGame(){
@@ -190,7 +190,7 @@ window.SpiderMode={
     comp?.setMode("game");
     comp?.resetGame();
 
-    this.setHint("抓住 4 只小蜘蛛，把它们放进垃圾筐！🗑️");
+    this.setHint("抓住 4 只小蜘蛛放进垃圾筐！🗑️");
   },
 
   complete(){
@@ -205,7 +205,7 @@ window.SpiderMode={
     document.getElementById("spiderRetryBtn").style.display="block";
     this.positionCompleteButtons();
 
-    this.setHint("🎉 任务完成！4 只小蜘蛛都清理掉了！");
+    this.setHint("🎉 任务完成！");
   },
 
   positionCompleteButtons(){
@@ -243,7 +243,7 @@ window.SpiderMode={
     const ctrl=document.querySelector("[spider-controller]")?.components?.["spider-controller"];
     if(ctrl)ctrl.dragState=null;
 
-    this.setHint("再来一次！抓住 4 只小蜘蛛，把它们放进垃圾筐！🗑️");
+    this.setHint("再来一次！抓住 4 只小蜘蛛放进垃圾筐！🗑️");
   },
 
   leave(){

@@ -125,7 +125,7 @@ window.StandaloneParkMode={
     const w=document.getElementById("parkWorld");
     if(w)w.object3D.visible=false;
 
-    document.getElementById("hint").textContent="PARK · 先用玩偶讲讲公园里发生了什么吧 🌳";
+    document.getElementById("hint").textContent="讲讲公园里发生了什么吧 🌳";
   },
   enterFix(){
     this.mode="fix";
@@ -142,7 +142,7 @@ window.StandaloneParkMode={
       const canvasComp=document.getElementById("parkDisplay")?.components?.["park-canvas"];
       if(canvasComp)canvasComp._lastDraw=0;
     }
-    document.getElementById("hint").textContent="PARK · 把乱掉的东西拖回合适的位置吧！🌳";
+    document.getElementById("hint").textContent="把乱掉的东西拖回合适的位置吧！🌳";
   },
   finishFix(){
     window.StandaloneHandMode?.sleep();
@@ -150,7 +150,7 @@ window.StandaloneParkMode={
     if(c){c.tracking=false;c.holding=false;c.dragState=null;c.hideHits()}
     const w=document.getElementById("parkWorld");if(w)w.object3D.visible=false;
     this.showStory();
-    document.getElementById("hint").textContent="PARK · 公园整理好啦，继续讲故事吧 🌿";
+    document.getElementById("hint").textContent="公园整理好啦，继续讲故事吧 🌿";
   }
 };
 
@@ -241,7 +241,7 @@ AFRAME.registerComponent("park-canvas",{
   },
   reset(){
     this.resetMessy();
-    document.getElementById("hint").textContent="PARK · 公园又乱了，重新修好它吧！✨";
+    document.getElementById("hint").textContent="公园又乱了，重新修好它吧！✨";
   },
   tick(){
     if(window.StandaloneParkMode?.mode==="story")return;
@@ -314,7 +314,7 @@ AFRAME.registerComponent("park-drag-controller",{
       }else{
         if(this.world)this.world.object3D.visible=true;
         this.showHits();this.updateHitPositions();
-        document.getElementById("hint").textContent="PARK · 拖动这些东西来修好公园吧！🌳";
+        document.getElementById("hint").textContent="拖动这些东西来修好公园吧！🌳";
       }
     });
 
@@ -346,10 +346,10 @@ AFRAME.registerComponent("park-drag-controller",{
       if(window.StandaloneParkMode?.mode==="story"){
         this.holding=false;this.hideHits();
         if(this.world)this.world.object3D.visible=false;
-        document.getElementById("hint").textContent="PARK · 继续用玩偶讲故事吧 🌿";
+        document.getElementById("hint").textContent="继续讲故事吧 🌿";
       }else{
         this.showHits();this.updateHitPositions();
-        document.getElementById("hint").textContent="PARK · 可以继续拖动，或用玩偶讲故事 🌿";
+        document.getElementById("hint").textContent="可以继续拖动 🌿";
       }
     });
   },
@@ -406,7 +406,7 @@ AFRAME.registerComponent("park-drag-controller",{
   },
   handleUp(input){
     if(!this.dragState||input.pointerId!==this.dragState.pointerId)return;
-    this.dragState=null;document.getElementById("hint").textContent="PARK · 继续拖动来修好公园吧！🌳";
+    this.dragState=null;document.getElementById("hint").textContent="继续拖动来修好公园吧！🌳";
   },
   showHits(){Object.values(this.hits).forEach(b=>b.style.display="block")},
   hideHits(){Object.values(this.hits).forEach(b=>b.style.display="none")},
