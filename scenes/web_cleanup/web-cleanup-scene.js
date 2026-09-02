@@ -430,8 +430,21 @@ AFRAME.registerComponent("web-cleanup-canvas",{
     // idle webs
     this.webs.forEach(w=>{
       if(w.state!=="idle")return;
-      const bob=Math.sin(t*1.75+w.phase)*4;
-      this.drawImg(this.image("web_small.png"),w.x,w.y+bob,150*w.scale,150*w.scale,1,w.rot+Math.sin(t+w.phase)*.025);
+      // Make the waiting webs visibly alive on top of a moving AR camera.
+      // Every web keeps its own phase so the group does not move in lockstep.
+      const floatY=Math.sin(t*1.65+w.phase)*8+
+        Math.sin(t*.72+w.phase*1.37)*3;
+      const swayX=Math.sin(t*.92+w.phase*1.61)*5;
+      const swayRot=Math.sin(t*1.18+w.phase)*.075;
+      const breathe=1+Math.sin(t*2.05+w.phase*1.23)*.055;
+      this.drawImg(
+        this.image("web_small.png"),
+        w.x+swayX,w.y+floatY,
+        150*w.scale,150*w.scale,
+        1,
+        w.rot+swayRot,
+        breathe
+      );
     });
 
     // Draw the collection hole first. Collected webs will remain visible on top,
