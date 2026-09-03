@@ -501,9 +501,9 @@ AFRAME.registerComponent("spider-canvas",{
 
     if(this.bossHits>=3){
       this.bossReaction="escape";
-      this.bossActionDuration=1550;
+      this.bossActionDuration=820;
       window.SpiderMode.setHint("成功了！大蜘蛛要逃走啦！💨");
-      setTimeout(()=>window.SpiderMode.enterSpiderGame(),this.bossActionDuration+120);
+      setTimeout(()=>window.SpiderMode.enterSpiderGame(),this.bossActionDuration+80);
     }else{
       this.bossReaction="hit";
       this.bossActionDuration=520;
@@ -808,6 +808,8 @@ AFRAME.registerComponent("spider-canvas",{
     let alpha=1;
     let linesA=0;
     let dustA=0;
+    let trailStrength=0;
+    let trailDir=0;
 
     const elapsed=now-this.bossActionStart;
     if(this.bossReaction==="hit"){
@@ -832,23 +834,41 @@ AFRAME.registerComponent("spider-canvas",{
         linesA=.76*(1-p/.22);
       }else{
         const q=(p-.22)/.78;
-        const e=q*q;
-        cx+=dir*(36+w*.72*e);
-        cy-=h*.16*e+Math.sin(q*Math.PI)*18;
-        sx*=1-.48*e;
-        sy*=1-.48*e;
-        rot+=dir*e*.72;
-        alpha=1-Math.max(0,(q-.72)/.28);
-        dustA=Math.max(0,1-q)*.82;
+        const e=q*q*(3-2*q);
+        const stride=Math.sin(q*Math.PI*8);
+        const launch=Math.sin(Math.PI*.5*Math.min(1,q/.18));
+        cx+=dir*w*.86*e;
+        cy+=stride*3*(1-q);
+        // Keep the Boss full-sized and slightly stretched while it dashes.
+        // The old shrink + diagonal fade made it look as if it entered a slit.
+        sx*=1+.12*launch*(1-q)+stride*.025;
+        sy*=1-.06*launch*(1-q)-stride*.018;
+        rot+=dir*(.035*launch+stride*.018);
+        dustA=Math.max(0,1-q)*.76;
+        linesA=Math.max(linesA,Math.max(0,1-q)*.32);
+        trailDir=dir;
+        trailStrength=launch*
+          (1-Math.max(0,(q-.72)/.28));
       }
     }
 
-    this.drawCentered(this.img.shadow,w*.50,h*.70,w*.49*sx,h*.18*.62,0,.46*alpha);
+    this.drawCentered(this.img.shadow,cx,h*.70,w*.49*sx,h*.18*.62,0,.46*alpha);
     if(dustA>0)this.drawCentered(this.img.dust,w*.50,h*.69,w*.68,h*.34,0,dustA);
     if(linesA>0)this.drawCentered(this.img.lines,w*.50,h*.47,w*.88,h*.88,0,linesA);
 
     const ratio=body.naturalHeight/body.naturalWidth;
     const bw=w*.58*v.scale,bh=bw*ratio;
+    if(trailStrength>0){
+      for(let i=2;i>=1;i--){
+        this.ctx.save();
+        this.ctx.globalAlpha=trailStrength*(i===1?.22:.11);
+        this.ctx.translate(cx-trailDir*i*38,cy);
+        this.ctx.rotate(rot);
+        this.ctx.scale(sx*(1-i*.035),sy);
+        this.ctx.drawImage(body,-bw/2,-bh/2,bw,bh);
+        this.ctx.restore();
+      }
+    }
     this.ctx.save();
     this.ctx.globalAlpha=alpha;
     this.ctx.translate(cx,cy);
