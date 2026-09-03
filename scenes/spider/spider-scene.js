@@ -501,9 +501,9 @@ AFRAME.registerComponent("spider-canvas",{
 
     if(this.bossHits>=3){
       this.bossReaction="escape";
-      this.bossActionDuration=820;
+      this.bossActionDuration=1250;
       window.SpiderMode.setHint("成功了！大蜘蛛要逃走啦！💨");
-      setTimeout(()=>window.SpiderMode.enterSpiderGame(),this.bossActionDuration+80);
+      setTimeout(()=>window.SpiderMode.enterSpiderGame(),this.bossActionDuration+160);
     }else{
       this.bossReaction="hit";
       this.bossActionDuration=520;
@@ -828,36 +828,38 @@ AFRAME.registerComponent("spider-canvas",{
     }else if(this.bossReaction==="escape"){
       const p=Math.min(1,elapsed/Math.max(1,this.bossActionDuration));
       const dir=v.key==="gray"?-1:1;
-      if(p<.18){
-        const squash=Math.sin(Math.PI*p/.18);
+      if(p<.16){
+        const squash=Math.sin(Math.PI*p/.16);
         sx+=squash*.18;
         sy-=squash*.25;
         cy+=squash*14;
-        linesA=.82*(1-p/.18);
+        linesA=.82*(1-p/.16);
       }else{
-        const q=(p-.18)/.82;
-        const dash=Math.min(1,q/.50);
+        const q=(p-.16)/.84;
+        const dash=Math.min(1,q/.68);
         const e=1-Math.pow(1-dash,3);
-        const stride=Math.sin(dash*Math.PI*7);
+        const stride=Math.sin(dash*Math.PI*9);
         const launch=Math.sin(Math.PI*.5*Math.min(1,dash/.22));
 
         // Stop while the whole spider is still inside the canvas. A foreground
         // dust burst hides the disappearance, so no body part is edge-clipped.
         cx+=dir*w*.18*e;
         escapeBurstX=w*(.50+dir*.18);
-        cy+=stride*3*(1-dash);
+        cy+=Math.abs(stride)*6*(1-dash);
         sx*=1+.16*launch*(1-dash)+stride*.028;
         sy*=1-.08*launch*(1-dash)-stride*.020;
         rot+=dir*(.028*launch+stride*.015);
         trailDir=dir;
-        trailStrength=Math.sin(Math.PI*dash)*.88;
+        trailStrength=Math.sin(Math.PI*dash)*.78;
 
-        const vanish=Math.max(0,Math.min(1,(q-.50)/.13));
+        // Let the dust build first, then fade the spider gradually behind it.
+        // This makes the exit read as a run-away action instead of a cut.
+        const vanish=Math.max(0,Math.min(1,(q-.58)/.28));
         alpha=1-vanish;
         dustA=.20*(1-dash);
-        escapeBurst=q<.42
-          ? Math.max(0,(q-.28)/.14)
-          : Math.max(0,1-(q-.42)/.48);
+        escapeBurst=q<.62
+          ? Math.max(0,(q-.38)/.24)
+          : Math.max(0,1-(q-.62)/.38);
         linesA=Math.max(linesA,(1-dash)*.42);
       }
     }
