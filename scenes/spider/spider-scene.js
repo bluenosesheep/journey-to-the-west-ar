@@ -810,6 +810,8 @@ AFRAME.registerComponent("spider-canvas",{
     let dustA=0;
     let trailStrength=0;
     let trailDir=0;
+    let escapeBurst=0;
+    let escapeBurstX=w*.50;
 
     const elapsed=now-this.bossActionStart;
     if(this.bossReaction==="hit"){
@@ -826,29 +828,37 @@ AFRAME.registerComponent("spider-canvas",{
     }else if(this.bossReaction==="escape"){
       const p=Math.min(1,elapsed/Math.max(1,this.bossActionDuration));
       const dir=v.key==="gray"?-1:1;
-      if(p<.22){
-        const squash=Math.sin(Math.PI*p/.22);
+      if(p<.18){
+        const squash=Math.sin(Math.PI*p/.18);
         sx+=squash*.18;
         sy-=squash*.25;
         cy+=squash*14;
-        linesA=.76*(1-p/.22);
+        linesA=.82*(1-p/.18);
       }else{
-        const q=(p-.22)/.78;
-        const e=q*q*(3-2*q);
-        const stride=Math.sin(q*Math.PI*8);
-        const launch=Math.sin(Math.PI*.5*Math.min(1,q/.18));
-        cx+=dir*w*.86*e;
-        cy+=stride*3*(1-q);
-        // Keep the Boss full-sized and slightly stretched while it dashes.
-        // The old shrink + diagonal fade made it look as if it entered a slit.
-        sx*=1+.12*launch*(1-q)+stride*.025;
-        sy*=1-.06*launch*(1-q)-stride*.018;
-        rot+=dir*(.035*launch+stride*.018);
-        dustA=Math.max(0,1-q)*.76;
-        linesA=Math.max(linesA,Math.max(0,1-q)*.32);
+        const q=(p-.18)/.82;
+        const dash=Math.min(1,q/.50);
+        const e=1-Math.pow(1-dash,3);
+        const stride=Math.sin(dash*Math.PI*7);
+        const launch=Math.sin(Math.PI*.5*Math.min(1,dash/.22));
+
+        // Stop while the whole spider is still inside the canvas. A foreground
+        // dust burst hides the disappearance, so no body part is edge-clipped.
+        cx+=dir*w*.18*e;
+        escapeBurstX=w*(.50+dir*.18);
+        cy+=stride*3*(1-dash);
+        sx*=1+.16*launch*(1-dash)+stride*.028;
+        sy*=1-.08*launch*(1-dash)-stride*.020;
+        rot+=dir*(.028*launch+stride*.015);
         trailDir=dir;
-        trailStrength=launch*
-          (1-Math.max(0,(q-.72)/.28));
+        trailStrength=Math.sin(Math.PI*dash)*.88;
+
+        const vanish=Math.max(0,Math.min(1,(q-.50)/.13));
+        alpha=1-vanish;
+        dustA=.20*(1-dash);
+        escapeBurst=q<.42
+          ? Math.max(0,(q-.28)/.14)
+          : Math.max(0,1-(q-.42)/.48);
+        linesA=Math.max(linesA,(1-dash)*.42);
       }
     }
 
@@ -876,6 +886,13 @@ AFRAME.registerComponent("spider-canvas",{
     this.ctx.scale(sx,sy);
     this.ctx.drawImage(body,-bw/2,-bh/2,bw,bh);
     this.ctx.restore();
+
+    if(escapeBurst>0){
+      const burstScale=.78+escapeBurst*.34;
+      this.drawCentered(this.img.dust,escapeBurstX,h*.67,w*.76*burstScale,h*.38*burstScale,0,.96*escapeBurst);
+      this.drawCentered(this.img.dust,escapeBurstX-trailDir*w*.07,h*.62,w*.48*burstScale,h*.25*burstScale,0,.62*escapeBurst);
+      this.drawCentered(this.img.lines,escapeBurstX,h*.48,w*.66,h*.66,0,.30*escapeBurst);
+    }
 
     if(this.bossReaction!=="escape"){
       const target=this.bossTargetPoint();
