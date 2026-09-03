@@ -52,7 +52,7 @@ window.WebCleanupSceneModule={
     ["webStartBtn","webRetryBtn","webLeaveBtn","webProgress","handBtn","handStatus"].forEach(id=>{
       const e=document.getElementById(id);if(e)e.style.display="none";
     });
-    const h=document.getElementById("hint");if(h)h.textContent="请把镜头对准 MAGIC 07 卡";
+    const h=document.getElementById("hint");if(h)h.textContent="请把镜头对准蛛网卡";
   }
 };
 
@@ -164,22 +164,16 @@ AFRAME.registerComponent("web-cleanup-canvas",{
     this.canvas=document.getElementById("webCanvas");this.ctx=this.canvas.getContext("2d");
     this.mode="waiting";this.webs=[];this.done=0;this.last=0;
     this.needsRender=true;this.texture=null;
-    this.basketBounceStart=0;this.basketBounceDuration=420;
-    this.pileBounceStart=0;this.pileBounceDuration=380;
     this.images={};
     ["web_large.png","web_small.png","web_basket.png"].forEach(n=>{
       const i=new Image();i.src=WebCleanupSceneModule.asset(n);this.images[n]=i;
     });
   },
   invalidate(){this.needsRender=true;this.last=0},
-  reset(){
-    this.mode="waiting";this.webs=[];this.done=0;
-    this.basketBounceStart=0;this.pileBounceStart=0;this.invalidate();
-  },
+  reset(){this.mode="waiting";this.webs=[];this.done=0;this.invalidate()},
   showStory(){this.mode="story";this.webs=[];this.done=0;this.invalidate()},
   startGame(){
-    this.mode="game";this.done=0;
-    this.basketBounceStart=0;this.pileBounceStart=0;this.invalidate();
+    this.mode="game";this.done=0;this.invalidate();
     // Five webs use noticeably different sizes and angles so they do not
     // look like cloned copies. A small amount of jitter is added each round.
     const seeds=[
@@ -201,8 +195,7 @@ AFRAME.registerComponent("web-cleanup-canvas",{
         scale:Math.max(.62,Math.min(1.04,v[2]+scaleJitter)),
         rot:v[3]+rotJitter,
         phase:i*1.29,
-        state:"idle",tugStart:0,tugDuration:240,tugDX:0,tugDY:-1,
-        flyStart:0,fromX:0,fromY:0,flyDuration:640,
+        state:"idle",flyStart:0,fromX:0,fromY:0,flyDuration:560,
         sinkStart:0,sinkDuration:360,
         mouthX:585,mouthY:542,
         pileX:0,pileY:0,pileScale:.26,pileRot:0
@@ -226,15 +219,12 @@ AFRAME.registerComponent("web-cleanup-canvas",{
   },
   getWeb(id){return this.webs.find(w=>w.id===id)},
   selectable(){return this.webs.filter(w=>w.state==="idle")},
-  collect(id,point){
+  collect(id){
     const w=this.getWeb(id);if(!w||w.state!=="idle"||this.mode!=="game")return false;
     const slot=this.pileSlot(w.id);
     w.pileX=slot.x;w.pileY=slot.y;w.pileScale=slot.scale;w.pileRot=slot.rot;
     w.mouthX=585;w.mouthY=542;
-    const dx=(point?.x??w.x)-w.x,dy=(point?.y??w.y)-w.y;
-    const len=Math.hypot(dx,dy);
-    w.tugDX=len>8?dx/len:0;w.tugDY=len>8?dy/len:-1;
-    w.state="tugging";w.tugStart=performance.now();w.fromX=w.x;w.fromY=w.y;
+    w.state="flying";w.flyStart=performance.now();w.fromX=w.x;w.fromY=w.y;
     this.needsRender=true;
     return true;
   },
@@ -242,11 +232,6 @@ AFRAME.registerComponent("web-cleanup-canvas",{
   drawImg(img,x,y,w,h,a=1,rot=0,scale=1){
     if(!img?.complete||!img.naturalWidth)return;
     const c=this.ctx;c.save();c.globalAlpha=a;c.translate(x,y);c.rotate(rot);c.scale(scale,scale);
-    c.drawImage(img,-w/2,-h/2,w,h);c.restore();
-  },
-  drawImgStretch(img,x,y,w,h,a=1,rot=0,scaleX=1,scaleY=1){
-    if(!img?.complete||!img.naturalWidth)return;
-    const c=this.ctx;c.save();c.globalAlpha=a;c.translate(x,y);c.rotate(rot);c.scale(scaleX,scaleY);
     c.drawImage(img,-w/2,-h/2,w,h);c.restore();
   },
   ease(t){return 1-Math.pow(1-t,3)},
@@ -462,60 +447,22 @@ AFRAME.registerComponent("web-cleanup-canvas",{
       );
     });
 
-    // Stage 0: a short pull-and-release makes a pinch feel as if it has
-    // actually detached the web instead of teleporting it into flight.
-    this.webs.forEach(w=>{
-      if(w.state!=="tugging")return;
-      const p=Math.min(1,(now-w.tugStart)/w.tugDuration);
-      const tension=p<.68?this.ease(p/.68):1-this.ease((p-.68)/.32);
-      const tremble=Math.sin(p*Math.PI*8)*(1-p)*.035;
-      const pull=18*tension;
-      this.drawImgStretch(
-        this.image("web_small.png"),
-        w.x+w.tugDX*pull,w.y+w.tugDY*pull,
-        150*w.scale,150*w.scale,
-        1,
-        w.rot+tremble+w.tugDX*.055*tension,
-        1+.18*tension,
-        1-.10*tension
-      );
-      if(p>=1){
-        w.state="flying";w.flyStart=now;w.fromX=w.x;w.fromY=w.y;
-      }
-    });
-
     // Draw the collection hole first. Collected webs will remain visible on top,
     // building up into a little pile at the hole instead of disappearing.
-    const basketP=this.basketBounceStart?
-      Math.min(1,(now-this.basketBounceStart)/this.basketBounceDuration):1;
-    const basketBounce=basketP<1?
-      Math.sin(basketP*Math.PI*3)*(1-basketP):0;
-    this.drawImgStretch(
-      this.image("web_basket.png"),
-      b.x,b.y-basketBounce*10,
-      b.w,b.h,1,
-      basketBounce*.035,
-      1+basketBounce*.08,
-      1-basketBounce*.06
-    );
+    this.drawImg(this.image("web_basket.png"),b.x,b.y,b.w,b.h,1);
 
     // Webs already collected stay deeper inside the hole.
     // Smaller size + lower alpha makes them read as being at the bottom,
     // not floating on the rim.
     this.webs.forEach(w=>{
       if(w.state!=="piled")return;
-      const pileP=this.pileBounceStart?
-        Math.min(1,(now-this.pileBounceStart)/this.pileBounceDuration):1;
-      const pileBounce=pileP<1?
-        Math.sin(pileP*Math.PI*3)*(1-pileP):0;
-      this.drawImgStretch(
+      this.drawImg(
         this.image("web_small.png"),
-        w.pileX,w.pileY-pileBounce*7,
+        w.pileX,w.pileY,
         150*w.scale,150*w.scale,
         .72,
-        w.pileRot+pileBounce*.08,
-        w.pileScale*(1+pileBounce*.12),
-        w.pileScale*(1-pileBounce*.08)
+        w.pileRot,
+        w.pileScale
       );
     });
 
@@ -523,49 +470,25 @@ AFRAME.registerComponent("web-cleanup-canvas",{
     this.webs.forEach(w=>{
       if(w.state!=="flying")return;
       const p=Math.min(1,(now-w.flyStart)/w.flyDuration),e=this.ease(p);
-      const flightPose=pp=>{
-        const ep=this.ease(pp);
-        const arc=Math.sin(Math.PI*pp)*-64;
-        return{
-          x:w.fromX+(w.mouthX-w.fromX)*ep,
-          y:w.fromY+(w.mouthY-w.fromY)*ep+arc,
-          sc:1-(1-.42)*ep,
-          rot:w.rot+(w.pileRot-w.rot)*ep*.45+pp*4.35+
-            Math.sin(pp*Math.PI*5)*(1-pp)*.10
-        };
-      };
-      const pose=flightPose(p);
+      const arc=Math.sin(Math.PI*p)*-64;
+      const x=w.fromX+(w.mouthX-w.fromX)*e;
+      const y=w.fromY+(w.mouthY-w.fromY)*e+arc;
+      const mouthScale=.50;
+      const sc=1-(1-mouthScale)*e;
+      const rot=w.rot+(w.pileRot-w.rot)*e*.45+p*.20;
 
-      // Two cheap translucent echoes make the curved, spinning flight easy to
-      // read without introducing particles or extra textures.
-      for(let i=2;i>=1;i--){
-        const trailP=Math.max(0,p-i*.055);
-        if(trailP<=0)continue;
-        const trail=flightPose(trailP);
-        this.drawImg(
-          this.image("web_small.png"),
-          trail.x,trail.y,
-          150*w.scale,150*w.scale,
-          i===1?.15:.075,
-          trail.rot,
-          trail.sc*(i===1?.96:.92)
-        );
-      }
-
-      this.drawImgStretch(
+      this.drawImg(
         this.image("web_small.png"),
-        pose.x,pose.y,
+        x,y,
         150*w.scale,150*w.scale,
         1,
-        pose.rot,
-        pose.sc*(1-.20*e),
-        pose.sc*(1+.06*e)
+        rot,
+        sc
       );
 
       if(p>=1){
         w.state="sinking";
         w.sinkStart=now;
-        this.basketBounceStart=now;
       }
     });
 
@@ -592,11 +515,10 @@ AFRAME.registerComponent("web-cleanup-canvas",{
 
       if(p>=1){
         w.state="piled";
-        this.pileBounceStart=now;
         this.needsRender=true;
         this.done++;
         WebCleanupMode.progress(this.done,this.webs.length);
-        if(this.done===this.webs.length)setTimeout(()=>WebCleanupMode.complete(),430);
+        if(this.done===this.webs.length)setTimeout(()=>WebCleanupMode.complete(),260);
       }
     });
   },
@@ -613,23 +535,15 @@ AFRAME.registerComponent("web-cleanup-canvas",{
   },
   tick(){
     if(this.mode==="waiting")return;
-    const now=performance.now();
-    const bounceActive=this.mode==="game"&&(
-      (this.basketBounceStart&&now-this.basketBounceStart<this.basketBounceDuration)||
-      (this.pileBounceStart&&now-this.pileBounceStart<this.pileBounceDuration)
-    );
-    const movingWeb=this.mode==="game"&&(
-      bounceActive||this.webs.some(w=>w.state==="tugging"||w.state==="flying"||w.state==="sinking")
-    );
+    const movingWeb=this.mode==="game"&&this.webs.some(w=>w.state==="flying"||w.state==="sinking");
     const animated=this.mode==="story"||
-      (this.mode==="game"&&(bounceActive||this.webs.some(w=>
-        w.state==="idle"||w.state==="tugging"||w.state==="flying"||w.state==="sinking"
-      )));
+      (this.mode==="game"&&this.webs.some(w=>w.state==="idle"||w.state==="flying"||w.state==="sinking"));
     if(!animated&&!this.needsRender)return;
 
     // Keep the short collection flight at ~24 FPS. Story breathing and idle
     // bobbing are deliberately capped at 15 FPS to reduce full-canvas uploads.
     const frameMs=movingWeb?42:66;
+    const now=performance.now();
     if(!this.needsRender&&this.last&&now-this.last<frameMs)return;
     this.last=now;this.needsRender=false;
     this.draw(now);
@@ -696,7 +610,7 @@ AFRAME.registerComponent("web-cleanup-controller",{
     if(WebCleanupMode.mode!=="game")return;
     const c=this.screenToCanvas(i.x,i.y);if(!c)return;
     const w=this.nearest(c,i.source);if(!w)return;
-    if(this.comp()?.collect(w.id,c)){
+    if(this.comp()?.collect(w.id)){
       if(i.source==="hand")StandaloneWebHandMode.note();
       i.nativeEvent?.preventDefault?.();
     }
