@@ -60,7 +60,7 @@ window.SpiderSceneModule = window.SpiderSceneModule || {
     }
 
     if(!document.getElementById("spiderFightBtn")){
-      make('<button id="spiderFightBtn" type="button">💪 赶走它</button>');
+      make('<button id="spiderFightBtn" type="button">⚔️ 消灭它</button>');
       make('<button id="spiderRetryBtn" type="button">↻ 再试一次</button>');
       make('<button id="spiderLeaveBtn" type="button">✅ 离开</button>');
       make('<div id="spiderProgress">🕷️ 0 / 4</div>');
@@ -178,7 +178,7 @@ window.SpiderMode={
 
   enterGame(){
     if(this.mode!=="story")return;
-    this.mode="boss";
+    this.mode="game";
 
     document.getElementById("spiderFightBtn").style.display="none";
     document.getElementById("spiderLeaveBtn").style.display="none";
@@ -187,31 +187,16 @@ window.SpiderMode={
     document.getElementById("spiderProgress").style.display="block";
 
     const comp=document.getElementById("spiderDisplay")?.components?.["spider-canvas"];
-    comp?.setMode("boss");
-    comp?.resetBoss();
-
-    this.setHint("找到大蜘蛛身上的发光点，命中 3 次！🎯");
-  },
-
-  enterSpiderGame(){
-    if(this.mode!=="boss")return;
-    this.mode="game";
-
-    const comp=document.getElementById("spiderDisplay")?.components?.["spider-canvas"];
     comp?.setMode("game");
     comp?.resetGame();
 
-    document.getElementById("spiderProgress").style.display="block";
-    this.setHint("大蜘蛛逃走了！抓住 4 只小蜘蛛放进垃圾筐！🗑️");
+    this.setHint("抓住 4 只小蜘蛛放进垃圾筐！🗑️");
   },
 
   complete(){
     if(this.mode!=="game")return;
     this.mode="complete";
     window.StandaloneSpiderHandMode?.sleep();
-
-    const comp=document.getElementById("spiderDisplay")?.components?.["spider-canvas"];
-    comp?.setMode("complete");
 
     document.getElementById("handBtn").style.display="none";
     document.getElementById("handStatus").style.display="none";
@@ -242,7 +227,7 @@ window.SpiderMode={
     if(this.mode!=="complete")return;
 
     window.StandaloneSpiderHandMode?.sleep();
-    this.mode="boss";
+    this.mode="game";
 
     document.getElementById("spiderRetryBtn").style.display="none";
     document.getElementById("spiderLeaveBtn").style.display="none";
@@ -252,13 +237,13 @@ window.SpiderMode={
     document.getElementById("spiderProgress").style.display="block";
 
     const comp=document.getElementById("spiderDisplay")?.components?.["spider-canvas"];
-    comp?.setMode("boss");
-    comp?.resetBoss();
+    comp?.setMode("game");
+    comp?.resetGame();
 
     const ctrl=document.querySelector("[spider-controller]")?.components?.["spider-controller"];
     if(ctrl)ctrl.dragState=null;
 
-    this.setHint("再来一次！找到发光点，先赶走大蜘蛛！🎯");
+    this.setHint("再来一次！抓住 4 只小蜘蛛放进垃圾筐！🗑️");
   },
 
   leave(){
@@ -299,7 +284,7 @@ window.StandaloneSpiderHandMode={
   },
 
   async start(){
-    if(this.running || !["boss","game"].includes(window.SpiderMode.mode))return;
+    if(this.running || window.SpiderMode.mode!=="game")return;
 
     const status=document.getElementById("handStatus");
     const cursor=document.getElementById("handCursor");
@@ -321,15 +306,13 @@ window.StandaloneSpiderHandMode={
       viewport:()=>({width:innerWidth,height:innerHeight}),
       onStatus:(msg)=>{if(status)status.textContent="手势："+msg},
       onArmedChange:(armed)=>{
-        if(!status)return;
-        const boss=window.SpiderMode.mode==="boss";
-        status.textContent=armed?(boss?"手势：瞄准发光点":"手势：抓小蜘蛛"):"张开手 ✋";
+        if(status)status.textContent=armed?"手势：抓小蜘蛛":"张开手 ✋";
       },
       onMetrics:(data)=>{
         if(!status)return;
         if(!data.handVisible)status.textContent="手势：请伸出一只手";
-        else if(data.pinching)status.textContent=window.SpiderMode.mode==="boss"?"手势：命中":"手势：抓住";
-        else status.textContent=window.SpiderMode.mode==="boss"?"手势：瞄准发光点":"手势：抓小蜘蛛";
+        else if(data.pinching)status.textContent="手势：抓住";
+        else status.textContent="手势：抓小蜘蛛";
       }
     });
 
@@ -353,7 +336,7 @@ window.StandaloneSpiderHandMode={
     const btn=document.getElementById("handBtn");
 
     if(cursor)cursor.style.display="none";
-    if(["boss","game"].includes(window.SpiderMode.mode)){
+    if(window.SpiderMode.mode==="game"){
       if(status){
         status.style.display="block";
         status.textContent="手势：已关闭 · 再点 INTERACT 唤醒";
@@ -375,8 +358,6 @@ AFRAME.registerComponent("spider-canvas",{
     this.ctx=this.c.getContext("2d");
     this.mode="waiting";
     this.start=performance.now();
-    this.needsRender=true;
-    this.texture=null;
 
     // Big-spider variant state. The selected Boss is locked for the full Story.
     this.storyVariant=null;
@@ -385,20 +366,6 @@ AFRAME.registerComponent("spider-canvas",{
     this.storyActionStart=performance.now();
     this.storyActionDuration=1800;
     this.nextStoryAction=performance.now()+1800;
-
-    // Three readable hit zones for the interactive Boss phase. They sit on
-    // visible parts of both the red and gray spider artwork.
-    this.bossTargets=[
-      {x:.37,y:.45},
-      {x:.50,y:.34},
-      {x:.63,y:.45}
-    ];
-    this.bossHits=0;
-    this.bossTarget=0;
-    this.bossReaction="idle";
-    this.bossActionStart=0;
-    this.bossActionDuration=0;
-    this.bossHitLockUntil=0;
 
     this.img={};
     this.loaded=0;
@@ -429,7 +396,6 @@ AFRAME.registerComponent("spider-canvas",{
     this.mode=mode;
     this.start=performance.now();
     this._last=0;
-    this.needsRender=true;
 
     if(mode==="story"){
       this.chooseStoryVariant();
@@ -459,62 +425,6 @@ AFRAME.registerComponent("spider-canvas",{
   currentSpiderImage(){
     const v=this.storyVariant;
     return this.img?.[v?.img] || this.img?.body;
-  },
-
-  resetBoss(){
-    this.bossHits=0;
-    this.bossTarget=Math.floor(Math.random()*this.bossTargets.length);
-    this.bossReaction="idle";
-    this.bossActionStart=performance.now();
-    this.bossActionDuration=0;
-    this.bossHitLockUntil=0;
-    this.updateBossProgress();
-    this._last=0;
-  },
-
-  updateBossProgress(){
-    const p=document.getElementById("spiderProgress");
-    if(p)p.textContent=`🎯 ${this.bossHits} / 3`;
-  },
-
-  bossTargetPoint(){
-    const target=this.bossTargets[this.bossTarget]||this.bossTargets[0];
-    return{x:this.c.width*target.x,y:this.c.height*target.y};
-  },
-
-  hitBoss(x,y,source){
-    if(this.mode!=="boss"||this.bossReaction==="escape")return false;
-    const now=performance.now();
-    if(now<this.bossHitLockUntil)return false;
-
-    const target=this.bossTargetPoint();
-    const radius=source==="hand"?82:62;
-    if(Math.hypot(x-target.x,y-target.y)>radius){
-      window.SpiderMode.setHint("看准蜘蛛身上闪动的光圈！🎯");
-      return false;
-    }
-
-    this.bossHits++;
-    this.updateBossProgress();
-    this.bossActionStart=now;
-    this.bossHitLockUntil=now+430;
-
-    if(this.bossHits>=3){
-      this.bossReaction="escape";
-      this.bossActionDuration=1550;
-      window.SpiderMode.setHint("成功了！大蜘蛛要逃走啦！💨");
-      setTimeout(()=>window.SpiderMode.enterSpiderGame(),this.bossActionDuration+120);
-    }else{
-      this.bossReaction="hit";
-      this.bossActionDuration=520;
-      const remaining=3-this.bossHits;
-      window.SpiderMode.setHint(`命中了！还要找到 ${remaining} 个发光点`);
-      const step=Math.random()<.5?1:2;
-      this.bossTarget=(this.bossTarget+step)%this.bossTargets.length;
-    }
-
-    this._last=0;
-    return true;
   },
 
   scheduleStoryAction(now){
@@ -785,101 +695,6 @@ AFRAME.registerComponent("spider-canvas",{
     }
   },
 
-  drawBoss(now){
-    const c=this.c,w=c.width,h=c.height;
-    const sec=(now-this.start)/1000;
-    const v=this.storyVariant||{key:"red",img:"body",scale:1};
-    const body=this.currentSpiderImage();
-    if(!body)return;
-
-    const webPulse=1+Math.sin(sec*1.35)*.012;
-    this.ctx.save();
-    this.ctx.translate(w*.50,h*.59);
-    this.ctx.scale(webPulse,2-webPulse);
-    this.ctx.globalAlpha=.44;
-    this.ctx.drawImage(this.img.web,-w*.43,-h*.245,w*.86,h*.49);
-    this.ctx.restore();
-
-    let cx=w*.50+Math.sin(sec*1.15)*4;
-    let cy=h*.47+Math.sin(sec*1.72)*3;
-    let sx=1+.014*Math.sin(sec*2.05);
-    let sy=1-.012*Math.sin(sec*2.05);
-    let rot=Math.sin(sec*.92)*.7*Math.PI/180;
-    let alpha=1;
-    let linesA=0;
-    let dustA=0;
-
-    const elapsed=now-this.bossActionStart;
-    if(this.bossReaction==="hit"){
-      const p=Math.min(1,elapsed/Math.max(1,this.bossActionDuration));
-      const impact=Math.sin(Math.PI*p);
-      cx+=Math.sin(p*Math.PI*9)*(1-p)*18;
-      cy+=impact*10;
-      sx+=impact*.15;
-      sy-=impact*.18;
-      rot+=Math.sin(p*Math.PI*5)*4.5*Math.PI/180;
-      linesA=.72*(1-p);
-      dustA=.55*(1-p);
-      if(p>=1)this.bossReaction="idle";
-    }else if(this.bossReaction==="escape"){
-      const p=Math.min(1,elapsed/Math.max(1,this.bossActionDuration));
-      const dir=v.key==="gray"?-1:1;
-      if(p<.22){
-        const squash=Math.sin(Math.PI*p/.22);
-        sx+=squash*.18;
-        sy-=squash*.25;
-        cy+=squash*14;
-        linesA=.76*(1-p/.22);
-      }else{
-        const q=(p-.22)/.78;
-        const e=q*q;
-        cx+=dir*(36+w*.72*e);
-        cy-=h*.16*e+Math.sin(q*Math.PI)*18;
-        sx*=1-.48*e;
-        sy*=1-.48*e;
-        rot+=dir*e*.72;
-        alpha=1-Math.max(0,(q-.72)/.28);
-        dustA=Math.max(0,1-q)*.82;
-      }
-    }
-
-    this.drawCentered(this.img.shadow,w*.50,h*.70,w*.49*sx,h*.18*.62,0,.46*alpha);
-    if(dustA>0)this.drawCentered(this.img.dust,w*.50,h*.69,w*.68,h*.34,0,dustA);
-    if(linesA>0)this.drawCentered(this.img.lines,w*.50,h*.47,w*.88,h*.88,0,linesA);
-
-    const ratio=body.naturalHeight/body.naturalWidth;
-    const bw=w*.58*v.scale,bh=bw*ratio;
-    this.ctx.save();
-    this.ctx.globalAlpha=alpha;
-    this.ctx.translate(cx,cy);
-    this.ctx.rotate(rot);
-    this.ctx.scale(sx,sy);
-    this.ctx.drawImage(body,-bw/2,-bh/2,bw,bh);
-    this.ctx.restore();
-
-    if(this.bossReaction!=="escape"){
-      const target=this.bossTargetPoint();
-      const pulse=.5+.5*Math.sin(sec*5.4);
-      const ring=28+pulse*8;
-      this.ctx.save();
-      this.ctx.globalCompositeOperation="screen";
-      this.ctx.shadowColor="rgba(255,232,72,.95)";
-      this.ctx.shadowBlur=16+pulse*10;
-      this.ctx.fillStyle=`rgba(255,224,62,${.22+pulse*.16})`;
-      this.ctx.strokeStyle=`rgba(255,250,164,${.78+pulse*.22})`;
-      this.ctx.lineWidth=4;
-      this.ctx.beginPath();
-      this.ctx.arc(target.x,target.y,ring,0,Math.PI*2);
-      this.ctx.fill();
-      this.ctx.stroke();
-      this.ctx.lineWidth=2;
-      this.ctx.beginPath();
-      this.ctx.arc(target.x,target.y,ring+10+pulse*4,0,Math.PI*2);
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
-  },
-
   drawGame(now){
     const c=this.c,w=c.width,h=c.height;
     const dt=Math.min(.05,(now-this.lastGameTime)/1000);
@@ -1007,37 +822,22 @@ AFRAME.registerComponent("spider-canvas",{
     }
   },
 
-  prepareTexture(map){
-    if(!map||this.texture===map)return;
-    map.generateMipmaps=false;
-    if(window.THREE?.LinearFilter){
-      map.minFilter=THREE.LinearFilter;
-      map.magFilter=THREE.LinearFilter;
-    }
-    this.texture=map;
-  },
-
   tick(){
-    if(this.loaded<this.total||this.mode==="waiting")return;
-
-    const animated=this.mode==="story"||this.mode==="boss"||this.mode==="game";
-    if(!animated&&!this.needsRender)return;
+    if(this.loaded<this.total)return;
 
     const now=performance.now();
-    const frameMs=this.mode==="game"||this.mode==="boss"?42:50;
-    if(!this.needsRender&&this._last&&now-this._last<frameMs)return;
+    const frameMs=this.mode==="game"?42:50;
+    if(this._last&&now-this._last<frameMs)return;
     this._last=now;
-    this.needsRender=false;
 
     const c=this.c,ctx=this.ctx;
     ctx.clearRect(0,0,c.width,c.height);
 
     if(this.mode==="story")this.drawStory(now);
-    else if(this.mode==="boss")this.drawBoss(now);
     else if(this.mode==="game"||this.mode==="complete")this.drawGame(now);
 
-    const mesh=this.el.getObject3D("mesh"),map=mesh?.material?.map;
-    if(map){this.prepareTexture(map);map.needsUpdate=true}
+    const mesh=this.el.getObject3D("mesh");
+    if(mesh?.material?.map)mesh.material.map.needsUpdate=true;
   }
 });
 
@@ -1198,18 +998,6 @@ AFRAME.registerComponent("spider-controller",{
   },
 
   handleDown(input){
-    if(input.nativeEvent?.target?.closest?.("button,select"))return;
-
-    if(window.SpiderMode.mode==="boss"){
-      const comp=this.getCanvasComp();
-      const pt=this.screenToCanvas(input.x,input.y);
-      if(!comp||!pt)return;
-      if(comp.hitBoss(pt.x,pt.y,input.source)){
-        input.nativeEvent?.preventDefault?.();
-      }
-      return;
-    }
-
     if(window.SpiderMode.mode!=="game")return;
     const id=this.hitSpiderAt(input.x,input.y,input.source);
     if(id===null)return;
