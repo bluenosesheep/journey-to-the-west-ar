@@ -501,7 +501,7 @@ AFRAME.registerComponent("spider-canvas",{
 
     if(this.bossHits>=3){
       this.bossReaction="escape";
-      this.bossActionDuration=1250;
+      this.bossActionDuration=1350;
       window.SpiderMode.setHint("成功了！大蜘蛛要逃走啦！💨");
       setTimeout(()=>window.SpiderMode.enterSpiderGame(),this.bossActionDuration+160);
     }else{
@@ -852,14 +852,20 @@ AFRAME.registerComponent("spider-canvas",{
         trailDir=dir;
         trailStrength=Math.sin(Math.PI*dash)*.78;
 
-        // Let the dust build first, then fade the spider gradually behind it.
-        // This makes the exit read as a run-away action instead of a cut.
-        const vanish=Math.max(0,Math.min(1,(q-.58)/.28));
+        // Let the dust build slowly, then make the spider recede inside it.
+        // The simultaneous shrink, forward travel and fade read as depth rather
+        // than an abrupt visibility cut.
+        const vanishRaw=Math.max(0,Math.min(1,(q-.56)/.30));
+        const vanish=vanishRaw*vanishRaw*(3-2*vanishRaw);
         alpha=1-vanish;
+        cx+=dir*w*.055*vanish;
+        sx*=1-.55*vanish;
+        sy*=1-.55*vanish;
         dustA=.20*(1-dash);
-        escapeBurst=q<.62
-          ? Math.max(0,(q-.38)/.24)
-          : Math.max(0,1-(q-.62)/.38);
+        const dustRiseRaw=Math.max(0,Math.min(1,(q-.22)/.42));
+        const dustRise=dustRiseRaw*dustRiseRaw*(3-2*dustRiseRaw);
+        const dustFall=q<.72?1:Math.max(0,1-(q-.72)/.28);
+        escapeBurst=dustRise*dustFall;
         linesA=Math.max(linesA,(1-dash)*.42);
       }
     }
