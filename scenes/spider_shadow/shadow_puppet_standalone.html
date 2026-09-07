@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#130d0a">
+  <title>蛛影小妖 · 自由皮影剧场</title>
+  <link rel="stylesheet" href="./shadow-puppet-style.css?v=2">
+</head>
+<body>
+  <main id="shadowStage" aria-label="蛛影小妖自由皮影剧场">
+    <video id="camera" autoplay muted playsinline></video>
+    <div class="stage-tint" aria-hidden="true"></div>
+    <canvas id="puppetCanvas"></canvas>
+
+    <header class="title-card">
+      <p class="eyebrow">自由皮影剧场</p>
+      <h1>蛛影小妖</h1>
+      <p>故事由你来讲</p>
+    </header>
+
+    <section id="guide" class="guide" aria-live="polite">
+      <div id="status">点击“开始表演”，允许使用摄像头</div>
+      <div class="calibration" aria-hidden="true">
+        <i id="calibrationBar"></i>
+      </div>
+      <p class="mapping">拇指＝头　食指/中指＝双手　无名指/小指＝双脚</p>
+    </section>
+
+    <nav class="controls" aria-label="表演控制">
+      <button id="startBtn" type="button">🎭 开始表演</button>
+      <button id="calibrateBtn" type="button" disabled>✋ 重新校准</button>
+      <button id="endBtn" type="button" disabled>结束表演</button>
+    </nav>
+  </main>
+
+  <script type="module" src="./shadow-puppet-scene.js?v=2"></script>
+</body>
+</html>
