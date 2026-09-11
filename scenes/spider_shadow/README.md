@@ -1,22 +1,10 @@
 # 蛛影小妖 · 独立自由皮影 Demo
 
-这个页面完全独立，不会加载或修改大蜘蛛、蜘蛛网清理及其状态机。
+这个页面完全独立。
 
 ## 启动
 
-摄像头和 ES Module 需要通过 `https://` 或 `localhost` 访问，不能直接双击 HTML 使用 `file://` 打开。
-
-在项目目录启动本地服务器，例如：
-
-```bash
-python -m http.server 8000
-```
-
-然后访问（假设服务器从项目根目录启动）：
-
-```text
-http://localhost:8000/scenes/spider_shadow/shadow_puppet_standalone.html
-```
+摄像头和 ES Module 需要通过 <https://bluenosesheep.github.io/journey-to-the-west-ar/scenes/spider_shadow/shadow_puppet_standalone.html> 访问。
 
 ## 操作
 
